@@ -11,10 +11,12 @@ Esta entrega cria apenas a base da API:
 - configuracao Alembic com migrations incrementais;
 - models iniciais do MVP com `organization_id` nas tabelas sensiveis;
 - camada inicial de schemas, repositories e services para clients e cases;
+- rotas CRUD iniciais para clients e cases em `/api/v1`;
 - placeholders seguros para Cognito/JWT e tenant;
 - README com comandos locais.
 
-Nao foram implementados autenticacao real, rotas CRUD, APIs externas, S3, SQS ou agentes.
+Nao foram implementados autenticacao Cognito real, APIs externas, S3, SQS ou agentes.
+As rotas sensiveis usam um `TenantContext` temporario de desenvolvimento ate a etapa de JWT/Cognito.
 
 ## Requisitos
 
@@ -71,6 +73,27 @@ Resposta esperada:
 }
 ```
 
+Rotas iniciais de clients:
+
+```text
+GET    /api/v1/clients
+POST   /api/v1/clients
+GET    /api/v1/clients/{client_id}
+PATCH  /api/v1/clients/{client_id}
+```
+
+Rotas iniciais de cases:
+
+```text
+GET    /api/v1/cases
+POST   /api/v1/cases
+GET    /api/v1/cases/{case_id}
+PATCH  /api/v1/cases/{case_id}
+```
+
+Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Nesta fase eles sao resolvidos por uma dependencia mock interna em `src/core/tenant.py`.
+As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel.
+
 ## Migrations
 
 O Alembic esta configurado em `alembic.ini` e usa `DATABASE_URL` via Pydantic Settings.
@@ -110,6 +133,14 @@ alembic upgrade head --sql
 python -m unittest discover -s tests -v
 ```
 
+Testar apenas as rotas de clients/cases:
+
+```bash
+python -m unittest tests.test_clients_cases_routes -v
+```
+
+Esses testes usam services mockados via `dependency_overrides`, entao nao exigem conexao com banco.
+
 ## Estrutura
 
 ```text
@@ -142,10 +173,12 @@ src/
 ├── modules/
 │   ├── cases/
 │   │   ├── repository.py
+│   │   ├── router.py
 │   │   ├── schemas.py
 │   │   └── service.py
 │   ├── clients/
 │   │   ├── repository.py
+│   │   ├── router.py
 │   │   ├── schemas.py
 │   │   └── service.py
 │   ├── common/
@@ -162,4 +195,4 @@ src/
 2. Implementar validacao JWT/Cognito.
 3. Implementar tenant middleware e RBAC.
 4. Adicionar auditoria para rotas sensiveis.
-5. Criar rotas CRUD autenticadas para clientes/casos usando a camada interna ja criada.
+5. Evoluir clients/cases com auditoria e regras de permissao por perfil.

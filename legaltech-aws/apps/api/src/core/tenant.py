@@ -13,6 +13,14 @@ class TenantContext:
     role: str
 
 
+async def get_dev_tenant_context() -> TenantContext:
+    return TenantContext(
+        organization_id="00000000-0000-4000-8000-000000000001",
+        user_id="00000000-0000-4000-8000-000000000002",
+        role="admin",
+    )
+
+
 async def get_tenant_context(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> TenantContext:
