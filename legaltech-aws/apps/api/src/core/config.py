@@ -39,6 +39,16 @@ class Settings(BaseSettings):
         default="id",
         alias="COGNITO_TOKEN_USE",
     )
+    dev_jwt_enabled: bool = Field(default=False, alias="DEV_JWT_ENABLED")
+    dev_jwt_secret: str | None = Field(default=None, alias="DEV_JWT_SECRET")
+    dev_jwt_issuer: str = Field(
+        default="legaltech-local-dev",
+        alias="DEV_JWT_ISSUER",
+    )
+    dev_jwt_audience: str = Field(
+        default="legaltech-local-api",
+        alias="DEV_JWT_AUDIENCE",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

@@ -56,7 +56,13 @@ COGNITO_CLIENT_ID=
 COGNITO_ORGANIZATION_CLAIM=custom:organization_id
 COGNITO_ROLE_CLAIM=custom:role
 COGNITO_TOKEN_USE=id
+DEV_JWT_ENABLED=true
+DEV_JWT_SECRET=fictitious-local-dev-secret-32-bytes-minimum
+DEV_JWT_ISSUER=legaltech-local-dev
+DEV_JWT_AUDIENCE=legaltech-local-api
 ```
+
+Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
 
 ## PostgreSQL local com Docker
 
@@ -193,6 +199,15 @@ No PowerShell, execute a partir da raiz do repositorio:
 Get-Content database\local\seed_example_organization.sql | docker compose exec -T postgres psql -U legaltech -d legaltech
 ```
 
+Esse SQL cria apenas dados tecnicos ficticios:
+
+```text
+organization_id: 11111111-1111-4111-8111-111111111111
+user_id:         22222222-2222-4222-8222-222222222222
+email:           dev.local@example.test
+role:            admin
+```
+
 Dry run, sem persistir:
 
 ```bash
@@ -222,6 +237,151 @@ Conferir permissoes populadas no banco local:
 
 ```bash
 docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT role, COUNT(*) FROM roles_permissions WHERE organization_id = '11111111-1111-4111-8111-111111111111' GROUP BY role ORDER BY role;"
+```
+
+## JWT local de desenvolvimento
+
+Para testar rotas reais localmente sem Cognito, habilite apenas em `APP_ENV=local`:
+
+```env
+DEV_JWT_ENABLED=true
+DEV_JWT_SECRET=fictitious-local-dev-secret-32-bytes-minimum
+DEV_JWT_ISSUER=legaltech-local-dev
+DEV_JWT_AUDIENCE=legaltech-local-api
+```
+
+O segredo acima e ficticio e serve apenas para desenvolvimento local. Nao reutilize em outro ambiente.
+
+Gerar token local:
+
+```bash
+python -m src.modules.admin.dev_jwt \
+  --organization-id 11111111-1111-4111-8111-111111111111 \
+  --user-id 22222222-2222-4222-8222-222222222222 \
+  --email dev.local@example.test \
+  --role admin
+```
+
+PowerShell:
+
+```powershell
+$TOKEN = python -m src.modules.admin.dev_jwt `
+  --organization-id 11111111-1111-4111-8111-111111111111 `
+  --user-id 22222222-2222-4222-8222-222222222222 `
+  --email dev.local@example.test `
+  --role admin
+```
+
+As claims do token carregam `organization_id`, `user_id` e `role`. Nao envie `organization_id` nos payloads de frontend.
+
+## Smoke local de clients e cases
+
+Fluxo end-to-end local:
+
+```powershell
+cd legaltech-aws
+docker compose up -d postgres
+
+cd apps\api
+Copy-Item .env.example.local .env
+$env:DATABASE_URL="postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech"
+alembic upgrade head
+
+cd ..\..
+Get-Content database\local\seed_example_organization.sql | docker compose exec -T postgres psql -U legaltech -d legaltech
+
+cd apps\api
+python -m src.modules.admin.seed_roles_permissions `
+  --organization-id 11111111-1111-4111-8111-111111111111 `
+  --actor-user-id 22222222-2222-4222-8222-222222222222
+
+$TOKEN = python -m src.modules.admin.dev_jwt `
+  --organization-id 11111111-1111-4111-8111-111111111111 `
+  --user-id 22222222-2222-4222-8222-222222222222 `
+  --email dev.local@example.test `
+  --role admin
+
+uvicorn src.main:app --reload
+```
+
+Em outro terminal, execute:
+
+```powershell
+cd legaltech-aws\apps\api
+$TOKEN = python -m src.modules.admin.dev_jwt `
+  --organization-id 11111111-1111-4111-8111-111111111111 `
+  --user-id 22222222-2222-4222-8222-222222222222 `
+  --email dev.local@example.test `
+  --role admin
+
+python -m src.modules.admin.smoke_clients_cases --token $TOKEN
+```
+
+O smoke executa:
+
+```text
+POST /api/v1/clients
+GET  /api/v1/clients
+POST /api/v1/cases
+GET  /api/v1/cases
+```
+
+Exemplo curl:
+
+```bash
+TOKEN="$(python -m src.modules.admin.dev_jwt \
+  --organization-id 11111111-1111-4111-8111-111111111111 \
+  --user-id 22222222-2222-4222-8222-222222222222 \
+  --email dev.local@example.test \
+  --role admin)"
+
+curl -X POST http://127.0.0.1:8000/api/v1/clients \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Cliente Local Exemplo","document":"00000000000","email":"cliente.local@example.test","phone":"+5500000000000","metadata":{"source":"local_curl"}}'
+
+curl http://127.0.0.1:8000/api/v1/clients \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Exemplo PowerShell:
+
+```powershell
+$Headers = @{ Authorization = "Bearer $TOKEN" }
+$Client = Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/clients" `
+  -Method Post `
+  -Headers $Headers `
+  -ContentType "application/json" `
+  -Body (@{
+    name = "Cliente Local Exemplo"
+    document = "00000000000"
+    email = "cliente.local@example.test"
+    phone = "+5500000000000"
+    metadata = @{ source = "local_powershell" }
+  } | ConvertTo-Json)
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/clients" `
+  -Method Get `
+  -Headers $Headers
+
+$Case = Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/cases" `
+  -Method Post `
+  -Headers $Headers `
+  -ContentType "application/json" `
+  -Body (@{
+    client_id = $Client.data.id
+    case_type = "contract_analysis"
+    priority = "normal"
+    metadata = @{ source = "local_powershell" }
+  } | ConvertTo-Json)
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/cases" `
+  -Method Get `
+  -Headers $Headers
 ```
 
 ## Migrations
@@ -335,7 +495,9 @@ src/
 │   └── user.py
 ├── modules/
 │   ├── admin/
-│   │   └── seed_roles_permissions.py
+│   │   ├── dev_jwt.py
+│   │   ├── seed_roles_permissions.py
+│   │   └── smoke_clients_cases.py
 │   ├── audit/
 │   │   └── service.py
 │   ├── cases/

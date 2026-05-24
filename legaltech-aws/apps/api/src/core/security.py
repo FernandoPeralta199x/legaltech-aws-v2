@@ -107,18 +107,92 @@ class CognitoJWTVerifier:
         return None
 
 
+class LocalDevJWTVerifier:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    def verify(self, token: str) -> AuthenticatedUser:
+        claims = self._decode_claims(token)
+
+        organization_id = claims.get(self.settings.cognito_organization_claim)
+        role = claims.get(self.settings.cognito_role_claim)
+        user_id = claims.get("sub")
+
+        if claims.get("token_use") != "dev":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid local development token use.",
+            )
+
+        if not user_id or not organization_id or not role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="JWT claims do not include user, tenant and role.",
+            )
+
+        return AuthenticatedUser(
+            user_id=str(user_id),
+            email=str(claims.get("email", "")),
+            organization_id=str(organization_id),
+            role=str(role),
+            claims=claims,
+        )
+
+    def _decode_claims(self, token: str) -> dict[str, Any]:
+        if self.settings.app_env != "local" or not self.settings.dev_jwt_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Local development JWT validation is disabled.",
+            )
+
+        if not self.settings.dev_jwt_secret:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="DEV_JWT_SECRET is required for local JWT validation.",
+            )
+
+        try:
+            import jwt
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="PyJWT is required for local JWT validation.",
+            ) from exc
+
+        try:
+            return jwt.decode(
+                token,
+                self.settings.dev_jwt_secret,
+                algorithms=["HS256"],
+                issuer=self.settings.dev_jwt_issuer,
+                audience=self.settings.dev_jwt_audience,
+            )
+        except jwt.PyJWTError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid local development JWT.",
+            ) from exc
+
+
 @lru_cache
-def get_cached_jwt_verifier() -> CognitoJWTVerifier:
-    return CognitoJWTVerifier(get_settings())
+def get_cached_jwt_verifier() -> CognitoJWTVerifier | LocalDevJWTVerifier:
+    settings = get_settings()
+    if settings.dev_jwt_enabled:
+        return LocalDevJWTVerifier(settings)
+
+    return CognitoJWTVerifier(settings)
 
 
-def get_jwt_verifier() -> CognitoJWTVerifier:
+def get_jwt_verifier() -> CognitoJWTVerifier | LocalDevJWTVerifier:
     return get_cached_jwt_verifier()
 
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
-    verifier: Annotated[CognitoJWTVerifier, Depends(get_jwt_verifier)],
+    verifier: Annotated[
+        CognitoJWTVerifier | LocalDevJWTVerifier,
+        Depends(get_jwt_verifier),
+    ],
 ) -> AuthenticatedUser:
     if credentials is None:
         raise HTTPException(
