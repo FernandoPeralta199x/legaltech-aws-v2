@@ -183,6 +183,8 @@ class BasePermissionsMatrixTest(unittest.TestCase):
         self.assertEqual(ALL_BASE_PERMISSIONS, BASE_ROLE_PERMISSIONS["owner"])
         self.assertIn("clients:read", BASE_ROLE_PERMISSIONS["client"])
         self.assertIn("cases:write", BASE_ROLE_PERMISSIONS["client"])
+        self.assertIn("documents:read", BASE_ROLE_PERMISSIONS["client"])
+        self.assertIn("documents:write", BASE_ROLE_PERMISSIONS["client"])
         self.assertNotIn("roles_permissions:write", BASE_ROLE_PERMISSIONS["client"])
         self.assertNotIn("audit:read", BASE_ROLE_PERMISSIONS["client"])
 

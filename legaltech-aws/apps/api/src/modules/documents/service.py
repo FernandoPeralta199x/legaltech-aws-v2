@@ -1,0 +1,176 @@
+from typing import Protocol
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from src.models.case import Case
+from src.models.document import Document
+from src.modules.cases.repository import CaseRepository
+from src.modules.common.exceptions import ResourceNotFoundError
+from src.modules.common.identifiers import parse_uuid
+from src.modules.documents.repository import DocumentRepository
+from src.modules.documents.schemas import DocumentCreate, DocumentUpdate
+
+
+class DocumentRepositoryProtocol(Protocol):
+    def list_documents(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[Document]: ...
+
+    def get_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        document_id: UUID | str,
+    ) -> Document | None: ...
+
+    def create_document(self, document: Document) -> Document: ...
+
+    def update_document(self, document: Document, values: dict) -> Document: ...
+
+
+class CaseRepositoryProtocol(Protocol):
+    def get_case(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+    ) -> Case | None: ...
+
+
+class DocumentService:
+    def __init__(
+        self,
+        db: Session | None = None,
+        repository: DocumentRepositoryProtocol | None = None,
+        case_repository: CaseRepositoryProtocol | None = None,
+    ) -> None:
+        if repository is None:
+            if db is None:
+                raise ValueError("db is required when repository is not provided.")
+            repository = DocumentRepository(db)
+
+        if case_repository is None:
+            if db is None:
+                raise ValueError("db is required when case_repository is not provided.")
+            case_repository = CaseRepository(db)
+
+        self.repository = repository
+        self.case_repository = case_repository
+
+    def list_documents(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[Document]:
+        return self.repository.list_documents(
+            organization_id=parse_uuid(organization_id),
+            case_id=parse_uuid(case_id) if case_id else None,
+            status=status,
+            page=page,
+            page_size=page_size,
+        )
+
+    def get_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        document_id: UUID | str,
+    ) -> Document:
+        document = self.repository.get_document(
+            organization_id=parse_uuid(organization_id),
+            document_id=parse_uuid(document_id),
+        )
+        if document is None:
+            raise ResourceNotFoundError("Document not found.")
+
+        return document
+
+    def create_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        user_id: UUID | str,
+        payload: DocumentCreate,
+    ) -> Document:
+        organization_uuid = parse_uuid(organization_id)
+        case = self.case_repository.get_case(
+            organization_id=organization_uuid,
+            case_id=payload.case_id,
+        )
+        if case is None:
+            raise ResourceNotFoundError("Case not found.")
+
+        document = Document(
+            organization_id=organization_uuid,
+            case_id=payload.case_id,
+            filename=payload.filename,
+            content_type=payload.content_type,
+            size_bytes=payload.size_bytes,
+            storage_bucket="metadata-only-local",
+            storage_key=self._metadata_only_storage_key(
+                organization_id=organization_uuid,
+                case_id=payload.case_id,
+                filename=payload.filename,
+            ),
+            file_hash=payload.file_hash,
+            status=payload.status,
+            uploaded_by=parse_uuid(user_id),
+            metadata_json=payload.metadata,
+        )
+
+        return self.repository.create_document(document)
+
+    def update_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        document_id: UUID | str,
+        payload: DocumentUpdate,
+    ) -> Document:
+        organization_uuid = parse_uuid(organization_id)
+        document = self.get_document(
+            organization_id=organization_uuid,
+            document_id=document_id,
+        )
+        values = payload.model_dump(exclude_unset=True)
+
+        if "case_id" in values and values["case_id"] is not None:
+            case = self.case_repository.get_case(
+                organization_id=organization_uuid,
+                case_id=values["case_id"],
+            )
+            if case is None:
+                raise ResourceNotFoundError("Case not found.")
+
+        if "metadata" in values:
+            values["metadata_json"] = values.pop("metadata")
+
+        if "filename" in values:
+            case_id = values.get("case_id", document.case_id)
+            values["storage_key"] = self._metadata_only_storage_key(
+                organization_id=organization_uuid,
+                case_id=case_id,
+                filename=values["filename"],
+            )
+
+        return self.repository.update_document(document, values)
+
+    def _metadata_only_storage_key(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        filename: str,
+    ) -> str:
+        return f"metadata-only/{organization_id}/cases/{case_id}/{filename}"

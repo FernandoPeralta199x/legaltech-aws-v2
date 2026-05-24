@@ -12,6 +12,7 @@ Esta entrega cria apenas a base da API:
 - models iniciais do MVP com `organization_id` nas tabelas sensiveis;
 - camada inicial de schemas, repositories e services para clients e cases;
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
+- rotas iniciais de metadados de documents em `/api/v1`;
 - estrutura JWT/Cognito para `Authorization: Bearer <jwt>`;
 - RBAC consultando `roles_permissions`;
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
@@ -140,6 +141,17 @@ GET    /api/v1/cases/{case_id}
 PATCH  /api/v1/cases/{case_id}
 ```
 
+Rotas iniciais de documents, apenas para metadados:
+
+```text
+GET    /api/v1/documents
+POST   /api/v1/documents
+GET    /api/v1/documents/{document_id}
+PATCH  /api/v1/documents/{document_id}
+```
+
+Nesta etapa, documents nao implementa upload real, S3, presigned URL, OCR, IA, embeddings ou RAG.
+
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
 
@@ -169,7 +181,11 @@ clients:read
 clients:write
 cases:read
 cases:write
+documents:read
+documents:write
 ```
+
+Se a organizacao local ja tiver sido populada antes desta permissao existir, rode novamente o seed interno de `roles_permissions`. O seed e idempotente e adiciona apenas permissoes faltantes.
 
 Papeis base preparados no seed interno:
 
@@ -182,6 +198,52 @@ support
 ```
 
 Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
+Operacoes de leitura e escrita em `documents` tambem registram eventos via `AuditLogService`.
+
+## Documents metadata
+
+As rotas de documents cadastram somente metadados no banco. Elas nao fazem upload de arquivo, nao geram URL temporaria e nao conversam com S3.
+
+Criar document metadata:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "case_id": "case-uuid",
+    "filename": "contrato.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": 1024000,
+    "file_hash": "sha256-opcional",
+    "metadata": {
+      "source": "metadata_only"
+    }
+  }'
+```
+
+Listar documents:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/documents?case_id=case-uuid" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Atualizar metadados:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/v1/documents/document-uuid \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "uploaded",
+    "metadata": {
+      "review": "pending"
+    }
+  }'
+```
+
+Campos como `organization_id`, `uploaded_by`, `storage_bucket` e `storage_key` nao sao aceitos no payload. O `organization_id` vem do JWT e os campos de storage permanecem internos como placeholders locais ate a etapa futura de S3/presigned URL.
 
 ## Seed interno de permissoes
 
@@ -461,6 +523,12 @@ python -m unittest tests.test_roles_permissions -v
 python -m unittest tests.test_admin_seed_roles_permissions -v
 ```
 
+Testar documents:
+
+```bash
+python -m unittest tests.test_documents_layers tests.test_documents_routes -v
+```
+
 Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
 
 ## Estrutura
@@ -506,6 +574,11 @@ src/
 │   │   ├── schemas.py
 │   │   └── service.py
 │   ├── clients/
+│   │   ├── repository.py
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   ├── documents/
 │   │   ├── repository.py
 │   │   ├── router.py
 │   │   ├── schemas.py

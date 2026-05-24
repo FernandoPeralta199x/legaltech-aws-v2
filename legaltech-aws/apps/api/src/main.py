@@ -7,6 +7,7 @@ from src.modules.cases.router import router as cases_router
 from src.modules.clients.router import router as clients_router
 from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.responses import error_response
+from src.modules.documents.router import router as documents_router
 from src.modules.health.router import router as health_router
 
 
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(clients_router)
     app.include_router(cases_router)
+    app.include_router(documents_router)
     return app
 
 

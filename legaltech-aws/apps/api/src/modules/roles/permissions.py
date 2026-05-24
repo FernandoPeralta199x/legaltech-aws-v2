@@ -10,6 +10,7 @@ CASE_PARTIES_READ: Final = "case_parties:read"
 CASE_PARTIES_WRITE: Final = "case_parties:write"
 CASE_PARTIES_DELETE: Final = "case_parties:delete"
 DOCUMENTS_READ: Final = "documents:read"
+DOCUMENTS_WRITE: Final = "documents:write"
 DOCUMENTS_UPLOAD: Final = "documents:upload"
 DOCUMENTS_DOWNLOAD: Final = "documents:download"
 DOCUMENTS_DELETE: Final = "documents:delete"
@@ -47,6 +48,7 @@ ALL_BASE_PERMISSIONS: Final[frozenset[str]] = frozenset(
         CASE_PARTIES_WRITE,
         CASE_PARTIES_DELETE,
         DOCUMENTS_READ,
+        DOCUMENTS_WRITE,
         DOCUMENTS_UPLOAD,
         DOCUMENTS_DOWNLOAD,
         DOCUMENTS_DELETE,
@@ -88,6 +90,7 @@ BASE_ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             CASE_PARTIES_WRITE,
             CASE_PARTIES_DELETE,
             DOCUMENTS_READ,
+            DOCUMENTS_WRITE,
             DOCUMENTS_UPLOAD,
             DOCUMENTS_DOWNLOAD,
             DOCUMENTS_DELETE,
@@ -122,6 +125,7 @@ BASE_ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             CASE_PARTIES_READ,
             CASE_PARTIES_WRITE,
             DOCUMENTS_READ,
+            DOCUMENTS_WRITE,
             DOCUMENTS_UPLOAD,
             DOCUMENTS_DOWNLOAD,
             AGENTS_READ,
@@ -146,6 +150,7 @@ BASE_ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             CASE_PARTIES_READ,
             CASE_PARTIES_WRITE,
             DOCUMENTS_READ,
+            DOCUMENTS_WRITE,
             DOCUMENTS_UPLOAD,
             DOCUMENTS_DOWNLOAD,
             DOCUMENTS_DELETE,
