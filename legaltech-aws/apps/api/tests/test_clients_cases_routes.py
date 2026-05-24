@@ -119,15 +119,22 @@ class NotFoundCaseService(FakeCaseService):
         raise ResourceNotFoundError("Case not found.")
 
 
+class FakeAuditLogService:
+    def record_event(self, **kwargs):
+        return SimpleNamespace(**kwargs)
+
+
 class ClientsRoutesTest(unittest.TestCase):
     def setUp(self) -> None:
         from src.core.tenant import get_dev_tenant_context
+        from src.modules.audit.service import get_audit_log_service
         from src.modules.clients.router import get_client_service
 
         self.service = FakeClientService()
         self.app = create_app()
         self.app.dependency_overrides[get_dev_tenant_context] = tenant_override
         self.app.dependency_overrides[get_client_service] = lambda: self.service
+        self.app.dependency_overrides[get_audit_log_service] = FakeAuditLogService
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -205,12 +212,14 @@ class ClientsRoutesTest(unittest.TestCase):
 class CasesRoutesTest(unittest.TestCase):
     def setUp(self) -> None:
         from src.core.tenant import get_dev_tenant_context
+        from src.modules.audit.service import get_audit_log_service
         from src.modules.cases.router import get_case_service
 
         self.service = FakeCaseService()
         self.app = create_app()
         self.app.dependency_overrides[get_dev_tenant_context] = tenant_override
         self.app.dependency_overrides[get_case_service] = lambda: self.service
+        self.app.dependency_overrides[get_audit_log_service] = FakeAuditLogService
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:

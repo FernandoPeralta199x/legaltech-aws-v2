@@ -3,7 +3,11 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from src.core.security import AuthenticatedUser, get_current_user
+from src.core.security import (
+    AuthenticatedUser,
+    get_current_user,
+    get_mock_current_user,
+)
 
 
 @dataclass(frozen=True)
@@ -13,11 +17,13 @@ class TenantContext:
     role: str
 
 
-async def get_dev_tenant_context() -> TenantContext:
+async def get_dev_tenant_context(
+    current_user: Annotated[AuthenticatedUser, Depends(get_mock_current_user)],
+) -> TenantContext:
     return TenantContext(
-        organization_id="00000000-0000-4000-8000-000000000001",
-        user_id="00000000-0000-4000-8000-000000000002",
-        role="admin",
+        organization_id=current_user.organization_id,
+        user_id=current_user.user_id,
+        role=current_user.role,
     )
 
 

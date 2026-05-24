@@ -12,11 +12,13 @@ Esta entrega cria apenas a base da API:
 - models iniciais do MVP com `organization_id` nas tabelas sensiveis;
 - camada inicial de schemas, repositories e services para clients e cases;
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
-- placeholders seguros para Cognito/JWT e tenant;
+- auth/RBAC mockado para desenvolvimento;
+- audit_log service inicial para eventos sensiveis;
+- placeholders seguros para Cognito/JWT real;
 - README com comandos locais.
 
 Nao foram implementados autenticacao Cognito real, APIs externas, S3, SQS ou agentes.
-As rotas sensiveis usam um `TenantContext` temporario de desenvolvimento ate a etapa de JWT/Cognito.
+As rotas sensiveis usam headers mockados de desenvolvimento ate a etapa de JWT/Cognito.
 
 ## Requisitos
 
@@ -94,6 +96,27 @@ PATCH  /api/v1/cases/{case_id}
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Nesta fase eles sao resolvidos por uma dependencia mock interna em `src/core/tenant.py`.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel.
 
+Headers mockados para desenvolvimento:
+
+```text
+X-Dev-User-Id: 00000000-0000-4000-8000-000000000002
+X-Dev-Organization-Id: 00000000-0000-4000-8000-000000000001
+X-Dev-Role: admin
+X-Dev-Email: dev@example.com
+```
+
+Papeis suportados nesta fase:
+
+```text
+owner
+admin
+analyst
+client
+support
+```
+
+As permissoes mockadas ficam em `src/core/rbac.py`. Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
+
 ## Migrations
 
 O Alembic esta configurado em `alembic.ini` e usa `DATABASE_URL` via Pydantic Settings.
@@ -139,6 +162,12 @@ Testar apenas as rotas de clients/cases:
 python -m unittest tests.test_clients_cases_routes -v
 ```
 
+Testar auth/RBAC mockado e auditoria:
+
+```bash
+python -m unittest tests.test_auth_rbac_audit -v
+```
+
 Esses testes usam services mockados via `dependency_overrides`, entao nao exigem conexao com banco.
 
 ## Estrutura
@@ -148,6 +177,7 @@ src/
 ├── core/
 │   ├── config.py
 │   ├── logging.py
+│   ├── rbac.py
 │   ├── security.py
 │   └── tenant.py
 ├── db/
@@ -171,6 +201,8 @@ src/
 │   ├── types.py
 │   └── user.py
 ├── modules/
+│   ├── audit/
+│   │   └── service.py
 │   ├── cases/
 │   │   ├── repository.py
 │   │   ├── router.py
@@ -183,7 +215,8 @@ src/
 │   │   └── service.py
 │   ├── common/
 │   │   ├── exceptions.py
-│   │   └── identifiers.py
+│   │   ├── identifiers.py
+│   │   └── responses.py
 │   └── health/
 │       └── router.py
 └── main.py
@@ -193,6 +226,6 @@ src/
 
 1. Validar migrations contra um PostgreSQL local com `uuid-ossp` e `pgvector`.
 2. Implementar validacao JWT/Cognito.
-3. Implementar tenant middleware e RBAC.
-4. Adicionar auditoria para rotas sensiveis.
-5. Evoluir clients/cases com auditoria e regras de permissao por perfil.
+3. Trocar headers mockados por tenant middleware derivado do JWT.
+4. Expandir auditoria para leitura sensivel e tentativas negadas.
+5. Evoluir permissoes por perfil com dados da tabela `roles_permissions`.

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from src.core.config import get_settings
@@ -8,6 +8,13 @@ from src.modules.clients.router import router as clients_router
 from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.responses import error_response
 from src.modules.health.router import router as health_router
+
+
+HTTP_ERROR_CODES = {
+    401: "UNAUTHORIZED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+}
 
 
 def create_app() -> FastAPI:
@@ -27,6 +34,17 @@ def create_app() -> FastAPI:
         return JSONResponse(
             status_code=404,
             content=error_response(code=exc.code, message=str(exc)),
+        )
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(_, exc: HTTPException) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=error_response(
+                code=HTTP_ERROR_CODES.get(exc.status_code, "INTERNAL_ERROR"),
+                message=str(exc.detail),
+            ),
+            headers=exc.headers,
         )
 
     app.include_router(health_router)
