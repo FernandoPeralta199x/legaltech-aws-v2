@@ -46,6 +46,14 @@ class DocumentRead(BaseModel):
     updated_at: datetime
 
 
+class DocumentDownloadUrlRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    url: str
+    expires_in_seconds: int
+    method: str = "GET"
+
+
 class DocumentListFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

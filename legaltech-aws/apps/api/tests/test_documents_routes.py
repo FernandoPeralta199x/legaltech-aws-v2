@@ -24,6 +24,8 @@ def make_document(**overrides):
         "filename": "contrato.pdf",
         "content_type": "application/pdf",
         "size_bytes": 1024,
+        "storage_bucket": "local-dev",
+        "storage_key": "test-only-storage-key",
         "file_hash": None,
         "status": "pending_upload",
         "uploaded_by": UUID(USER_ID),
@@ -71,6 +73,14 @@ class FakeDocumentService:
     def get_document(self, **kwargs):
         self.calls.append(("get_document", kwargs))
         return self.document
+
+    def generate_download_url(self, **kwargs):
+        self.calls.append(("generate_download_url", kwargs))
+        return SimpleNamespace(
+            url="https://s3.example.test/presigned-download-token",
+            expires_in_seconds=300,
+            method="GET",
+        )
 
     def update_document(self, **kwargs):
         self.calls.append(("update_document", kwargs))
@@ -242,6 +252,41 @@ class DocumentsRoutesTest(unittest.TestCase):
                     "application/pdf",
                 )
             },
+        )
+
+        self.assertEqual(403, response.status_code)
+        self.assertEqual([], self.service.calls)
+
+    def test_generate_download_url_uses_internal_tenant_rbac_and_records_audit(self) -> None:
+        document_id = uuid4()
+        response = self.client.get(
+            f"/api/v1/documents/{document_id}/download-url",
+            headers=auth_headers(),
+        )
+
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(
+            "https://s3.example.test/presigned-download-token",
+            body["data"]["url"],
+        )
+        self.assertNotIn("storage_key", body["data"])
+        _, kwargs = self.service.calls[0]
+        self.assertEqual(ORG_ID, kwargs["organization_id"])
+        self.assertEqual(document_id, kwargs["document_id"])
+        self.assertEqual(
+            "documents:download",
+            self.permission_service.calls[0]["permission"],
+        )
+        self.assertEqual("document.download_url", self.audit_service.events[0]["action"])
+
+    def test_generate_download_url_without_permission_is_forbidden(self) -> None:
+        self.permission_service.allowed = False
+
+        response = self.client.get(
+            f"/api/v1/documents/{uuid4()}/download-url",
+            headers=auth_headers(),
         )
 
         self.assertEqual(403, response.status_code)

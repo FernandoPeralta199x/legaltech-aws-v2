@@ -18,9 +18,12 @@ Esta entrega cria apenas a base da API:
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
 - audit_log service inicial para eventos sensiveis;
 - upload local/mock de documents para desenvolvimento;
+- abstracao de storage de documents com modo `local` e modo `s3`;
+- geracao preparada de URL temporaria de download para documents;
 - README com comandos locais.
 
-Nao foram implementados APIs externas, S3, presigned URL, OCR, IA, SQS ou agentes.
+Nao foram implementados OCR, IA, SQS, agentes, frontend ou APIs externas.
+O modo S3 esta preparado para ambiente futuro AWS ou LocalStack, mas os testes nao exigem AWS real.
 As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
 
 ## Requisitos
@@ -64,6 +67,10 @@ DEV_JWT_ISSUER=legaltech-local-dev
 DEV_JWT_AUDIENCE=legaltech-local-api
 LOCAL_UPLOAD_ROOT=storage/local_uploads
 MAX_UPLOAD_SIZE_BYTES=10485760
+STORAGE_BACKEND=local
+S3_DOCUMENTS_BUCKET=legaltech-documents-dev
+AWS_ENDPOINT_URL=
+PRESIGNED_URL_EXPIRES_IN_SECONDS=900
 ```
 
 Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
@@ -150,11 +157,12 @@ Rotas iniciais de documents:
 GET    /api/v1/documents
 POST   /api/v1/documents
 POST   /api/v1/documents/upload
+GET    /api/v1/documents/{document_id}/download-url
 GET    /api/v1/documents/{document_id}
 PATCH  /api/v1/documents/{document_id}
 ```
 
-O endpoint `/api/v1/documents/upload` salva arquivos apenas em storage local/mock de desenvolvimento. Ele nao implementa S3, presigned URL, OCR, IA, embeddings ou RAG.
+O endpoint `/api/v1/documents/upload` continua funcionando em modo local/mock por padrao. Com `STORAGE_BACKEND=s3`, o backend fica preparado para usar S3 compativel via boto3. Ele nao implementa OCR, IA, embeddings ou RAG.
 
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
@@ -188,6 +196,7 @@ cases:write
 documents:read
 documents:write
 documents:upload
+documents:download
 ```
 
 Se a organizacao local ja tiver sido populada antes desta permissao existir, rode novamente o seed interno de `roles_permissions`. O seed e idempotente e adiciona apenas permissoes faltantes.
@@ -205,11 +214,32 @@ support
 Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
 Operacoes de leitura e escrita em `documents` tambem registram eventos via `AuditLogService`.
 
-## Documents metadata e upload local
+## Documents storage e download URL
 
-As rotas de documents cadastram metadados no banco. O upload desta etapa e local/mock, salva arquivos em `apps/api/storage/local_uploads/` e nao conversa com S3.
+As rotas de documents cadastram metadados no banco e usam uma camada abstrata de storage. Por padrao, `STORAGE_BACKEND=local` salva arquivos em `apps/api/storage/local_uploads/`.
 
 A pasta `apps/api/storage/local_uploads/` e ignorada pelo Git. Nao coloque documentos reais ou sensiveis ali.
+
+Configuracao local/mock:
+
+```env
+STORAGE_BACKEND=local
+LOCAL_UPLOAD_ROOT=storage/local_uploads
+MAX_UPLOAD_SIZE_BYTES=10485760
+PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+```
+
+Configuracao futura S3 ou LocalStack, com valores ficticios:
+
+```env
+STORAGE_BACKEND=s3
+S3_DOCUMENTS_BUCKET=legaltech-documents-dev
+AWS_REGION=sa-east-1
+AWS_ENDPOINT_URL=http://localhost:4566
+PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+```
+
+Nao coloque `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` ou credenciais reais em arquivos versionados. Em AWS real, use IAM role, Secrets Manager, SSM ou configuracao segura do ambiente.
 
 Criar document metadata:
 
@@ -250,7 +280,7 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/documents/document-uuid \
   }'
 ```
 
-Campos como `organization_id`, `uploaded_by`, `storage_bucket` e `storage_key` nao sao aceitos no payload. O `organization_id` vem do JWT e os campos de storage permanecem internos como placeholders locais ate a etapa futura de S3/presigned URL.
+Campos como `organization_id`, `uploaded_by`, `storage_bucket` e `storage_key` nao sao aceitos no payload. O `organization_id` vem do JWT e os campos de storage permanecem internos, definidos pela camada de storage configurada no backend.
 
 Upload local/mock de documento:
 
@@ -281,6 +311,29 @@ Extensoes permitidas no storage local/mock:
 ```
 
 O limite padrao e `10485760` bytes e pode ser ajustado por `MAX_UPLOAD_SIZE_BYTES` no `.env` local. `LOCAL_UPLOAD_ROOT` deve apontar para uma pasta local de desenvolvimento, por padrao `storage/local_uploads`.
+
+Gerar URL temporaria de download:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/documents/document-uuid/download-url \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Resposta esperada:
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://s3-presigned-url-ou-url-local-mock",
+    "expires_in_seconds": 900,
+    "method": "GET"
+  },
+  "message": "URL temporaria gerada com sucesso."
+}
+```
+
+A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O backend valida `document_id` pelo `organization_id` do JWT antes de gerar a URL e registra `audit_log` com a acao `document.download_url`.
 
 ## Seed interno de permissoes
 

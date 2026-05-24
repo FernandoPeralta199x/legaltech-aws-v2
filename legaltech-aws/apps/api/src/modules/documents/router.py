@@ -11,7 +11,8 @@ from src.core.tenant import TenantContext
 from src.db.session import get_db
 from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.common.responses import success_response
-from src.modules.documents.schemas import DocumentCreate, DocumentRead, DocumentUpdate
+from src.modules.documents.schemas import DocumentCreate, DocumentDownloadUrlRead
+from src.modules.documents.schemas import DocumentRead, DocumentUpdate
 from src.modules.documents.service import DocumentService
 
 
@@ -24,6 +25,10 @@ def get_document_service(db: Annotated[Session, Depends(get_db)]) -> DocumentSer
 
 def serialize_document(document) -> dict:
     return DocumentRead.model_validate(document).model_dump(mode="json")
+
+
+def serialize_download_url(download_url) -> dict:
+    return DocumentDownloadUrlRead.model_validate(download_url).model_dump(mode="json")
 
 
 def request_ip(request: Request) -> str | None:
@@ -145,7 +150,9 @@ def upload_document(
             "case_id": str(document.case_id),
             "filename": document.filename,
             "source": "api",
-            "storage": "local_mock",
+            "storage_backend": (
+                "local" if document.storage_bucket == "local-dev" else "s3"
+            ),
         },
         ip_address=request_ip(request),
         user_agent=request.headers.get("user-agent"),
@@ -154,6 +161,39 @@ def upload_document(
     return success_response(
         serialize_document(document),
         "Documento enviado com sucesso.",
+    )
+
+
+@router.get("/{document_id}/download-url")
+def generate_download_url(
+    document_id: UUID,
+    request: Request,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+    audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
+    tenant: Annotated[TenantContext, Depends(require_permission("documents:download"))],
+) -> dict[str, object]:
+    download_url = service.generate_download_url(
+        organization_id=tenant.organization_id,
+        document_id=document_id,
+    )
+    audit_log.record_event(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        action="document.download_url",
+        entity_type="document",
+        entity_id=document_id,
+        metadata={
+            "expires_in_seconds": download_url.expires_in_seconds,
+            "method": download_url.method,
+            "source": "api",
+        },
+        ip_address=request_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return success_response(
+        serialize_download_url(download_url),
+        "URL temporaria gerada com sucesso.",
     )
 
 

@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from src.core.config import get_settings
 from src.models.case import Case
 from src.models.document import Document
 from src.modules.cases.repository import CaseRepository
@@ -12,7 +13,8 @@ from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.identifiers import parse_uuid
 from src.modules.documents.repository import DocumentRepository
 from src.modules.documents.schemas import DocumentCreate, DocumentUpdate
-from src.modules.documents.storage import LocalDocumentStorage, LocalUploadResult
+from src.modules.documents.storage import PresignedUrlResult, StoredDocument
+from src.modules.documents.storage import create_document_storage
 
 
 class DocumentRepositoryProtocol(Protocol):
@@ -54,7 +56,17 @@ class DocumentStorageProtocol(Protocol):
         upload_file: UploadFile,
         organization_id: UUID,
         case_id: UUID,
-    ) -> LocalUploadResult: ...
+    ) -> StoredDocument: ...
+
+    def generate_download_url(
+        self,
+        *,
+        document_id: UUID,
+        storage_bucket: str,
+        storage_key: str,
+        filename: str,
+        expires_in_seconds: int,
+    ) -> PresignedUrlResult: ...
 
 
 class DocumentService:
@@ -64,6 +76,7 @@ class DocumentService:
         repository: DocumentRepositoryProtocol | None = None,
         case_repository: CaseRepositoryProtocol | None = None,
         storage: DocumentStorageProtocol | None = None,
+        download_url_expires_in_seconds: int | None = None,
     ) -> None:
         if repository is None:
             if db is None:
@@ -77,7 +90,12 @@ class DocumentService:
 
         self.repository = repository
         self.case_repository = case_repository
-        self.storage = storage or LocalDocumentStorage.from_settings()
+        self.storage = storage or create_document_storage()
+        self.download_url_expires_in_seconds = (
+            download_url_expires_in_seconds
+            if download_url_expires_in_seconds is not None
+            else get_settings().presigned_url_expires_in_seconds
+        )
 
     def list_documents(
         self,
@@ -186,6 +204,25 @@ class DocumentService:
         )
 
         return self.repository.create_document(document)
+
+    def generate_download_url(
+        self,
+        *,
+        organization_id: UUID | str,
+        document_id: UUID | str,
+    ) -> PresignedUrlResult:
+        document = self.get_document(
+            organization_id=organization_id,
+            document_id=document_id,
+        )
+
+        return self.storage.generate_download_url(
+            document_id=document.id,
+            storage_bucket=document.storage_bucket,
+            storage_key=document.storage_key,
+            filename=document.filename,
+            expires_in_seconds=self.download_url_expires_in_seconds,
+        )
 
     def update_document(
         self,

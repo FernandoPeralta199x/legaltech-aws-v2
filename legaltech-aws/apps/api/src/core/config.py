@@ -58,6 +58,21 @@ class Settings(BaseSettings):
         alias="MAX_UPLOAD_SIZE_BYTES",
         gt=0,
     )
+    storage_backend: Literal["local", "s3"] = Field(
+        default="local",
+        alias="STORAGE_BACKEND",
+    )
+    s3_documents_bucket: str | None = Field(
+        default=None,
+        alias="S3_DOCUMENTS_BUCKET",
+    )
+    aws_endpoint_url: str | None = Field(default=None, alias="AWS_ENDPOINT_URL")
+    presigned_url_expires_in_seconds: int = Field(
+        default=900,
+        alias="PRESIGNED_URL_EXPIRES_IN_SECONDS",
+        gt=0,
+        le=3600,
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

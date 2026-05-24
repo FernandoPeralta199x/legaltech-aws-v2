@@ -1,5 +1,6 @@
 import hashlib
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -17,13 +18,44 @@ READ_CHUNK_SIZE_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True)
-class LocalUploadResult:
+class StoredDocument:
     filename: str
     content_type: str
     size_bytes: int
     storage_bucket: str
     storage_key: str
     file_hash: str
+
+
+LocalUploadResult = StoredDocument
+
+
+@dataclass(frozen=True)
+class PresignedUrlResult:
+    url: str
+    expires_in_seconds: int
+    method: str = "GET"
+
+
+def create_document_storage(
+    settings: Settings | None = None,
+    *,
+    s3_client=None,
+) -> "LocalDocumentStorage | S3DocumentStorage":
+    settings = settings or get_settings()
+    if settings.storage_backend == "s3":
+        if not settings.s3_documents_bucket:
+            raise ValueError("S3_DOCUMENTS_BUCKET is required when STORAGE_BACKEND=s3.")
+
+        return S3DocumentStorage(
+            bucket_name=settings.s3_documents_bucket,
+            region_name=settings.aws_region,
+            endpoint_url=settings.aws_endpoint_url,
+            max_size_bytes=settings.max_upload_size_bytes,
+            client=s3_client,
+        )
+
+    return LocalDocumentStorage.from_settings(settings)
 
 
 class LocalDocumentStorage:
@@ -57,7 +89,7 @@ class LocalDocumentStorage:
         upload_file: UploadFile,
         organization_id: UUID | str,
         case_id: UUID | str,
-    ) -> LocalUploadResult:
+    ) -> StoredDocument:
         return self.save_file(
             file_obj=upload_file.file,
             filename=upload_file.filename or "document",
@@ -74,7 +106,7 @@ class LocalDocumentStorage:
         content_type: str,
         organization_id: UUID | str,
         case_id: UUID | str,
-    ) -> LocalUploadResult:
+    ) -> StoredDocument:
         safe_filename = self._safe_filename(filename)
         self._validate_extension(safe_filename)
 
@@ -88,6 +120,39 @@ class LocalDocumentStorage:
         self._ensure_path_inside_root(target_path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
+        digest, size_bytes = self._write_local_file(file_obj, target_path)
+
+        return StoredDocument(
+            filename=safe_filename,
+            content_type=content_type,
+            size_bytes=size_bytes,
+            storage_bucket=LOCAL_STORAGE_BUCKET,
+            storage_key=storage_key.replace("\\", "/"),
+            file_hash=f"sha256:{digest.hexdigest()}",
+        )
+
+    def generate_download_url(
+        self,
+        *,
+        document_id: UUID | str,
+        storage_bucket: str,
+        storage_key: str,
+        filename: str,
+        expires_in_seconds: int,
+    ) -> PresignedUrlResult:
+        return PresignedUrlResult(
+            url=(
+                "https://local.legaltech.invalid/documents/"
+                f"{document_id}/download?expires_in={expires_in_seconds}"
+            ),
+            expires_in_seconds=expires_in_seconds,
+        )
+
+    def _write_local_file(
+        self,
+        file_obj: BinaryIO,
+        target_path: Path,
+    ) -> tuple[hashlib._Hash, int]:
         digest = hashlib.sha256()
         size_bytes = 0
         created_target = False
@@ -116,14 +181,7 @@ class LocalDocumentStorage:
                 target_path.unlink(missing_ok=True)
             raise
 
-        return LocalUploadResult(
-            filename=safe_filename,
-            content_type=content_type,
-            size_bytes=size_bytes,
-            storage_bucket=LOCAL_STORAGE_BUCKET,
-            storage_key=storage_key.replace("\\", "/"),
-            file_hash=f"sha256:{digest.hexdigest()}",
-        )
+        return digest, size_bytes
 
     def _safe_filename(self, filename: str) -> str:
         base_name = Path(filename).name.strip()
@@ -160,3 +218,169 @@ class LocalDocumentStorage:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid upload path.",
             ) from exc
+
+
+class S3DocumentStorage:
+    def __init__(
+        self,
+        *,
+        bucket_name: str,
+        region_name: str,
+        max_size_bytes: int,
+        endpoint_url: str | None = None,
+        client=None,
+        allowed_extensions: frozenset[str] = ALLOWED_UPLOAD_EXTENSIONS,
+    ) -> None:
+        self.bucket_name = bucket_name
+        self.region_name = region_name
+        self.endpoint_url = endpoint_url
+        self.max_size_bytes = max_size_bytes
+        self.allowed_extensions = allowed_extensions
+        self.client = client or self._build_client()
+
+    def save_upload(
+        self,
+        *,
+        upload_file: UploadFile,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+    ) -> StoredDocument:
+        return self.save_file(
+            file_obj=upload_file.file,
+            filename=upload_file.filename or "document",
+            content_type=upload_file.content_type or DEFAULT_CONTENT_TYPE,
+            organization_id=organization_id,
+            case_id=case_id,
+        )
+
+    def save_file(
+        self,
+        *,
+        file_obj: BinaryIO,
+        filename: str,
+        content_type: str,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+    ) -> StoredDocument:
+        safe_filename = self._safe_filename(filename)
+        self._validate_extension(safe_filename)
+        storage_key = (
+            f"organizations/{organization_id}/cases/{case_id}/documents/"
+            f"{uuid4().hex}_{safe_filename}"
+        )
+        digest, size_bytes, temporary_file = self._copy_to_temporary_file(file_obj)
+
+        try:
+            temporary_file.seek(0)
+            self.client.upload_fileobj(
+                temporary_file,
+                self.bucket_name,
+                storage_key,
+                ExtraArgs={
+                    "ContentType": content_type,
+                    "Metadata": {
+                        "organization_id": str(organization_id),
+                        "case_id": str(case_id),
+                    },
+                },
+            )
+        finally:
+            temporary_file.close()
+
+        return StoredDocument(
+            filename=safe_filename,
+            content_type=content_type,
+            size_bytes=size_bytes,
+            storage_bucket=self.bucket_name,
+            storage_key=storage_key,
+            file_hash=f"sha256:{digest.hexdigest()}",
+        )
+
+    def generate_download_url(
+        self,
+        *,
+        document_id: UUID | str,
+        storage_bucket: str,
+        storage_key: str,
+        filename: str,
+        expires_in_seconds: int,
+    ) -> PresignedUrlResult:
+        response_content_disposition = (
+            f'attachment; filename="{self._safe_content_disposition_filename(filename)}"'
+        )
+        url = self.client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": storage_bucket or self.bucket_name,
+                "Key": storage_key,
+                "ResponseContentDisposition": response_content_disposition,
+            },
+            ExpiresIn=expires_in_seconds,
+        )
+
+        return PresignedUrlResult(
+            url=url,
+            expires_in_seconds=expires_in_seconds,
+        )
+
+    def _build_client(self):
+        try:
+            import boto3
+        except ImportError as exc:
+            raise RuntimeError("boto3 is required when STORAGE_BACKEND=s3.") from exc
+
+        return boto3.client(
+            "s3",
+            region_name=self.region_name,
+            endpoint_url=self.endpoint_url or None,
+        )
+
+    def _copy_to_temporary_file(
+        self,
+        file_obj: BinaryIO,
+    ) -> tuple[hashlib._Hash, int, tempfile.SpooledTemporaryFile]:
+        digest = hashlib.sha256()
+        size_bytes = 0
+        temporary_file = tempfile.SpooledTemporaryFile(max_size=self.max_size_bytes)
+
+        try:
+            while chunk := file_obj.read(READ_CHUNK_SIZE_BYTES):
+                size_bytes += len(chunk)
+                if size_bytes > self.max_size_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        detail="Uploaded file exceeds the configured maximum size.",
+                    )
+
+                digest.update(chunk)
+                temporary_file.write(chunk)
+
+            if size_bytes == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Uploaded file must not be empty.",
+                )
+        except Exception:
+            temporary_file.close()
+            raise
+
+        return digest, size_bytes, temporary_file
+
+    def _safe_filename(self, filename: str) -> str:
+        return LocalDocumentStorage(
+            root_path=tempfile.gettempdir(),
+            max_size_bytes=self.max_size_bytes,
+            allowed_extensions=self.allowed_extensions,
+        )._safe_filename(filename)
+
+    def _validate_extension(self, filename: str) -> None:
+        extension = Path(filename).suffix.lower()
+        if extension not in self.allowed_extensions:
+            allowed = ", ".join(sorted(self.allowed_extensions))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported document extension. Allowed: {allowed}.",
+            )
+
+    def _safe_content_disposition_filename(self, filename: str) -> str:
+        return re.sub(r'["\\\r\n]+', "_", Path(filename).name)
