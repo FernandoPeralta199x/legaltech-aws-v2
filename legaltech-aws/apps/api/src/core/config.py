@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,6 +27,18 @@ class Settings(BaseSettings):
     aws_region: str = Field(default="sa-east-1", alias="AWS_REGION")
     cognito_user_pool_id: str | None = Field(default=None, alias="COGNITO_USER_POOL_ID")
     cognito_client_id: str | None = Field(default=None, alias="COGNITO_CLIENT_ID")
+    cognito_organization_claim: str = Field(
+        default="custom:organization_id",
+        alias="COGNITO_ORGANIZATION_CLAIM",
+    )
+    cognito_role_claim: str = Field(
+        default="custom:role",
+        alias="COGNITO_ROLE_CLAIM",
+    )
+    cognito_token_use: Literal["id", "access"] = Field(
+        default="id",
+        alias="COGNITO_TOKEN_USE",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod
@@ -34,6 +47,23 @@ class Settings(BaseSettings):
             return value.replace("postgresql://", "postgresql+psycopg://", 1)
 
         return value
+
+    @property
+    def cognito_issuer(self) -> str | None:
+        if not self.cognito_user_pool_id:
+            return None
+
+        return (
+            f"https://cognito-idp.{self.aws_region}.amazonaws.com/"
+            f"{self.cognito_user_pool_id}"
+        )
+
+    @property
+    def cognito_jwks_url(self) -> str | None:
+        if not self.cognito_issuer:
+            return None
+
+        return f"{self.cognito_issuer}/.well-known/jwks.json"
 
 
 @lru_cache

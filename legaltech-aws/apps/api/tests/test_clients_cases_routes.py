@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
-from src.core.tenant import TenantContext
 from src.main import create_app
 from src.modules.common.exceptions import ResourceNotFoundError
 
@@ -14,12 +13,8 @@ ORG_ID = "11111111-1111-4111-8111-111111111111"
 USER_ID = "22222222-2222-4222-8222-222222222222"
 
 
-def tenant_override() -> TenantContext:
-    return TenantContext(
-        organization_id=ORG_ID,
-        user_id=USER_ID,
-        role="admin",
-    )
+def auth_headers() -> dict[str, str]:
+    return {"Authorization": "Bearer valid-test-token"}
 
 
 def make_client(**overrides):
@@ -124,15 +119,36 @@ class FakeAuditLogService:
         return SimpleNamespace(**kwargs)
 
 
+class FakeJwtVerifier:
+    def verify(self, token: str):
+        from src.core.security import AuthenticatedUser
+
+        return AuthenticatedUser(
+            user_id=USER_ID,
+            email="dev@example.com",
+            organization_id=ORG_ID,
+            role="admin",
+        )
+
+
+class FakePermissionService:
+    def has_permission(self, *, organization_id: str, role: str, permission: str) -> bool:
+        return True
+
+
 class ClientsRoutesTest(unittest.TestCase):
     def setUp(self) -> None:
-        from src.core.tenant import get_dev_tenant_context
+        from src.core.rbac import get_permission_service
+        from src.core.security import get_jwt_verifier
         from src.modules.audit.service import get_audit_log_service
         from src.modules.clients.router import get_client_service
 
         self.service = FakeClientService()
         self.app = create_app()
-        self.app.dependency_overrides[get_dev_tenant_context] = tenant_override
+        self.app.dependency_overrides[get_jwt_verifier] = lambda: FakeJwtVerifier()
+        self.app.dependency_overrides[get_permission_service] = (
+            lambda: FakePermissionService()
+        )
         self.app.dependency_overrides[get_client_service] = lambda: self.service
         self.app.dependency_overrides[get_audit_log_service] = FakeAuditLogService
         self.client = TestClient(self.app)
@@ -141,7 +157,10 @@ class ClientsRoutesTest(unittest.TestCase):
         self.app.dependency_overrides.clear()
 
     def test_list_clients_uses_internal_tenant_context(self) -> None:
-        response = self.client.get("/api/v1/clients?search=teste&page=2&page_size=10")
+        response = self.client.get(
+            "/api/v1/clients?search=teste&page=2&page_size=10",
+            headers=auth_headers(),
+        )
 
         self.assertEqual(200, response.status_code)
         body = response.json()
@@ -160,6 +179,7 @@ class ClientsRoutesTest(unittest.TestCase):
     def test_create_client_rejects_frontend_organization_id(self) -> None:
         response = self.client.post(
             "/api/v1/clients",
+            headers=auth_headers(),
             json={
                 "name": "Cliente Teste",
                 "organization_id": str(uuid4()),
@@ -171,6 +191,7 @@ class ClientsRoutesTest(unittest.TestCase):
     def test_create_client_uses_internal_tenant_and_user(self) -> None:
         response = self.client.post(
             "/api/v1/clients",
+            headers=auth_headers(),
             json={
                 "name": "Cliente Novo",
                 "document": "00000000000",
@@ -189,7 +210,10 @@ class ClientsRoutesTest(unittest.TestCase):
 
         self.app.dependency_overrides[get_client_service] = lambda: NotFoundClientService()
         missing_id = uuid4()
-        response = self.client.get(f"/api/v1/clients/{missing_id}")
+        response = self.client.get(
+            f"/api/v1/clients/{missing_id}",
+            headers=auth_headers(),
+        )
 
         self.assertEqual(404, response.status_code)
         self.assertEqual(False, response.json()["success"])
@@ -199,6 +223,7 @@ class ClientsRoutesTest(unittest.TestCase):
         client_id = uuid4()
         response = self.client.patch(
             f"/api/v1/clients/{client_id}",
+            headers=auth_headers(),
             json={"name": "Cliente Atualizado"},
         )
 
@@ -211,13 +236,17 @@ class ClientsRoutesTest(unittest.TestCase):
 
 class CasesRoutesTest(unittest.TestCase):
     def setUp(self) -> None:
-        from src.core.tenant import get_dev_tenant_context
+        from src.core.rbac import get_permission_service
+        from src.core.security import get_jwt_verifier
         from src.modules.audit.service import get_audit_log_service
         from src.modules.cases.router import get_case_service
 
         self.service = FakeCaseService()
         self.app = create_app()
-        self.app.dependency_overrides[get_dev_tenant_context] = tenant_override
+        self.app.dependency_overrides[get_jwt_verifier] = lambda: FakeJwtVerifier()
+        self.app.dependency_overrides[get_permission_service] = (
+            lambda: FakePermissionService()
+        )
         self.app.dependency_overrides[get_case_service] = lambda: self.service
         self.app.dependency_overrides[get_audit_log_service] = FakeAuditLogService
         self.client = TestClient(self.app)
@@ -229,6 +258,7 @@ class CasesRoutesTest(unittest.TestCase):
         client_id = uuid4()
         response = self.client.get(
             "/api/v1/cases",
+            headers=auth_headers(),
             params={
                 "status": "draft",
                 "case_type": "contract_analysis",
@@ -246,6 +276,7 @@ class CasesRoutesTest(unittest.TestCase):
     def test_create_case_rejects_frontend_organization_id_and_created_by(self) -> None:
         response = self.client.post(
             "/api/v1/cases",
+            headers=auth_headers(),
             json={
                 "client_id": str(uuid4()),
                 "case_type": "contract_analysis",
@@ -259,6 +290,7 @@ class CasesRoutesTest(unittest.TestCase):
     def test_create_case_uses_internal_tenant_and_user(self) -> None:
         response = self.client.post(
             "/api/v1/cases",
+            headers=auth_headers(),
             json={
                 "client_id": str(uuid4()),
                 "case_type": "contract_analysis",
@@ -278,7 +310,10 @@ class CasesRoutesTest(unittest.TestCase):
 
         self.app.dependency_overrides[get_case_service] = lambda: NotFoundCaseService()
         missing_id = uuid4()
-        response = self.client.get(f"/api/v1/cases/{missing_id}")
+        response = self.client.get(
+            f"/api/v1/cases/{missing_id}",
+            headers=auth_headers(),
+        )
 
         self.assertEqual(404, response.status_code)
         self.assertEqual(False, response.json()["success"])
@@ -288,6 +323,7 @@ class CasesRoutesTest(unittest.TestCase):
         case_id = uuid4()
         response = self.client.patch(
             f"/api/v1/cases/{case_id}",
+            headers=auth_headers(),
             json={"status": "submitted"},
         )
 

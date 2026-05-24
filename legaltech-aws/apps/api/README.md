@@ -12,13 +12,13 @@ Esta entrega cria apenas a base da API:
 - models iniciais do MVP com `organization_id` nas tabelas sensiveis;
 - camada inicial de schemas, repositories e services para clients e cases;
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
-- auth/RBAC mockado para desenvolvimento;
+- estrutura JWT/Cognito para `Authorization: Bearer <jwt>`;
+- RBAC consultando `roles_permissions`;
 - audit_log service inicial para eventos sensiveis;
-- placeholders seguros para Cognito/JWT real;
 - README com comandos locais.
 
-Nao foram implementados autenticacao Cognito real, APIs externas, S3, SQS ou agentes.
-As rotas sensiveis usam headers mockados de desenvolvimento ate a etapa de JWT/Cognito.
+Nao foram implementados APIs externas, S3, SQS ou agentes.
+As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
 
 ## Requisitos
 
@@ -49,6 +49,9 @@ DATABASE_URL=postgresql+psycopg://legaltech:legaltech@localhost:5432/legaltech
 AWS_REGION=sa-east-1
 COGNITO_USER_POOL_ID=
 COGNITO_CLIENT_ID=
+COGNITO_ORGANIZATION_CLAIM=custom:organization_id
+COGNITO_ROLE_CLAIM=custom:role
+COGNITO_TOKEN_USE=id
 ```
 
 ## Rodar localmente
@@ -93,29 +96,38 @@ GET    /api/v1/cases/{case_id}
 PATCH  /api/v1/cases/{case_id}
 ```
 
-Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Nesta fase eles sao resolvidos por uma dependencia mock interna em `src/core/tenant.py`.
-As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel.
+Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
+As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
 
-Headers mockados para desenvolvimento:
-
-```text
-X-Dev-User-Id: 00000000-0000-4000-8000-000000000002
-X-Dev-Organization-Id: 00000000-0000-4000-8000-000000000001
-X-Dev-Role: admin
-X-Dev-Email: dev@example.com
-```
-
-Papeis suportados nesta fase:
+Header esperado:
 
 ```text
-owner
-admin
-analyst
-client
-support
+Authorization: Bearer <jwt>
 ```
 
-As permissoes mockadas ficam em `src/core/rbac.py`. Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
+Claims esperadas por padrao:
+
+```text
+sub
+email
+custom:organization_id
+custom:role
+token_use=id
+aud=<COGNITO_CLIENT_ID>
+```
+
+`COGNITO_ORGANIZATION_CLAIM`, `COGNITO_ROLE_CLAIM` e `COGNITO_TOKEN_USE` podem ser ajustados via `.env`.
+
+Permissoes usadas pelas rotas atuais:
+
+```text
+clients:read
+clients:write
+cases:read
+cases:write
+```
+
+Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
 
 ## Migrations
 
@@ -162,13 +174,14 @@ Testar apenas as rotas de clients/cases:
 python -m unittest tests.test_clients_cases_routes -v
 ```
 
-Testar auth/RBAC mockado e auditoria:
+Testar auth/RBAC e auditoria:
 
 ```bash
 python -m unittest tests.test_auth_rbac_audit -v
+python -m unittest tests.test_roles_permissions -v
 ```
 
-Esses testes usam services mockados via `dependency_overrides`, entao nao exigem conexao com banco.
+Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
 
 ## Estrutura
 
@@ -217,15 +230,18 @@ src/
 │   │   ├── exceptions.py
 │   │   ├── identifiers.py
 │   │   └── responses.py
-│   └── health/
-│       └── router.py
+│   ├── health/
+│   │   └── router.py
+│   └── roles/
+│       ├── repository.py
+│       └── service.py
 └── main.py
 ```
 
 ## Proximos passos
 
 1. Validar migrations contra um PostgreSQL local com `uuid-ossp` e `pgvector`.
-2. Implementar validacao JWT/Cognito.
-3. Trocar headers mockados por tenant middleware derivado do JWT.
-4. Expandir auditoria para leitura sensivel e tentativas negadas.
-5. Evoluir permissoes por perfil com dados da tabela `roles_permissions`.
+2. Popular `roles_permissions` por organizacao e papel.
+3. Mapear usuario interno a partir de `sub`/Cognito e tabela `users`.
+4. Expandir auditoria para tentativas negadas.
+5. Criar seed/admin tooling para permissoes iniciais.

@@ -1,8 +1,12 @@
 from dataclasses import dataclass
+from functools import lru_cache
+from typing import Any
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from src.core.config import Settings, get_settings
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -14,28 +18,107 @@ class AuthenticatedUser:
     email: str
     organization_id: str
     role: str
+    claims: dict[str, Any] | None = None
 
 
-async def get_mock_current_user(request: Request) -> AuthenticatedUser:
-    user_id = request.headers.get("X-Dev-User-Id")
-    organization_id = request.headers.get("X-Dev-Organization-Id")
+class CognitoJWTVerifier:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
 
-    if not user_id or not organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Mock authentication headers are required.",
+    def verify(self, token: str) -> AuthenticatedUser:
+        claims = self._decode_claims(token)
+        self._validate_claims(claims)
+
+        organization_id = claims.get(self.settings.cognito_organization_claim)
+        role = self._resolve_role(claims)
+        user_id = claims.get("sub")
+
+        if not user_id or not organization_id or not role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="JWT claims do not include user, tenant and role.",
+            )
+
+        return AuthenticatedUser(
+            user_id=str(user_id),
+            email=str(claims.get("email", "")),
+            organization_id=str(organization_id),
+            role=str(role),
+            claims=claims,
         )
 
-    return AuthenticatedUser(
-        user_id=user_id,
-        email=request.headers.get("X-Dev-Email", "dev@example.com"),
-        organization_id=organization_id,
-        role=request.headers.get("X-Dev-Role", "client"),
-    )
+    def _decode_claims(self, token: str) -> dict[str, Any]:
+        if not self.settings.cognito_jwks_url or not self.settings.cognito_issuer:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Cognito settings are not configured.",
+            )
+
+        try:
+            import jwt
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="PyJWT is required for Cognito/JWT validation.",
+            ) from exc
+
+        try:
+            jwks_client = jwt.PyJWKClient(self.settings.cognito_jwks_url)
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            return jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                issuer=self.settings.cognito_issuer,
+                options={"verify_aud": False},
+            )
+        except jwt.PyJWTError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid JWT.",
+            ) from exc
+
+    def _validate_claims(self, claims: dict[str, Any]) -> None:
+        token_use = claims.get("token_use")
+        if token_use != self.settings.cognito_token_use:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Cognito token use.",
+            )
+
+        if self.settings.cognito_client_id:
+            audience = claims.get("aud")
+            client_id = claims.get("client_id")
+            if self.settings.cognito_client_id not in {audience, client_id}:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid Cognito client id.",
+                )
+
+    def _resolve_role(self, claims: dict[str, Any]) -> str | None:
+        role = claims.get(self.settings.cognito_role_claim)
+        if role:
+            return str(role)
+
+        groups = claims.get("cognito:groups")
+        if isinstance(groups, list) and groups:
+            return str(groups[0])
+
+        return None
+
+
+@lru_cache
+def get_cached_jwt_verifier() -> CognitoJWTVerifier:
+    return CognitoJWTVerifier(get_settings())
+
+
+def get_jwt_verifier() -> CognitoJWTVerifier:
+    return get_cached_jwt_verifier()
 
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    verifier: Annotated[CognitoJWTVerifier, Depends(get_jwt_verifier)],
 ) -> AuthenticatedUser:
     if credentials is None:
         raise HTTPException(
@@ -43,7 +126,4 @@ async def get_current_user(
             detail="Authentication is required.",
         )
 
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Cognito/JWT authentication is not implemented yet.",
-    )
+    return verifier.verify(credentials.credentials)

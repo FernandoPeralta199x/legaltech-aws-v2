@@ -3,48 +3,30 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from src.core.tenant import TenantContext, get_dev_tenant_context
+from src.core.tenant import TenantContext, get_tenant_context
+from src.modules.roles.service import RolePermissionService, get_role_permission_service
 
 
-ROLE_PERMISSIONS: dict[str, set[str]] = {
-    "owner": {
-        "clients:read",
-        "clients:write",
-        "cases:read",
-        "cases:write",
-    },
-    "admin": {
-        "clients:read",
-        "clients:write",
-        "cases:read",
-        "cases:write",
-    },
-    "analyst": {
-        "clients:read",
-        "cases:read",
-        "cases:write",
-    },
-    "client": {
-        "clients:read",
-        "cases:read",
-        "cases:write",
-    },
-    "support": {
-        "clients:read",
-        "cases:read",
-    },
-}
-
-
-def role_has_permission(role: str, permission: str) -> bool:
-    return permission in ROLE_PERMISSIONS.get(role, set())
+def get_permission_service(
+    service: Annotated[RolePermissionService, Depends(get_role_permission_service)],
+) -> RolePermissionService:
+    return service
 
 
 def require_permission(permission: str) -> Callable:
     async def dependency(
-        tenant: Annotated[TenantContext, Depends(get_dev_tenant_context)],
+        tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+        permission_service: Annotated[
+            RolePermissionService,
+            Depends(get_permission_service),
+        ],
     ) -> TenantContext:
-        if not role_has_permission(tenant.role, permission):
+        has_permission = permission_service.has_permission(
+            organization_id=tenant.organization_id,
+            role=tenant.role,
+            permission=permission,
+        )
+        if not has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission required: {permission}.",
@@ -53,4 +35,3 @@ def require_permission(permission: str) -> Callable:
         return tenant
 
     return dependency
-

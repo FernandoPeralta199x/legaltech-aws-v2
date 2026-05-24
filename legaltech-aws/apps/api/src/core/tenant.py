@@ -6,7 +6,6 @@ from fastapi import Depends, HTTPException, status
 from src.core.security import (
     AuthenticatedUser,
     get_current_user,
-    get_mock_current_user,
 )
 
 
@@ -15,16 +14,6 @@ class TenantContext:
     organization_id: str
     user_id: str
     role: str
-
-
-async def get_dev_tenant_context(
-    current_user: Annotated[AuthenticatedUser, Depends(get_mock_current_user)],
-) -> TenantContext:
-    return TenantContext(
-        organization_id=current_user.organization_id,
-        user_id=current_user.user_id,
-        role=current_user.role,
-    )
 
 
 async def get_tenant_context(
