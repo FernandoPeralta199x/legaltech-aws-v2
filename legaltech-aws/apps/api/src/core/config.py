@@ -73,6 +73,11 @@ class Settings(BaseSettings):
         gt=0,
         le=3600,
     )
+    local_processing_max_text_chars: int = Field(
+        default=50_000,
+        alias="LOCAL_PROCESSING_MAX_TEXT_CHARS",
+        gt=0,
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

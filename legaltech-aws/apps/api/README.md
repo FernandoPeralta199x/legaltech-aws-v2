@@ -20,9 +20,10 @@ Esta entrega cria apenas a base da API:
 - upload local/mock de documents para desenvolvimento;
 - abstracao de storage de documents com modo `local` e modo `s3`;
 - geracao preparada de URL temporaria de download para documents;
+- base local/mock de document_chunks e document_embeddings, sem IA externa;
 - README com comandos locais.
 
-Nao foram implementados OCR, IA, SQS, agentes, frontend ou APIs externas.
+Nao foram implementados OCR real, IA real, RAG real, SQS, workers, agentes, frontend ou APIs externas.
 O modo S3 esta preparado para ambiente futuro AWS ou LocalStack, mas os testes nao exigem AWS real.
 As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
 
@@ -71,6 +72,7 @@ STORAGE_BACKEND=local
 S3_DOCUMENTS_BUCKET=legaltech-documents-dev
 AWS_ENDPOINT_URL=
 PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
 ```
 
 Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
@@ -158,11 +160,14 @@ GET    /api/v1/documents
 POST   /api/v1/documents
 POST   /api/v1/documents/upload
 GET    /api/v1/documents/{document_id}/download-url
+POST   /api/v1/documents/{document_id}/process-local
+GET    /api/v1/documents/{document_id}/chunks
 GET    /api/v1/documents/{document_id}
 PATCH  /api/v1/documents/{document_id}
 ```
 
-O endpoint `/api/v1/documents/upload` continua funcionando em modo local/mock por padrao. Com `STORAGE_BACKEND=s3`, o backend fica preparado para usar S3 compativel via boto3. Ele nao implementa OCR, IA, embeddings ou RAG.
+O endpoint `/api/v1/documents/upload` continua funcionando em modo local/mock por padrao. Com `STORAGE_BACKEND=s3`, o backend fica preparado para usar S3 compativel via boto3.
+O processamento local cria chunks e embeddings fake/deterministicos para desenvolvimento. Ele nao chama OpenAI, Claude, AWS Bedrock ou qualquer IA externa, e nao implementa OCR nem RAG real.
 
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
@@ -197,6 +202,8 @@ documents:read
 documents:write
 documents:upload
 documents:download
+documents:process
+document_chunks:read
 ```
 
 Se a organizacao local ja tiver sido populada antes desta permissao existir, rode novamente o seed interno de `roles_permissions`. O seed e idempotente e adiciona apenas permissoes faltantes.
@@ -334,6 +341,63 @@ Resposta esperada:
 ```
 
 A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O backend valida `document_id` pelo `organization_id` do JWT antes de gerar a URL e registra `audit_log` com a acao `document.download_url`.
+
+## Document processing local/mock
+
+O processamento local serve apenas para preparar a base de `document_chunks` e `document_embeddings`. Ele recebe texto simples enviado pela API, divide em chunks e gera embeddings fake/deterministicos de 1536 dimensoes. Nao ha chamada para OpenAI, Claude, Bedrock, OCR, RAG, SQS ou worker.
+
+Configuracao:
+
+```env
+LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+```
+
+Processar texto local/mock:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents/document-uuid/process-local \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Texto ficticio para processamento local em chunks.",
+    "chunk_size_chars": 1200,
+    "chunk_overlap_chars": 120,
+    "metadata": {
+      "source": "local_mock"
+    }
+  }'
+```
+
+PowerShell:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/documents/document-uuid/process-local" `
+  -Method Post `
+  -Headers @{ Authorization = "Bearer $TOKEN" } `
+  -ContentType "application/json" `
+  -Body (@{
+    text = "Texto ficticio para processamento local em chunks."
+    chunk_size_chars = 1200
+    chunk_overlap_chars = 120
+    metadata = @{ source = "local_mock" }
+  } | ConvertTo-Json)
+```
+
+Listar chunks do documento:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/documents/document-uuid/chunks \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Regras importantes:
+
+- `organization_id` nunca e aceito no payload;
+- o documento e buscado pelo `organization_id` do JWT;
+- `documents:process` protege o processamento local;
+- `document_chunks:read` protege a leitura de chunks;
+- o `audit_log` registra contagens e metadados tecnicos, sem registrar o texto integral do documento.
 
 ## Seed interno de permissoes
 
@@ -619,6 +683,12 @@ Testar documents:
 python -m unittest tests.test_documents_storage tests.test_documents_layers tests.test_documents_routes -v
 ```
 
+Testar document processing:
+
+```bash
+python -m unittest tests.test_document_processing_layers tests.test_document_processing_routes -v
+```
+
 Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
 
 ## Estrutura
@@ -674,6 +744,13 @@ src/
 │   │   ├── schemas.py
 │   │   ├── service.py
 │   │   └── storage.py
+│   ├── document_processing/
+│   │   ├── chunker.py
+│   │   ├── fake_embeddings.py
+│   │   ├── repository.py
+│   │   ├── router.py
+│   │   ├── schemas.py
+│   │   └── service.py
 │   ├── common/
 │   │   ├── exceptions.py
 │   │   ├── identifiers.py

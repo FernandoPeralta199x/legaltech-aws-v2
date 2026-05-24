@@ -13,7 +13,9 @@ DOCUMENTS_READ: Final = "documents:read"
 DOCUMENTS_WRITE: Final = "documents:write"
 DOCUMENTS_UPLOAD: Final = "documents:upload"
 DOCUMENTS_DOWNLOAD: Final = "documents:download"
+DOCUMENTS_PROCESS: Final = "documents:process"
 DOCUMENTS_DELETE: Final = "documents:delete"
+DOCUMENT_CHUNKS_READ: Final = "document_chunks:read"
 USERS_READ: Final = "users:read"
 USERS_WRITE: Final = "users:write"
 USERS_INVITE: Final = "users:invite"
@@ -51,7 +53,9 @@ ALL_BASE_PERMISSIONS: Final[frozenset[str]] = frozenset(
         DOCUMENTS_WRITE,
         DOCUMENTS_UPLOAD,
         DOCUMENTS_DOWNLOAD,
+        DOCUMENTS_PROCESS,
         DOCUMENTS_DELETE,
+        DOCUMENT_CHUNKS_READ,
         USERS_READ,
         USERS_WRITE,
         USERS_INVITE,
@@ -93,7 +97,9 @@ BASE_ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             DOCUMENTS_WRITE,
             DOCUMENTS_UPLOAD,
             DOCUMENTS_DOWNLOAD,
+            DOCUMENTS_PROCESS,
             DOCUMENTS_DELETE,
+            DOCUMENT_CHUNKS_READ,
             USERS_READ,
             USERS_WRITE,
             USERS_INVITE,
@@ -128,6 +134,8 @@ BASE_ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
             DOCUMENTS_WRITE,
             DOCUMENTS_UPLOAD,
             DOCUMENTS_DOWNLOAD,
+            DOCUMENTS_PROCESS,
+            DOCUMENT_CHUNKS_READ,
             AGENTS_READ,
             AGENTS_START,
             AGENTS_RETRY,
