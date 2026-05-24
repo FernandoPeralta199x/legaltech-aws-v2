@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -192,6 +193,107 @@ class DocumentServiceTest(unittest.TestCase):
         self.assertEqual("metadata-only-local", document_repository.created.storage_bucket)
         self.assertIn(str(organization_id), document_repository.created.storage_key)
         self.assertEqual({"origin": "unit-test"}, document_repository.created.metadata_json)
+
+    def test_upload_document_requires_case_from_same_organization_before_saving(self) -> None:
+        from src.modules.common.exceptions import ResourceNotFoundError
+        from src.modules.documents.service import DocumentService
+
+        class DocumentRepository:
+            def create_document(self, document):
+                return document
+
+        class CaseRepository:
+            def get_case(self, *, organization_id, case_id):
+                return None
+
+        class Storage:
+            def __init__(self) -> None:
+                self.called = False
+
+            def save_upload(self, **kwargs):
+                self.called = True
+                return None
+
+        storage = Storage()
+        service = DocumentService(
+            repository=DocumentRepository(),
+            case_repository=CaseRepository(),
+            storage=storage,
+        )
+
+        with self.assertRaises(ResourceNotFoundError):
+            service.upload_document(
+                organization_id=uuid4(),
+                user_id=uuid4(),
+                case_id=uuid4(),
+                upload_file=SimpleNamespace(filename="contrato.pdf"),
+                metadata={"source": "unit-test"},
+            )
+
+        self.assertFalse(storage.called)
+
+    def test_upload_document_uses_internal_tenant_storage_and_creates_metadata(self) -> None:
+        from src.modules.documents.service import DocumentService
+
+        class DocumentRepository:
+            def __init__(self) -> None:
+                self.created = None
+
+            def create_document(self, document):
+                self.created = document
+                return document
+
+        class CaseRepository:
+            def get_case(self, *, organization_id, case_id):
+                return object()
+
+        class Storage:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def save_upload(self, **kwargs):
+                self.calls.append(kwargs)
+                return SimpleNamespace(
+                    filename="contrato.pdf",
+                    content_type="application/pdf",
+                    size_bytes=42,
+                    storage_bucket="local-dev",
+                    storage_key="org/cases/case/contrato.pdf",
+                    file_hash="sha256:abc123",
+                )
+
+        organization_id = uuid4()
+        user_id = uuid4()
+        case_id = uuid4()
+        storage = Storage()
+        document_repository = DocumentRepository()
+        upload_file = SimpleNamespace(filename="contrato.pdf")
+        service = DocumentService(
+            repository=document_repository,
+            case_repository=CaseRepository(),
+            storage=storage,
+        )
+
+        document = service.upload_document(
+            organization_id=organization_id,
+            user_id=user_id,
+            case_id=case_id,
+            upload_file=upload_file,
+            metadata={"source": "unit-test"},
+        )
+
+        self.assertEqual(organization_id, document.organization_id)
+        self.assertEqual(user_id, document.uploaded_by)
+        self.assertEqual(case_id, document.case_id)
+        self.assertEqual("uploaded", document.status)
+        self.assertEqual("local-dev", document.storage_bucket)
+        self.assertEqual("org/cases/case/contrato.pdf", document.storage_key)
+        self.assertEqual("sha256:abc123", document.file_hash)
+        self.assertEqual({"source": "unit-test"}, document.metadata_json)
+        self.assertIsNotNone(document.uploaded_at)
+        self.assertEqual(organization_id, storage.calls[0]["organization_id"])
+        self.assertEqual(case_id, storage.calls[0]["case_id"])
+        self.assertIs(upload_file, storage.calls[0]["upload_file"])
 
     def test_update_document_validates_new_case_when_case_id_changes(self) -> None:
         from src.modules.common.exceptions import ResourceNotFoundError

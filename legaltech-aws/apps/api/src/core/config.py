@@ -49,6 +49,15 @@ class Settings(BaseSettings):
         default="legaltech-local-api",
         alias="DEV_JWT_AUDIENCE",
     )
+    local_upload_root: str = Field(
+        default="storage/local_uploads",
+        alias="LOCAL_UPLOAD_ROOT",
+    )
+    max_upload_size_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        alias="MAX_UPLOAD_SIZE_BYTES",
+        gt=0,
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

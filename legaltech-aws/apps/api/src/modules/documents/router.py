@@ -1,7 +1,9 @@
+import json
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException
+from fastapi import Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.core.rbac import require_permission
@@ -26,6 +28,27 @@ def serialize_document(document) -> dict:
 
 def request_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
+
+
+def parse_upload_metadata(metadata: str | None) -> dict:
+    if metadata is None or metadata.strip() == "":
+        return {}
+
+    try:
+        parsed = json.loads(metadata)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="metadata must be a valid JSON object.",
+        ) from exc
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="metadata must be a JSON object.",
+        )
+
+    return parsed
 
 
 @router.get("")
@@ -93,6 +116,45 @@ def create_document(
     )
 
     return success_response(serialize_document(document), "Documento criado com sucesso.")
+
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+def upload_document(
+    request: Request,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+    audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
+    tenant: Annotated[TenantContext, Depends(require_permission("documents:upload"))],
+    case_id: Annotated[UUID, Form()],
+    file: Annotated[UploadFile, File()],
+    metadata: Annotated[str | None, Form()] = None,
+) -> dict[str, object]:
+    document = service.upload_document(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        case_id=case_id,
+        upload_file=file,
+        metadata=parse_upload_metadata(metadata),
+    )
+    audit_log.record_event(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        action="document.upload",
+        entity_type="document",
+        entity_id=document.id,
+        metadata={
+            "case_id": str(document.case_id),
+            "filename": document.filename,
+            "source": "api",
+            "storage": "local_mock",
+        },
+        ip_address=request_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return success_response(
+        serialize_document(document),
+        "Documento enviado com sucesso.",
+    )
 
 
 @router.get("/{document_id}")

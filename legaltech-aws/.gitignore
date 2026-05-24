@@ -59,3 +59,4 @@ logs/
 tmp/
 temp/
 .cache/
+apps/api/storage/local_uploads/

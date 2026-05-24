@@ -1,6 +1,8 @@
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
+from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from src.models.case import Case
@@ -10,6 +12,7 @@ from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.identifiers import parse_uuid
 from src.modules.documents.repository import DocumentRepository
 from src.modules.documents.schemas import DocumentCreate, DocumentUpdate
+from src.modules.documents.storage import LocalDocumentStorage, LocalUploadResult
 
 
 class DocumentRepositoryProtocol(Protocol):
@@ -44,12 +47,23 @@ class CaseRepositoryProtocol(Protocol):
     ) -> Case | None: ...
 
 
+class DocumentStorageProtocol(Protocol):
+    def save_upload(
+        self,
+        *,
+        upload_file: UploadFile,
+        organization_id: UUID,
+        case_id: UUID,
+    ) -> LocalUploadResult: ...
+
+
 class DocumentService:
     def __init__(
         self,
         db: Session | None = None,
         repository: DocumentRepositoryProtocol | None = None,
         case_repository: CaseRepositoryProtocol | None = None,
+        storage: DocumentStorageProtocol | None = None,
     ) -> None:
         if repository is None:
             if db is None:
@@ -63,6 +77,7 @@ class DocumentService:
 
         self.repository = repository
         self.case_repository = case_repository
+        self.storage = storage or LocalDocumentStorage.from_settings()
 
     def list_documents(
         self,
@@ -127,6 +142,47 @@ class DocumentService:
             status=payload.status,
             uploaded_by=parse_uuid(user_id),
             metadata_json=payload.metadata,
+        )
+
+        return self.repository.create_document(document)
+
+    def upload_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        user_id: UUID | str,
+        case_id: UUID | str,
+        upload_file: UploadFile,
+        metadata: dict | None = None,
+    ) -> Document:
+        organization_uuid = parse_uuid(organization_id)
+        case_uuid = parse_uuid(case_id)
+        case = self.case_repository.get_case(
+            organization_id=organization_uuid,
+            case_id=case_uuid,
+        )
+        if case is None:
+            raise ResourceNotFoundError("Case not found.")
+
+        upload_result = self.storage.save_upload(
+            upload_file=upload_file,
+            organization_id=organization_uuid,
+            case_id=case_uuid,
+        )
+
+        document = Document(
+            organization_id=organization_uuid,
+            case_id=case_uuid,
+            filename=upload_result.filename,
+            content_type=upload_result.content_type,
+            size_bytes=upload_result.size_bytes,
+            storage_bucket=upload_result.storage_bucket,
+            storage_key=upload_result.storage_key,
+            file_hash=upload_result.file_hash,
+            status="uploaded",
+            uploaded_by=parse_uuid(user_id),
+            uploaded_at=datetime.now(UTC),
+            metadata_json=metadata or {},
         )
 
         return self.repository.create_document(document)

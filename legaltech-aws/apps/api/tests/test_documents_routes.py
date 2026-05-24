@@ -55,6 +55,19 @@ class FakeDocumentService:
             metadata_json=kwargs["payload"].metadata,
         )
 
+    def upload_document(self, **kwargs):
+        self.calls.append(("upload_document", kwargs))
+        upload_file = kwargs["upload_file"]
+        return make_document(
+            case_id=kwargs["case_id"],
+            filename=upload_file.filename,
+            content_type=upload_file.content_type,
+            size_bytes=21,
+            status="uploaded",
+            metadata_json=kwargs["metadata"],
+            uploaded_at=datetime(2026, 5, 24, 12, 1, tzinfo=UTC),
+        )
+
     def get_document(self, **kwargs):
         self.calls.append(("get_document", kwargs))
         return self.document
@@ -92,6 +105,7 @@ class FakeJwtVerifier:
 class FakePermissionService:
     def __init__(self) -> None:
         self.calls = []
+        self.allowed = True
 
     def has_permission(self, *, organization_id: str, role: str, permission: str) -> bool:
         self.calls.append(
@@ -101,7 +115,7 @@ class FakePermissionService:
                 "permission": permission,
             }
         )
-        return True
+        return self.allowed
 
 
 class DocumentsRoutesTest(unittest.TestCase):
@@ -179,6 +193,59 @@ class DocumentsRoutesTest(unittest.TestCase):
         self.assertEqual(USER_ID, kwargs["user_id"])
         self.assertEqual("documents:write", self.permission_service.calls[0]["permission"])
         self.assertEqual("document.create", self.audit_service.events[0]["action"])
+
+    def test_upload_document_uses_internal_tenant_rbac_and_records_audit(self) -> None:
+        case_id = uuid4()
+        response = self.client.post(
+            "/api/v1/documents/upload",
+            headers=auth_headers(),
+            data={
+                "case_id": str(case_id),
+                "metadata": '{"source":"route-upload"}',
+                "organization_id": str(uuid4()),
+            },
+            files={
+                "file": (
+                    "contrato.pdf",
+                    b"%PDF-1.4 conteudo fake",
+                    "application/pdf",
+                )
+            },
+        )
+
+        self.assertEqual(201, response.status_code)
+        self.assertTrue(response.json()["success"])
+        self.assertEqual("uploaded", response.json()["data"]["status"])
+        _, kwargs = self.service.calls[0]
+        self.assertEqual(ORG_ID, kwargs["organization_id"])
+        self.assertEqual(USER_ID, kwargs["user_id"])
+        self.assertEqual(case_id, kwargs["case_id"])
+        self.assertEqual({"source": "route-upload"}, kwargs["metadata"])
+        self.assertEqual("contrato.pdf", kwargs["upload_file"].filename)
+        self.assertEqual(
+            "documents:upload",
+            self.permission_service.calls[0]["permission"],
+        )
+        self.assertEqual("document.upload", self.audit_service.events[0]["action"])
+
+    def test_upload_document_without_permission_is_forbidden(self) -> None:
+        self.permission_service.allowed = False
+
+        response = self.client.post(
+            "/api/v1/documents/upload",
+            headers=auth_headers(),
+            data={"case_id": str(uuid4())},
+            files={
+                "file": (
+                    "contrato.pdf",
+                    b"%PDF-1.4 conteudo fake",
+                    "application/pdf",
+                )
+            },
+        )
+
+        self.assertEqual(403, response.status_code)
+        self.assertEqual([], self.service.calls)
 
     def test_get_document_records_audit(self) -> None:
         document_id = uuid4()

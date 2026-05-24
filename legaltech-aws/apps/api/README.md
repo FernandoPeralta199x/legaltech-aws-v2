@@ -17,9 +17,10 @@ Esta entrega cria apenas a base da API:
 - RBAC consultando `roles_permissions`;
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
 - audit_log service inicial para eventos sensiveis;
+- upload local/mock de documents para desenvolvimento;
 - README com comandos locais.
 
-Nao foram implementados APIs externas, S3, SQS ou agentes.
+Nao foram implementados APIs externas, S3, presigned URL, OCR, IA, SQS ou agentes.
 As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
 
 ## Requisitos
@@ -61,6 +62,8 @@ DEV_JWT_ENABLED=true
 DEV_JWT_SECRET=fictitious-local-dev-secret-32-bytes-minimum
 DEV_JWT_ISSUER=legaltech-local-dev
 DEV_JWT_AUDIENCE=legaltech-local-api
+LOCAL_UPLOAD_ROOT=storage/local_uploads
+MAX_UPLOAD_SIZE_BYTES=10485760
 ```
 
 Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
@@ -141,16 +144,17 @@ GET    /api/v1/cases/{case_id}
 PATCH  /api/v1/cases/{case_id}
 ```
 
-Rotas iniciais de documents, apenas para metadados:
+Rotas iniciais de documents:
 
 ```text
 GET    /api/v1/documents
 POST   /api/v1/documents
+POST   /api/v1/documents/upload
 GET    /api/v1/documents/{document_id}
 PATCH  /api/v1/documents/{document_id}
 ```
 
-Nesta etapa, documents nao implementa upload real, S3, presigned URL, OCR, IA, embeddings ou RAG.
+O endpoint `/api/v1/documents/upload` salva arquivos apenas em storage local/mock de desenvolvimento. Ele nao implementa S3, presigned URL, OCR, IA, embeddings ou RAG.
 
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
@@ -183,6 +187,7 @@ cases:read
 cases:write
 documents:read
 documents:write
+documents:upload
 ```
 
 Se a organizacao local ja tiver sido populada antes desta permissao existir, rode novamente o seed interno de `roles_permissions`. O seed e idempotente e adiciona apenas permissoes faltantes.
@@ -200,9 +205,11 @@ support
 Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
 Operacoes de leitura e escrita em `documents` tambem registram eventos via `AuditLogService`.
 
-## Documents metadata
+## Documents metadata e upload local
 
-As rotas de documents cadastram somente metadados no banco. Elas nao fazem upload de arquivo, nao geram URL temporaria e nao conversam com S3.
+As rotas de documents cadastram metadados no banco. O upload desta etapa e local/mock, salva arquivos em `apps/api/storage/local_uploads/` e nao conversa com S3.
+
+A pasta `apps/api/storage/local_uploads/` e ignorada pelo Git. Nao coloque documentos reais ou sensiveis ali.
 
 Criar document metadata:
 
@@ -244,6 +251,36 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/documents/document-uuid \
 ```
 
 Campos como `organization_id`, `uploaded_by`, `storage_bucket` e `storage_key` nao sao aceitos no payload. O `organization_id` vem do JWT e os campos de storage permanecem internos como placeholders locais ate a etapa futura de S3/presigned URL.
+
+Upload local/mock de documento:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "case_id=case-uuid" \
+  -F "metadata={\"source\":\"local_mock\"}" \
+  -F "file=@./contrato-exemplo.pdf;type=application/pdf"
+```
+
+PowerShell usando `curl.exe`:
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/v1/documents/upload" `
+  -H "Authorization: Bearer $TOKEN" `
+  -F "case_id=case-uuid" `
+  -F "metadata={""source"":""local_mock""}" `
+  -F "file=@.\contrato-exemplo.pdf;type=application/pdf"
+```
+
+Extensoes permitidas no storage local/mock:
+
+```text
+.pdf
+.docx
+.txt
+```
+
+O limite padrao e `10485760` bytes e pode ser ajustado por `MAX_UPLOAD_SIZE_BYTES` no `.env` local. `LOCAL_UPLOAD_ROOT` deve apontar para uma pasta local de desenvolvimento, por padrao `storage/local_uploads`.
 
 ## Seed interno de permissoes
 
@@ -526,7 +563,7 @@ python -m unittest tests.test_admin_seed_roles_permissions -v
 Testar documents:
 
 ```bash
-python -m unittest tests.test_documents_layers tests.test_documents_routes -v
+python -m unittest tests.test_documents_storage tests.test_documents_layers tests.test_documents_routes -v
 ```
 
 Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
@@ -582,7 +619,8 @@ src/
 │   │   ├── repository.py
 │   │   ├── router.py
 │   │   ├── schemas.py
-│   │   └── service.py
+│   │   ├── service.py
+│   │   └── storage.py
 │   ├── common/
 │   │   ├── exceptions.py
 │   │   ├── identifiers.py
