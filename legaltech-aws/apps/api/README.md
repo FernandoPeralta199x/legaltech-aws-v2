@@ -14,6 +14,7 @@ Esta entrega cria apenas a base da API:
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
 - estrutura JWT/Cognito para `Authorization: Bearer <jwt>`;
 - RBAC consultando `roles_permissions`;
+- matriz base de permissoes por papel e seed interno de `roles_permissions`;
 - audit_log service inicial para eventos sensiveis;
 - README com comandos locais.
 
@@ -127,7 +128,46 @@ cases:read
 cases:write
 ```
 
+Papeis base preparados no seed interno:
+
+```text
+owner
+admin
+analyst
+client
+support
+```
+
 Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
+
+## Seed interno de permissoes
+
+O seed de `roles_permissions` e um comando administrativo interno, nao uma rota publica. Ele popula apenas permissoes faltantes para uma organizacao existente e registra auditoria quando cria novas permissoes.
+
+Dry run, sem persistir:
+
+```bash
+python -m src.modules.admin.seed_roles_permissions \
+  --organization-id 11111111-1111-4111-8111-111111111111 \
+  --dry-run
+```
+
+Aplicar no banco configurado em `DATABASE_URL`:
+
+```bash
+python -m src.modules.admin.seed_roles_permissions \
+  --organization-id 11111111-1111-4111-8111-111111111111
+```
+
+Registrar usuario interno responsavel pela auditoria, se existir na tabela `users`:
+
+```bash
+python -m src.modules.admin.seed_roles_permissions \
+  --organization-id 11111111-1111-4111-8111-111111111111 \
+  --actor-user-id 22222222-2222-4222-8222-222222222222
+```
+
+Use UUIDs reais apenas no ambiente local/dev apropriado. Nao coloque esses valores no codigo.
 
 ## Migrations
 
@@ -179,6 +219,7 @@ Testar auth/RBAC e auditoria:
 ```bash
 python -m unittest tests.test_auth_rbac_audit -v
 python -m unittest tests.test_roles_permissions -v
+python -m unittest tests.test_admin_seed_roles_permissions -v
 ```
 
 Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
@@ -214,6 +255,8 @@ src/
 │   ├── types.py
 │   └── user.py
 ├── modules/
+│   ├── admin/
+│   │   └── seed_roles_permissions.py
 │   ├── audit/
 │   │   └── service.py
 │   ├── cases/
@@ -233,6 +276,7 @@ src/
 │   ├── health/
 │   │   └── router.py
 │   └── roles/
+│       ├── permissions.py
 │       ├── repository.py
 │       └── service.py
 └── main.py
@@ -241,7 +285,7 @@ src/
 ## Proximos passos
 
 1. Validar migrations contra um PostgreSQL local com `uuid-ossp` e `pgvector`.
-2. Popular `roles_permissions` por organizacao e papel.
+2. Rodar o seed interno de `roles_permissions` para cada organizacao de desenvolvimento.
 3. Mapear usuario interno a partir de `sub`/Cognito e tabela `users`.
 4. Expandir auditoria para tentativas negadas.
-5. Criar seed/admin tooling para permissoes iniciais.
+5. Criar administracao segura para futuras alteracoes de permissoes, com aprovacao e auditoria.
