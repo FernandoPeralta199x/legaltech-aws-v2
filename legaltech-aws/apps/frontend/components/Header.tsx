@@ -1,8 +1,21 @@
-import { LogIn, Search } from "lucide-react";
+"use client";
+
+import { LogIn, LogOut, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/Button";
+import { clearStoredSession } from "@/src/lib/authStorage";
+import { useDevSession } from "@/src/lib/useDevSession";
 
 export function Header() {
+  const router = useRouter();
+  const session = useDevSession();
+
+  function handleLogout() {
+    clearStoredSession();
+    router.replace("/login");
+  }
+
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur md:px-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -20,12 +33,30 @@ export function Header() {
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold text-ink">Demo local</p>
-            <p className="text-xs text-slate-500">Sem autenticacao real</p>
+            <p className="text-sm font-semibold text-ink">
+              {session ? session.email : "Sem sessao dev"}
+            </p>
+            <p className="text-xs text-slate-500">
+              {session ? `Papel: ${session.role}` : "Autenticacao local"}
+            </p>
           </div>
-          <Button href="/login" icon={<LogIn aria-hidden="true" size={16} />} variant="secondary">
-            Login
-          </Button>
+          {session ? (
+            <Button
+              icon={<LogOut aria-hidden="true" size={16} />}
+              onClick={handleLogout}
+              variant="secondary"
+            >
+              Sair
+            </Button>
+          ) : (
+            <Button
+              href="/login"
+              icon={<LogIn aria-hidden="true" size={16} />}
+              variant="secondary"
+            >
+              Login
+            </Button>
+          )}
         </div>
       </div>
     </header>
