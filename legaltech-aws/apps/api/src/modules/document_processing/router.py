@@ -13,6 +13,9 @@ from src.modules.document_processing.schemas import DocumentChunkRead
 from src.modules.document_processing.schemas import ProcessLocalDocumentRequest
 from src.modules.document_processing.schemas import ProcessLocalDocumentResponse
 from src.modules.document_processing.service import DocumentProcessingService
+from src.modules.queues.publisher import DocumentProcessingJobPublisher
+from src.modules.queues.publisher import create_document_processing_job_publisher
+from src.modules.queues.schemas import EnqueueDocumentProcessingResult
 
 
 router = APIRouter(prefix="/api/v1/documents", tags=["document-processing"])
@@ -24,6 +27,12 @@ def get_document_processing_service(
     return DocumentProcessingService(db=db)
 
 
+def get_document_processing_job_publisher(
+    db: Annotated[Session, Depends(get_db)],
+) -> DocumentProcessingJobPublisher:
+    return create_document_processing_job_publisher(db=db)
+
+
 def serialize_process_result(result) -> dict:
     return ProcessLocalDocumentResponse.model_validate(result).model_dump(mode="json")
 
@@ -32,8 +41,49 @@ def serialize_chunk(chunk) -> dict:
     return DocumentChunkRead.model_validate(chunk).model_dump(mode="json")
 
 
+def serialize_enqueue_result(result) -> dict:
+    return EnqueueDocumentProcessingResult.model_validate(result).model_dump(mode="json")
+
+
 def request_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
+
+
+@router.post("/{document_id}/enqueue-processing", status_code=status.HTTP_202_ACCEPTED)
+def enqueue_document_processing(
+    document_id: UUID,
+    request: Request,
+    publisher: Annotated[
+        DocumentProcessingJobPublisher,
+        Depends(get_document_processing_job_publisher),
+    ],
+    audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
+    tenant: Annotated[TenantContext, Depends(require_permission("documents:process"))],
+) -> dict[str, object]:
+    result = publisher.enqueue_document_processing(
+        organization_id=tenant.organization_id,
+        document_id=document_id,
+        requested_by=tenant.user_id,
+    )
+    audit_log.record_event(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        action="document.processing_enqueue",
+        entity_type="document",
+        entity_id=document_id,
+        metadata={
+            "job_id": str(result.job_id),
+            "queue_backend": result.queue_backend,
+            "source": "api",
+        },
+        ip_address=request_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return success_response(
+        serialize_enqueue_result(result),
+        "Processamento de documento enfileirado com sucesso.",
+    )
 
 
 @router.post("/{document_id}/process-local", status_code=status.HTTP_201_CREATED)

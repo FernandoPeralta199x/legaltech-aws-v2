@@ -60,3 +60,4 @@ tmp/
 temp/
 .cache/
 apps/api/storage/local_uploads/
+apps/api/storage/local_queue/

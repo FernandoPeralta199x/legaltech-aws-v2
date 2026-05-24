@@ -21,9 +21,10 @@ Esta entrega cria apenas a base da API:
 - abstracao de storage de documents com modo `local` e modo `s3`;
 - geracao preparada de URL temporaria de download para documents;
 - base local/mock de document_chunks e document_embeddings, sem IA externa;
+- fila local/mock para processamento de documents e worker inicial local;
 - README com comandos locais.
 
-Nao foram implementados OCR real, IA real, RAG real, SQS, workers, agentes, frontend ou APIs externas.
+Nao foram implementados OCR real, IA real, RAG real, AWS SQS real, Lambda, agentes completos, frontend ou APIs externas.
 O modo S3 esta preparado para ambiente futuro AWS ou LocalStack, mas os testes nao exigem AWS real.
 As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
 
@@ -73,6 +74,9 @@ S3_DOCUMENTS_BUCKET=legaltech-documents-dev
 AWS_ENDPOINT_URL=
 PRESIGNED_URL_EXPIRES_IN_SECONDS=900
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+QUEUE_BACKEND=local
+LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
+SQS_DOCUMENT_PROCESSING_QUEUE_URL=
 ```
 
 Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
@@ -161,6 +165,7 @@ POST   /api/v1/documents
 POST   /api/v1/documents/upload
 GET    /api/v1/documents/{document_id}/download-url
 POST   /api/v1/documents/{document_id}/process-local
+POST   /api/v1/documents/{document_id}/enqueue-processing
 GET    /api/v1/documents/{document_id}/chunks
 GET    /api/v1/documents/{document_id}
 PATCH  /api/v1/documents/{document_id}
@@ -168,6 +173,7 @@ PATCH  /api/v1/documents/{document_id}
 
 O endpoint `/api/v1/documents/upload` continua funcionando em modo local/mock por padrao. Com `STORAGE_BACKEND=s3`, o backend fica preparado para usar S3 compativel via boto3.
 O processamento local cria chunks e embeddings fake/deterministicos para desenvolvimento. Ele nao chama OpenAI, Claude, AWS Bedrock ou qualquer IA externa, e nao implementa OCR nem RAG real.
+A fila local/mock permite enfileirar processamento de documents sem AWS real. O worker local consome jobs com IDs e revalida tenant/case/document no banco antes de chamar o processamento local.
 
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
 As rotas reais usam `DATABASE_URL`; para chamadas locais fora dos testes, aplique as migrations em um PostgreSQL disponivel e cadastre permissoes em `roles_permissions`.
@@ -344,12 +350,14 @@ A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O
 
 ## Document processing local/mock
 
-O processamento local serve apenas para preparar a base de `document_chunks` e `document_embeddings`. Ele recebe texto simples enviado pela API, divide em chunks e gera embeddings fake/deterministicos de 1536 dimensoes. Nao ha chamada para OpenAI, Claude, Bedrock, OCR, RAG, SQS ou worker.
+O processamento local serve apenas para preparar a base de `document_chunks` e `document_embeddings`. Ele recebe texto simples enviado pela API ou texto mockado pelo worker local, divide em chunks e gera embeddings fake/deterministicos de 1536 dimensoes. Nao ha chamada para OpenAI, Claude, Bedrock, OCR, RAG real, AWS SQS real ou Lambda.
 
 Configuracao:
 
 ```env
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+QUEUE_BACKEND=local
+LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
 ```
 
 Processar texto local/mock:
@@ -398,6 +406,73 @@ Regras importantes:
 - `documents:process` protege o processamento local;
 - `document_chunks:read` protege a leitura de chunks;
 - o `audit_log` registra contagens e metadados tecnicos, sem registrar o texto integral do documento.
+
+## Fila local/mock e worker
+
+O endpoint de enqueue publica um job local/mock com apenas IDs:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents/document-uuid/enqueue-processing \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+PowerShell:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/documents/document-uuid/enqueue-processing" `
+  -Method Post `
+  -Headers @{ Authorization = "Bearer $TOKEN" }
+```
+
+Resposta esperada:
+
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "job-uuid",
+    "status": "queued",
+    "queue_backend": "local",
+    "document_id": "document-uuid"
+  },
+  "message": "Processamento de documento enfileirado com sucesso."
+}
+```
+
+Rodar o worker local uma vez, a partir de `legaltech-aws/apps/api`:
+
+```powershell
+$env:PYTHONPATH=".;..\.."
+.\.venv\Scripts\python.exe ..\..\workers\document_processing\worker.py --once
+```
+
+Ou por modulo, a partir de `legaltech-aws`:
+
+```powershell
+$env:PYTHONPATH="apps/api;."
+apps\api\.venv\Scripts\python.exe -m workers.document_processing.worker --once
+```
+
+O worker:
+
+- consome jobs de `apps/api/storage/local_queue/document_processing.jsonl`;
+- revalida `organization_id`, `case_id` e `document_id` no banco;
+- evita duplicidade basica usando `agent_executions.job_id` e chunks ja existentes;
+- chama o processamento local com texto ficticio de desenvolvimento;
+- registra `audit_log` de inicio, sucesso, falha ou skip;
+- nao transporta nem registra conteudo integral do documento.
+
+Configuracao futura SQS/LocalStack, com valores ficticios:
+
+```env
+QUEUE_BACKEND=sqs
+SQS_DOCUMENT_PROCESSING_QUEUE_URL=http://localhost:4566/000000000000/legaltech-document-processing-queue
+AWS_REGION=sa-east-1
+AWS_ENDPOINT_URL=http://localhost:4566
+```
+
+Nao configure credenciais AWS reais em arquivos versionados. A implementacao SQS esta preparada para testes com client mockado ou LocalStack futuro.
 
 ## Seed interno de permissoes
 
@@ -689,6 +764,12 @@ Testar document processing:
 python -m unittest tests.test_document_processing_layers tests.test_document_processing_routes -v
 ```
 
+Testar fila local/mock e worker:
+
+```bash
+python -m unittest tests.test_document_processing_queue_worker -v
+```
+
 Esses testes usam services/verifiers mockados via `dependency_overrides`, entao nao exigem conexao com banco ou Cognito real.
 
 ## Estrutura
@@ -751,6 +832,11 @@ src/
 │   │   ├── router.py
 │   │   ├── schemas.py
 │   │   └── service.py
+│   ├── queues/
+│   │   ├── local_queue.py
+│   │   ├── publisher.py
+│   │   ├── schemas.py
+│   │   └── sqs_client.py
 │   ├── common/
 │   │   ├── exceptions.py
 │   │   ├── identifiers.py

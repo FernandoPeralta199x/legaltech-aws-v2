@@ -78,6 +78,18 @@ class Settings(BaseSettings):
         alias="LOCAL_PROCESSING_MAX_TEXT_CHARS",
         gt=0,
     )
+    queue_backend: Literal["local", "sqs"] = Field(
+        default="local",
+        alias="QUEUE_BACKEND",
+    )
+    local_queue_path: str = Field(
+        default="storage/local_queue/document_processing.jsonl",
+        alias="LOCAL_QUEUE_PATH",
+    )
+    sqs_document_processing_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_DOCUMENT_PROCESSING_QUEUE_URL",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod
