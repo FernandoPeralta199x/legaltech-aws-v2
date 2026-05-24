@@ -1,8 +1,8 @@
-import { FileText, Upload } from "lucide-react";
+import { FileText } from "lucide-react";
+import Link from "next/link";
 
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
-import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -14,58 +14,45 @@ export default function DocumentsPage() {
     <AuthGuard>
       <AppLayout>
         <PageTitle
-          actions={
-            <Button
-              disabled
-              icon={<Upload aria-hidden="true" size={16} />}
-              variant="secondary"
-            >
-              Upload futuro
-            </Button>
-          }
-          description="Listagem mockada para preparar metadata, upload local/mock e URLs temporarias sem expor storage interno."
+          description="Documentos enviados para os casos jurídicos, com status de processamento."
           eyebrow="Documentos"
-          title="Documentos do MVP"
+          title="Documentos enviados"
         />
 
-        <Card
-          description="Sem upload real nesta tarefa. Os nomes abaixo sao ficticios e usados apenas para UI."
-          title="Arquivos recentes"
-        >
-          <div className="divide-y divide-slate-100">
-            {mockDocuments.map((document) => (
+        <Card title="Arquivos recentes" description="Sem upload real — dados demonstrativos.">
+          <div className="space-y-3">
+            {mockDocuments.map((doc) => (
               <div
-                className="grid gap-4 py-4 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.6fr]"
-                key={document.id}
+                className="flex flex-wrap items-center gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3"
+                key={doc.id}
               >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
-                    <FileText aria-hidden="true" size={18} />
-                  </span>
-                  <div>
-                    <p className="font-semibold text-ink">{document.filename}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {document.contentType}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06]">
+                    <FileText className="text-slate-400" size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-100">
+                      {doc.filename}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {doc.sizeLabel} · {doc.contentType.split("/")[1]?.toUpperCase()}
                     </p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase text-slate-500">
-                    Caso
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700">{document.caseCode}</p>
+                <div className="hidden sm:block">
+                  <p className="text-[11px] text-slate-500">Caso</p>
+                  <Link
+                    className="text-xs font-medium text-brand-blue-light hover:underline"
+                    href={`/cases/${doc.caseId}`}
+                  >
+                    {doc.caseCode}
+                  </Link>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase text-slate-500">
-                    Upload
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700">
-                    {formatDate(document.uploadedAt)} · {document.sizeLabel}
-                  </p>
+                <div className="hidden md:block">
+                  <p className="text-[11px] text-slate-500">Upload</p>
+                  <p className="text-xs text-slate-300">{formatDate(doc.uploadedAt)}</p>
                 </div>
-                <div className="flex items-center md:justify-end">
-                  <StatusBadge status={document.status} />
-                </div>
+                <StatusBadge status={doc.status} />
               </div>
             ))}
           </div>

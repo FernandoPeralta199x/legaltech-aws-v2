@@ -9,19 +9,25 @@ type PageTitleProps = {
 
 export function PageTitle({ actions, description, eyebrow, title }: PageTitleProps) {
   return (
-    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {eyebrow && (
-          <p className="text-sm font-semibold uppercase text-registry">{eyebrow}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-brand-teal">
+            {eyebrow}
+          </p>
         )}
-        <h1 className="mt-1 text-3xl font-semibold text-ink">{title}</h1>
+        <h1 className="mt-1 text-[1.375rem] font-bold leading-tight tracking-tightest text-white sm:text-[1.5rem]">
+          {title}
+        </h1>
         {description && (
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-400">
             {description}
           </p>
         )}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      )}
     </div>
   );
 }
