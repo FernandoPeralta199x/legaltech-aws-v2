@@ -8,10 +8,12 @@ Esta entrega cria apenas a base da API:
 - endpoint `GET /health`;
 - configuracao central com Pydantic Settings;
 - estrutura inicial de banco com SQLAlchemy;
+- configuracao Alembic e migration inicial;
+- models iniciais com `organization_id` nas tabelas sensiveis;
 - placeholders seguros para Cognito/JWT e tenant;
 - README com comandos locais.
 
-Nao foram implementados autenticacao real, modelos de banco, migrations, APIs externas, S3, SQS ou agentes.
+Nao foram implementados autenticacao real, APIs externas, S3, SQS ou agentes.
 
 ## Requisitos
 
@@ -67,6 +69,40 @@ Resposta esperada:
 }
 ```
 
+## Migrations
+
+O Alembic esta configurado em `alembic.ini` e usa `DATABASE_URL` via Pydantic Settings.
+
+Gerar uma nova revision a partir dos models:
+
+```bash
+alembic revision --autogenerate -m "descricao da mudanca"
+```
+
+Aplicar migrations no banco configurado:
+
+```bash
+alembic upgrade head
+```
+
+Ver migration atual:
+
+```bash
+alembic current
+```
+
+Gerar SQL sem aplicar no banco:
+
+```bash
+alembic upgrade head --sql
+```
+
+## Testes
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ## Estrutura
 
 ```text
@@ -79,6 +115,15 @@ src/
 ├── db/
 │   ├── base.py
 │   └── session.py
+├── models/
+│   ├── agent_execution.py
+│   ├── audit_log.py
+│   ├── case.py
+│   ├── client.py
+│   ├── document.py
+│   ├── mixins.py
+│   ├── organization.py
+│   └── user.py
 ├── modules/
 │   └── health/
 │       └── router.py
@@ -87,8 +132,8 @@ src/
 
 ## Proximos passos
 
-1. Adicionar testes automatizados.
-2. Configurar Alembic e modelos iniciais com `organization_id`.
-3. Implementar validacao JWT/Cognito.
-4. Implementar tenant middleware e RBAC.
-5. Adicionar auditoria para rotas sensiveis.
+1. Expandir models para `roles_permissions`, partes, cache externo, chunks, reviews e reports.
+2. Implementar validacao JWT/Cognito.
+3. Implementar tenant middleware e RBAC.
+4. Adicionar auditoria para rotas sensiveis.
+5. Criar repositories e services para clientes/casos.
