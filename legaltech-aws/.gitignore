@@ -24,6 +24,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.npm-cache/
+apps/frontend/.npm-cache/
+*.tsbuildinfo
 
 # Python
 __pycache__/

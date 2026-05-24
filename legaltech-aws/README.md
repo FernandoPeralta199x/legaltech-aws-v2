@@ -4,7 +4,7 @@
 
 Base inicial para o desenvolvimento do projeto LegalTech AWS V2: uma plataforma modular para fluxos juridicos com frontend web, API backend, persistencia relacional, preparo para RAG futuro, armazenamento privado de documentos, filas, workers e infraestrutura AWS.
 
-Esta fase cria apenas a estrutura documental e organizacional do repositório. Nenhuma dependencia foi instalada, nenhuma API externa real foi implementada e nenhum agente completo foi criado.
+Esta fase cria a base documental, backend inicial e frontend inicial do repositório. Nenhuma API externa real foi implementada e nenhum agente completo foi criado.
 
 ## Stack Tecnica
 
@@ -54,21 +54,22 @@ legaltech-aws/
 3. Configurar SQLAlchemy, Alembic, PostgreSQL e modelos iniciais com `organization_id`.
 4. Criar autenticacao base com validacao de JWT/Cognito simulada em ambiente local.
 5. Implementar RBAC, tenant resolution e `audit_log` para acoes sensiveis.
-6. Criar frontend Next.js com layout autenticado, chamadas ao backend e estados de erro.
+6. Criar frontend Next.js com layout base, chamadas futuras ao backend e estados de UI.
 7. Implementar fluxo de upload via presigned URL para S3 privado.
 8. Introduzir SQS e worker de triagem com contrato de mensagem versionado.
 9. Preparar pgvector e pipeline RAG somente depois dos fluxos base estarem testados.
 10. Adicionar agentes e integracoes externas apenas apos contratos, auditoria e revisao humana estarem definidos.
 
-## Comandos Futuros
-
-Os comandos abaixo sao referencias para etapas futuras. Nao foram executados nesta preparacao inicial.
+## Comandos Locais
 
 ```bash
 # Frontend
 cd apps/frontend
 npm install
 npm run dev
+npm run typecheck
+npm run lint
+npm run build
 ```
 
 ```bash
@@ -86,10 +87,21 @@ alembic upgrade head
 ```
 
 ```bash
-# Testes futuros
-npm test
+# Testes e validacoes
+cd apps/frontend
+npm run typecheck
+npm run lint
+npm run build
+
+cd ../api
 pytest
 ```
+
+## Frontend Inicial
+
+O app em `apps/frontend` usa Next.js + TypeScript + Tailwind CSS e inclui rotas iniciais para `/`, `/login`, `/dashboard`, `/clients`, `/cases` e `/documents`.
+
+Nesta etapa, a UI usa apenas dados mockados e ficticios. O `apiClient` esta preparado para consumir `NEXT_PUBLIC_API_BASE_URL` futuramente, sem autenticacao real e sem expor segredos no navegador.
 
 ## Configuracao
 
