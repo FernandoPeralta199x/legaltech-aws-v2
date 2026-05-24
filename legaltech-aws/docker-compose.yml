@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: legaltech-postgres
+    environment:
+      POSTGRES_DB: legaltech
+      POSTGRES_USER: legaltech
+      POSTGRES_PASSWORD: legaltech_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - legaltech_postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legaltech -d legaltech"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  legaltech_postgres_data:

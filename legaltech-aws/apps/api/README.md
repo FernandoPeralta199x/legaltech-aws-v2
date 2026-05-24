@@ -24,6 +24,7 @@ As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissio
 ## Requisitos
 
 - Python 3.12+
+- Docker Desktop ou Docker Engine com Docker Compose
 - PostgreSQL local ou remoto para migrations
 - Extensoes PostgreSQL `uuid-ossp` e `vector` disponiveis no banco
 
@@ -38,7 +39,9 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Opcionalmente crie um `.env` local, sem versionar segredos:
+O arquivo `apps/api/.env.example.local` contem variaveis ficticias para o PostgreSQL local do `docker-compose.yml`.
+
+Exemplo local, sem versionar segredos:
 
 ```env
 APP_ENV=local
@@ -46,13 +49,47 @@ APP_NAME=legaltech-api
 APP_VERSION=0.1.0
 ENABLE_DOCS=true
 LOG_LEVEL=INFO
-DATABASE_URL=postgresql+psycopg://legaltech:legaltech@localhost:5432/legaltech
+DATABASE_URL=postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech
 AWS_REGION=sa-east-1
 COGNITO_USER_POOL_ID=
 COGNITO_CLIENT_ID=
 COGNITO_ORGANIZATION_CLAIM=custom:organization_id
 COGNITO_ROLE_CLAIM=custom:role
 COGNITO_TOKEN_USE=id
+```
+
+## PostgreSQL local com Docker
+
+Na raiz do repositorio, suba o PostgreSQL local:
+
+```bash
+docker compose up -d postgres
+```
+
+O compose usa:
+
+```text
+Banco: legaltech
+Usuario: legaltech
+Senha: legaltech_dev
+Porta: 5432
+Imagem: pgvector/pgvector:pg16
+Volume: legaltech_postgres_data
+```
+
+As credenciais acima sao apenas ficticias para desenvolvimento local. Nao use esses valores em producao.
+
+Verificar saude do banco:
+
+```bash
+docker compose ps
+docker compose exec postgres pg_isready -U legaltech -d legaltech
+```
+
+Confirmar extensoes disponiveis:
+
+```bash
+docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT extname FROM pg_extension WHERE extname IN ('uuid-ossp', 'vector') ORDER BY extname;"
 ```
 
 ## Rodar localmente
@@ -144,6 +181,18 @@ Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `Aud
 
 O seed de `roles_permissions` e um comando administrativo interno, nao uma rota publica. Ele popula apenas permissoes faltantes para uma organizacao existente e registra auditoria quando cria novas permissoes.
 
+Para testar localmente, aplique primeiro as migrations e crie a organizacao tecnica ficticia:
+
+```bash
+docker compose exec -T postgres psql -U legaltech -d legaltech < database/local/seed_example_organization.sql
+```
+
+No PowerShell, execute a partir da raiz do repositorio:
+
+```powershell
+Get-Content database\local\seed_example_organization.sql | docker compose exec -T postgres psql -U legaltech -d legaltech
+```
+
 Dry run, sem persistir:
 
 ```bash
@@ -168,6 +217,12 @@ python -m src.modules.admin.seed_roles_permissions \
 ```
 
 Use UUIDs reais apenas no ambiente local/dev apropriado. Nao coloque esses valores no codigo.
+
+Conferir permissoes populadas no banco local:
+
+```bash
+docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT role, COUNT(*) FROM roles_permissions WHERE organization_id = '11111111-1111-4111-8111-111111111111' GROUP BY role ORDER BY role;"
+```
 
 ## Migrations
 
@@ -200,6 +255,30 @@ Gerar SQL sem aplicar no banco:
 
 ```bash
 alembic upgrade head --sql
+```
+
+Fluxo completo para validar migrations no PostgreSQL local:
+
+```bash
+cd legaltech-aws/apps/api
+export DATABASE_URL=postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech
+alembic upgrade head
+alembic current
+```
+
+No PowerShell:
+
+```powershell
+cd legaltech-aws\apps\api
+$env:DATABASE_URL="postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech"
+alembic upgrade head
+alembic current
+```
+
+Para resetar apenas o banco local de desenvolvimento, remova o volume nomeado na raiz do repositorio:
+
+```bash
+docker compose down -v
 ```
 
 ## Testes
