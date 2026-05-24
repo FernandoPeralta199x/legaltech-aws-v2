@@ -74,6 +74,7 @@ S3_DOCUMENTS_BUCKET=legaltech-documents-dev
 AWS_ENDPOINT_URL=
 PRESIGNED_URL_EXPIRES_IN_SECONDS=900
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+DOCUMENT_PROCESSING_MAX_ATTEMPTS=3
 QUEUE_BACKEND=local
 LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
 SQS_DOCUMENT_PROCESSING_QUEUE_URL=
@@ -356,6 +357,7 @@ Configuracao:
 
 ```env
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+DOCUMENT_PROCESSING_MAX_ATTEMPTS=3
 QUEUE_BACKEND=local
 LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
 ```
@@ -457,11 +459,35 @@ apps\api\.venv\Scripts\python.exe -m workers.document_processing.worker --once
 O worker:
 
 - consome jobs de `apps/api/storage/local_queue/document_processing.jsonl`;
-- revalida `organization_id`, `case_id` e `document_id` no banco;
-- evita duplicidade basica usando `agent_executions.job_id` e chunks ja existentes;
+- revalida `organization_id`, `case_id` e `document_id` no banco antes de processar;
+- registra e atualiza `agent_executions` com `queued`, `running`, `completed`, `failed`, `retrying` ou `skipped`;
+- atualiza `documents.status` para `processing`, `processed` ou `failed`;
+- evita duplicidade basica usando `agent_executions.job_id` concluido e chunks ja existentes;
+- respeita `attempt` do job e o limite `DOCUMENT_PROCESSING_MAX_ATTEMPTS`;
 - chama o processamento local com texto ficticio de desenvolvimento;
 - registra `audit_log` de inicio, sucesso, falha ou skip;
 - nao transporta nem registra conteudo integral do documento.
+
+Payload interno do job local/mock:
+
+```json
+{
+  "job_id": "job-uuid",
+  "job_type": "document_processing",
+  "agent_type": "document_processing_local",
+  "organization_id": "organization-uuid",
+  "case_id": "case-uuid",
+  "document_id": "document-uuid",
+  "attempt": 1,
+  "requested_by": "user-uuid",
+  "metadata": {
+    "source": "api"
+  },
+  "created_at": "2026-05-24T00:00:00Z"
+}
+```
+
+O payload acima nao deve conter texto integral, arquivo, contrato, CPF, token ou qualquer dado sensivel completo.
 
 Configuracao futura SQS/LocalStack, com valores ficticios:
 
@@ -808,6 +834,11 @@ src/
 │   │   ├── seed_roles_permissions.py
 │   │   └── smoke_clients_cases.py
 │   ├── audit/
+│   │   └── service.py
+│   ├── agent_executions/
+│   │   ├── idempotency.py
+│   │   ├── repository.py
+│   │   ├── schemas.py
 │   │   └── service.py
 │   ├── cases/
 │   │   ├── repository.py

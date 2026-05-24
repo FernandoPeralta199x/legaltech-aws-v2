@@ -37,12 +37,14 @@ class DocumentProcessingJob(BaseModel):
 
     job_id: UUID = Field(default_factory=uuid4)
     job_type: Literal["document_processing"] = "document_processing"
+    agent_type: Literal["document_processing_local"] = "document_processing_local"
     organization_id: UUID
     case_id: UUID
     document_id: UUID
+    attempt: int = Field(default=1, ge=1)
     requested_by: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
-    enqueued_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @field_validator("metadata")
     @classmethod
@@ -78,5 +80,5 @@ class WorkerResult(BaseModel):
 
     job_id: UUID | None = None
     document_id: UUID | None = None
-    status: Literal["empty", "succeeded", "skipped", "failed"]
+    status: Literal["empty", "completed", "skipped", "failed", "retrying"]
     reason: str | None = None

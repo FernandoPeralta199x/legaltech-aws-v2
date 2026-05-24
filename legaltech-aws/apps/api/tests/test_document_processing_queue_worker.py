@@ -63,6 +63,22 @@ class FakeAuditLogService:
 
 
 class QueueSchemasTest(unittest.TestCase):
+    def test_document_processing_job_includes_agent_type_and_attempt(self) -> None:
+        from src.modules.queues.schemas import DocumentProcessingJob
+
+        job = DocumentProcessingJob(
+            organization_id=uuid4(),
+            case_id=uuid4(),
+            document_id=uuid4(),
+            requested_by=uuid4(),
+            metadata={"source": "unit-test"},
+        )
+
+        self.assertEqual("document_processing_local", job.agent_type)
+        self.assertEqual(1, job.attempt)
+        self.assertNotIn("text", job.model_dump())
+        self.assertNotIn("content", job.model_dump())
+
     def test_document_processing_job_rejects_sensitive_metadata(self) -> None:
         from src.modules.queues.schemas import DocumentProcessingJob
 
@@ -145,6 +161,8 @@ class PublisherTest(unittest.TestCase):
         self.assertEqual(case_id, queue.jobs[0].case_id)
         self.assertEqual(organization_id, queue.jobs[0].organization_id)
         self.assertEqual(requested_by, queue.jobs[0].requested_by)
+        self.assertEqual("document_processing_local", queue.jobs[0].agent_type)
+        self.assertEqual(1, queue.jobs[0].attempt)
         self.assertNotIn("text", queue.jobs[0].model_dump())
         self.assertNotIn("content", queue.jobs[0].model_dump())
 
@@ -263,13 +281,19 @@ class FakeWorkerQueue:
 
 
 class FakeWorkerRepository:
-    def __init__(self, *, document=None, chunks=None, execution=None) -> None:
+    def __init__(self, *, document=None, case=None, chunks=None) -> None:
         self.document = document
+        self.case = case
         self.chunks = chunks or []
-        self.execution = execution
-        self.created_executions = []
-        self.statuses = []
         self.document_queries = []
+        self.case_queries = []
+        self.document_statuses = []
+
+    def get_case(self, *, organization_id, case_id):
+        self.case_queries.append(
+            {"organization_id": organization_id, "case_id": case_id}
+        )
+        return self.case
 
     def get_document(self, *, organization_id, document_id):
         self.document_queries.append(
@@ -280,50 +304,89 @@ class FakeWorkerRepository:
     def list_chunks(self, *, organization_id, document_id):
         return self.chunks
 
-    def get_execution_by_job_id(self, *, organization_id, job_id):
+    def update_document_status(self, document, *, status):
+        document.status = status
+        self.document_statuses.append(status)
+        return document
+
+
+class FakeAgentExecutionService:
+    def __init__(self, *, execution=None, max_attempts=3) -> None:
+        self.execution = execution
+        self.max_attempts = max_attempts
+        self.created_executions = []
+        self.statuses = []
+
+    def get_by_job_id(self, *, organization_id, job_id):
         return self.execution
 
-    def create_execution(self, *, job, status):
+    def create_queued(self, *, job):
         execution = SimpleNamespace(
             id=uuid4(),
             organization_id=job.organization_id,
             case_id=job.case_id,
             document_id=job.document_id,
             job_id=job.job_id,
-            status=status,
+            agent_type=job.agent_type,
+            status="queued",
+            attempt=job.attempt,
             started_at=None,
             completed_at=None,
+            input_payload={},
             output_payload={},
             error_message=None,
         )
         self.created_executions.append(execution)
         self.execution = execution
+        self.statuses.append("queued")
         return execution
 
-    def mark_execution_started(self, execution):
+    def mark_retrying(self, execution, *, job):
+        execution.status = "retrying"
+        execution.attempt = job.attempt
+        self.statuses.append("retrying")
+        return execution
+
+    def mark_running(self, execution, *, job):
         execution.status = "running"
+        execution.attempt = job.attempt
         self.statuses.append("running")
+        return execution
 
-    def mark_execution_succeeded(self, execution, *, result):
-        execution.status = "succeeded"
-        self.statuses.append("succeeded")
+    def mark_completed(self, execution, *, result):
+        execution.status = "completed"
+        self.statuses.append("completed")
+        return execution
 
-    def mark_execution_skipped(self, execution, *, reason):
+    def mark_skipped(self, execution, *, reason):
         execution.status = "skipped"
+        execution.output_payload = {"reason": reason}
         self.statuses.append("skipped")
+        return execution
 
-    def mark_execution_failed(self, execution, *, error_message):
+    def mark_failed(self, execution, *, error_message):
         execution.status = "failed"
         execution.error_message = error_message
         self.statuses.append("failed")
+        return execution
+
+    def can_retry(self, execution, *, job) -> bool:
+        return job.attempt > execution.attempt and job.attempt <= self.max_attempts
+
+    def max_attempts_exceeded(self, *, job) -> bool:
+        return job.attempt > self.max_attempts
 
 
 class FakeProcessingService:
-    def __init__(self) -> None:
+    def __init__(self, *, should_fail=False) -> None:
         self.calls = []
+        self.should_fail = should_fail
 
     def process_local_text(self, **kwargs):
         self.calls.append(kwargs)
+        if self.should_fail:
+            raise RuntimeError("fake processing failure")
+
         return SimpleNamespace(
             document_id=kwargs["document_id"],
             chunk_count=1,
@@ -332,8 +395,24 @@ class FakeProcessingService:
         )
 
 
+class AgentExecutionLayerTest(unittest.TestCase):
+    def test_agent_execution_modules_are_available(self) -> None:
+        from src.modules.agent_executions.repository import AgentExecutionRepository
+        from src.modules.agent_executions.service import AgentExecutionService
+
+        self.assertTrue(AgentExecutionRepository)
+        self.assertTrue(AgentExecutionService)
+
+
 class DocumentProcessingWorkerTest(unittest.TestCase):
-    def make_message(self, *, organization_id=None, document_id=None, case_id=None):
+    def make_message(
+        self,
+        *,
+        organization_id=None,
+        document_id=None,
+        case_id=None,
+        attempt=1,
+    ):
         from src.modules.queues.schemas import DocumentProcessingJob, LocalQueueMessage
 
         job = DocumentProcessingJob(
@@ -341,56 +420,125 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
             case_id=case_id or uuid4(),
             document_id=document_id or uuid4(),
             requested_by=uuid4(),
+            attempt=attempt,
             metadata={"source": "unit-test"},
         )
         return LocalQueueMessage(receipt_handle=str(uuid4()), job=job)
 
-    def test_worker_consumes_job_revalidates_ids_and_processes_document(self) -> None:
+    def test_new_job_creates_execution_running_completed_and_marks_document_processed(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
 
         message = self.make_message()
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
         document = SimpleNamespace(
             id=message.job.document_id,
             organization_id=message.job.organization_id,
             case_id=message.job.case_id,
+            status="uploaded",
         )
-        repository = FakeWorkerRepository(document=document)
+        repository = FakeWorkerRepository(document=document, case=case)
+        execution_service = FakeAgentExecutionService()
         processing_service = FakeProcessingService()
         audit_log = FakeAuditLogService()
         worker = DocumentProcessingWorker(
             queue_client=FakeWorkerQueue([message]),
             repository=repository,
+            execution_service=execution_service,
             processing_service=processing_service,
             audit_log=audit_log,
         )
 
         result = worker.process_one()
 
-        self.assertEqual("succeeded", result.status)
+        self.assertEqual("completed", result.status)
         self.assertEqual([message.receipt_handle], worker.queue_client.acked)
-        self.assertEqual(message.job.organization_id, repository.document_queries[0]["organization_id"])
-        self.assertEqual(message.job.document_id, repository.document_queries[0]["document_id"])
-        self.assertEqual(message.job.organization_id, processing_service.calls[0]["organization_id"])
-        self.assertEqual(message.job.document_id, processing_service.calls[0]["document_id"])
+        self.assertEqual(
+            message.job.organization_id,
+            repository.case_queries[0]["organization_id"],
+        )
+        self.assertEqual(message.job.case_id, repository.case_queries[0]["case_id"])
+        self.assertEqual(
+            message.job.organization_id,
+            repository.document_queries[0]["organization_id"],
+        )
+        self.assertEqual(
+            message.job.document_id,
+            repository.document_queries[0]["document_id"],
+        )
+        self.assertEqual(
+            message.job.organization_id,
+            processing_service.calls[0]["organization_id"],
+        )
+        self.assertEqual(
+            message.job.document_id,
+            processing_service.calls[0]["document_id"],
+        )
         self.assertNotIn("text", audit_log.events[0]["metadata"])
         self.assertNotIn("conteudo sensivel", str(audit_log.events))
-        self.assertIn("succeeded", repository.statuses)
+        self.assertEqual(["queued", "running", "completed"], execution_service.statuses)
+        self.assertEqual(["processing", "processed"], repository.document_statuses)
+        self.assertEqual(
+            [
+                "document_processing.worker_started",
+                "document_processing.worker_completed",
+            ],
+            [event["action"] for event in audit_log.events],
+        )
 
-    def test_worker_rejects_job_when_document_case_does_not_match(self) -> None:
+    def test_completed_duplicate_job_returns_success_without_reprocessing(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
 
         message = self.make_message()
-        document = SimpleNamespace(
-            id=message.job.document_id,
-            organization_id=message.job.organization_id,
-            case_id=uuid4(),
+        execution = SimpleNamespace(
+            status="completed",
+            attempt=1,
+            output_payload={"status": "processed_local"},
         )
-        repository = FakeWorkerRepository(document=document)
+        repository = FakeWorkerRepository()
+        execution_service = FakeAgentExecutionService(execution=execution)
         processing_service = FakeProcessingService()
         audit_log = FakeAuditLogService()
         worker = DocumentProcessingWorker(
             queue_client=FakeWorkerQueue([message]),
             repository=repository,
+            execution_service=execution_service,
+            processing_service=processing_service,
+            audit_log=audit_log,
+        )
+
+        result = worker.process_one()
+
+        self.assertEqual("completed", result.status)
+        self.assertEqual("duplicate_completed", result.reason)
+        self.assertEqual([], processing_service.calls)
+        self.assertEqual([], repository.document_statuses)
+        self.assertEqual("document_processing.worker_skipped", audit_log.events[-1]["action"])
+
+    def test_worker_rejects_job_when_document_case_does_not_match(self) -> None:
+        from workers.document_processing.worker import DocumentProcessingWorker
+
+        message = self.make_message()
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
+        document = SimpleNamespace(
+            id=message.job.document_id,
+            organization_id=message.job.organization_id,
+            case_id=uuid4(),
+            status="uploaded",
+        )
+        repository = FakeWorkerRepository(document=document, case=case)
+        execution_service = FakeAgentExecutionService()
+        processing_service = FakeProcessingService()
+        audit_log = FakeAuditLogService()
+        worker = DocumentProcessingWorker(
+            queue_client=FakeWorkerQueue([message]),
+            repository=repository,
+            execution_service=execution_service,
             processing_service=processing_service,
             audit_log=audit_log,
         )
@@ -399,10 +547,11 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
 
         self.assertEqual("failed", result.status)
         self.assertEqual([], processing_service.calls)
-        self.assertIn("failed", repository.statuses)
+        self.assertIn("failed", execution_service.statuses)
+        self.assertEqual(["failed"], repository.document_statuses)
         self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
 
-    def test_worker_skips_duplicate_when_chunks_already_exist(self) -> None:
+    def test_worker_rejects_job_when_case_belongs_to_another_organization(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
 
         message = self.make_message()
@@ -410,16 +559,52 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
             id=message.job.document_id,
             organization_id=message.job.organization_id,
             case_id=message.job.case_id,
+            status="uploaded",
         )
-        repository = FakeWorkerRepository(
-            document=document,
-            chunks=[SimpleNamespace(id=uuid4())],
-        )
+        repository = FakeWorkerRepository(document=document, case=None)
+        execution_service = FakeAgentExecutionService()
         processing_service = FakeProcessingService()
         audit_log = FakeAuditLogService()
         worker = DocumentProcessingWorker(
             queue_client=FakeWorkerQueue([message]),
             repository=repository,
+            execution_service=execution_service,
+            processing_service=processing_service,
+            audit_log=audit_log,
+        )
+
+        result = worker.process_one()
+
+        self.assertEqual("failed", result.status)
+        self.assertEqual([], processing_service.calls)
+        self.assertIn("failed", execution_service.statuses)
+
+    def test_worker_skips_duplicate_when_chunks_already_exist(self) -> None:
+        from workers.document_processing.worker import DocumentProcessingWorker
+
+        message = self.make_message()
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
+        document = SimpleNamespace(
+            id=message.job.document_id,
+            organization_id=message.job.organization_id,
+            case_id=message.job.case_id,
+            status="uploaded",
+        )
+        repository = FakeWorkerRepository(
+            document=document,
+            case=case,
+            chunks=[SimpleNamespace(id=uuid4())],
+        )
+        execution_service = FakeAgentExecutionService()
+        processing_service = FakeProcessingService()
+        audit_log = FakeAuditLogService()
+        worker = DocumentProcessingWorker(
+            queue_client=FakeWorkerQueue([message]),
+            repository=repository,
+            execution_service=execution_service,
             processing_service=processing_service,
             audit_log=audit_log,
         )
@@ -428,19 +613,21 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
 
         self.assertEqual("skipped", result.status)
         self.assertEqual([], processing_service.calls)
-        self.assertIn("skipped", repository.statuses)
+        self.assertIn("skipped", execution_service.statuses)
         self.assertEqual("document_processing.worker_skipped", audit_log.events[-1]["action"])
 
     def test_worker_fails_job_from_other_organization(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
 
         message = self.make_message()
-        repository = FakeWorkerRepository(document=None)
+        repository = FakeWorkerRepository(document=None, case=None)
+        execution_service = FakeAgentExecutionService()
         processing_service = FakeProcessingService()
         audit_log = FakeAuditLogService()
         worker = DocumentProcessingWorker(
             queue_client=FakeWorkerQueue([message]),
             repository=repository,
+            execution_service=execution_service,
             processing_service=processing_service,
             audit_log=audit_log,
         )
@@ -450,6 +637,74 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual("failed", result.status)
         self.assertEqual([], processing_service.calls)
         self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
+
+    def test_processing_error_marks_execution_failed_and_document_failed(self) -> None:
+        from workers.document_processing.worker import DocumentProcessingWorker
+
+        message = self.make_message()
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
+        document = SimpleNamespace(
+            id=message.job.document_id,
+            organization_id=message.job.organization_id,
+            case_id=message.job.case_id,
+            status="uploaded",
+        )
+        repository = FakeWorkerRepository(document=document, case=case)
+        execution_service = FakeAgentExecutionService()
+        processing_service = FakeProcessingService(should_fail=True)
+        audit_log = FakeAuditLogService()
+        worker = DocumentProcessingWorker(
+            queue_client=FakeWorkerQueue([message]),
+            repository=repository,
+            execution_service=execution_service,
+            processing_service=processing_service,
+            audit_log=audit_log,
+        )
+
+        result = worker.process_one()
+
+        self.assertEqual("failed", result.status)
+        self.assertIn("failed", execution_service.statuses)
+        self.assertEqual(["processing", "failed"], repository.document_statuses)
+        self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
+
+    def test_retrying_failed_job_respects_attempt_and_completes(self) -> None:
+        from workers.document_processing.worker import DocumentProcessingWorker
+
+        message = self.make_message(attempt=2)
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
+        document = SimpleNamespace(
+            id=message.job.document_id,
+            organization_id=message.job.organization_id,
+            case_id=message.job.case_id,
+            status="failed",
+        )
+        execution = SimpleNamespace(status="failed", attempt=1)
+        repository = FakeWorkerRepository(document=document, case=case)
+        execution_service = FakeAgentExecutionService(execution=execution)
+        processing_service = FakeProcessingService()
+        audit_log = FakeAuditLogService()
+        worker = DocumentProcessingWorker(
+            queue_client=FakeWorkerQueue([message]),
+            repository=repository,
+            execution_service=execution_service,
+            processing_service=processing_service,
+            audit_log=audit_log,
+            max_attempts=3,
+        )
+
+        result = worker.process_one()
+
+        self.assertEqual("completed", result.status)
+        self.assertEqual(["retrying", "running", "completed"], execution_service.statuses)
+        self.assertEqual(2, execution.attempt)
+        self.assertEqual(["processing", "processed"], repository.document_statuses)
 
 
 if __name__ == "__main__":

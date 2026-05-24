@@ -78,6 +78,11 @@ class Settings(BaseSettings):
         alias="LOCAL_PROCESSING_MAX_TEXT_CHARS",
         gt=0,
     )
+    document_processing_max_attempts: int = Field(
+        default=3,
+        alias="DOCUMENT_PROCESSING_MAX_ATTEMPTS",
+        ge=1,
+    )
     queue_backend: Literal["local", "sqs"] = Field(
         default="local",
         alias="QUEUE_BACKEND",

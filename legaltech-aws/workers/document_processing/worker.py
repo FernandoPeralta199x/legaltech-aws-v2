@@ -1,7 +1,6 @@
 import argparse
 import sys
 from collections.abc import Callable
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 from uuid import UUID
@@ -14,10 +13,15 @@ if str(API_ROOT) not in sys.path:
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.core.config import get_settings
 from src.db.session import SessionLocal
-from src.models.agent_execution import AgentExecution
+from src.models.case import Case
 from src.models.document import Document
 from src.models.document_chunk import DocumentChunk
+from src.modules.agent_executions.idempotency import is_busy_execution
+from src.modules.agent_executions.idempotency import is_completed_execution
+from src.modules.agent_executions.schemas import DocumentProcessingDocumentStatus
+from src.modules.agent_executions.service import AgentExecutionService
 from src.modules.audit.service import AuditLogService
 from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.identifiers import parse_uuid
@@ -27,10 +31,6 @@ from src.modules.queues.publisher import create_queue_client
 from src.modules.queues.schemas import DocumentProcessingJob, QueueMessage, WorkerResult
 
 
-PROCESSING_AGENT_TYPE = "document_processing_local"
-TERMINAL_IDEMPOTENT_STATUSES = frozenset({"running", "succeeded", "skipped"})
-
-
 class QueueClientProtocol(Protocol):
     def receive(self, *, max_messages: int = 1) -> list[QueueMessage]: ...
 
@@ -38,6 +38,13 @@ class QueueClientProtocol(Protocol):
 
 
 class WorkerRepositoryProtocol(Protocol):
+    def get_case(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+    ) -> Case | None: ...
+
     def get_document(
         self,
         *,
@@ -52,38 +59,26 @@ class WorkerRepositoryProtocol(Protocol):
         document_id: UUID | str,
     ) -> list[DocumentChunk]: ...
 
-    def get_execution_by_job_id(
-        self,
-        *,
-        organization_id: UUID | str,
-        job_id: UUID | str,
-    ) -> AgentExecution | None: ...
-
-    def create_execution(
-        self,
-        *,
-        job: DocumentProcessingJob,
-        status: str,
-    ) -> AgentExecution: ...
-
-    def mark_execution_started(self, execution: AgentExecution) -> None: ...
-
-    def mark_execution_succeeded(self, execution: AgentExecution, *, result) -> None: ...
-
-    def mark_execution_skipped(self, execution: AgentExecution, *, reason: str) -> None:
+    def update_document_status(self, document: Document, *, status: str) -> Document:
         ...
-
-    def mark_execution_failed(
-        self,
-        execution: AgentExecution,
-        *,
-        error_message: str,
-    ) -> None: ...
 
 
 class DocumentProcessingWorkerRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    def get_case(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+    ) -> Case | None:
+        statement = select(Case).where(
+            Case.id == parse_uuid(case_id),
+            Case.organization_id == parse_uuid(organization_id),
+            Case.deleted_at.is_(None),
+        )
+        return self.db.scalars(statement).first()
 
     def get_document(
         self,
@@ -110,77 +105,10 @@ class DocumentProcessingWorkerRepository:
         )
         return list(self.db.scalars(statement).all())
 
-    def get_execution_by_job_id(
-        self,
-        *,
-        organization_id: UUID | str,
-        job_id: UUID | str,
-    ) -> AgentExecution | None:
-        statement = select(AgentExecution).where(
-            AgentExecution.organization_id == parse_uuid(organization_id),
-            AgentExecution.job_id == parse_uuid(job_id),
-        )
-        return self.db.scalars(statement).first()
-
-    def create_execution(
-        self,
-        *,
-        job: DocumentProcessingJob,
-        status: str,
-    ) -> AgentExecution:
-        now = datetime.now(UTC)
-        execution = AgentExecution(
-            organization_id=job.organization_id,
-            case_id=job.case_id,
-            document_id=job.document_id,
-            job_id=job.job_id,
-            agent_type=PROCESSING_AGENT_TYPE,
-            status=status,
-            input_payload={
-                "job_type": job.job_type,
-                "case_id": str(job.case_id),
-                "document_id": str(job.document_id),
-                "source": job.metadata.get("source", "queue"),
-            },
-            output_payload={},
-            started_at=now if status == "running" else None,
-        )
-        self.db.add(execution)
+    def update_document_status(self, document: Document, *, status: str) -> Document:
+        document.status = status
         self.db.flush()
-        return execution
-
-    def mark_execution_started(self, execution: AgentExecution) -> None:
-        execution.status = "running"
-        execution.started_at = execution.started_at or datetime.now(UTC)
-        self.db.flush()
-
-    def mark_execution_succeeded(self, execution: AgentExecution, *, result) -> None:
-        execution.status = "succeeded"
-        execution.completed_at = datetime.now(UTC)
-        execution.output_payload = {
-            "status": result.status,
-            "chunk_count": result.chunk_count,
-            "embedding_count": result.embedding_count,
-        }
-        execution.error_message = None
-        self.db.flush()
-
-    def mark_execution_skipped(self, execution: AgentExecution, *, reason: str) -> None:
-        execution.status = "skipped"
-        execution.completed_at = datetime.now(UTC)
-        execution.output_payload = {"reason": reason}
-        self.db.flush()
-
-    def mark_execution_failed(
-        self,
-        execution: AgentExecution,
-        *,
-        error_message: str,
-    ) -> None:
-        execution.status = "failed"
-        execution.completed_at = datetime.now(UTC)
-        execution.error_message = error_message[:500]
-        self.db.flush()
+        return document
 
 
 def default_mock_text_provider(job: DocumentProcessingJob) -> str:
@@ -197,17 +125,33 @@ class DocumentProcessingWorker:
         queue_client: QueueClientProtocol | None = None,
         db: Session | None = None,
         repository: WorkerRepositoryProtocol | None = None,
+        execution_service: AgentExecutionService | None = None,
         processing_service: DocumentProcessingService | None = None,
         audit_log: AuditLogService | None = None,
         text_provider: Callable[[DocumentProcessingJob], str] = default_mock_text_provider,
+        max_attempts: int | None = None,
     ) -> None:
         self.db = db
         self.queue_client = queue_client or create_queue_client()
+        self.max_attempts = (
+            max_attempts
+            if max_attempts is not None
+            else get_settings().document_processing_max_attempts
+        )
 
         if repository is None:
             if db is None:
                 raise ValueError("db is required when repository is not provided.")
             repository = DocumentProcessingWorkerRepository(db)
+        if execution_service is None:
+            if db is None:
+                raise ValueError(
+                    "db is required when execution_service is not provided."
+                )
+            execution_service = AgentExecutionService(
+                db=db,
+                max_attempts=self.max_attempts,
+            )
         if processing_service is None:
             if db is None:
                 raise ValueError(
@@ -220,6 +164,7 @@ class DocumentProcessingWorker:
             audit_log = AuditLogService(db)
 
         self.repository = repository
+        self.execution_service = execution_service
         self.processing_service = processing_service
         self.audit_log = audit_log
         self.text_provider = text_provider
@@ -246,22 +191,70 @@ class DocumentProcessingWorker:
             self.queue_client.ack(message.receipt_handle)
 
     def _process_job(self, job: DocumentProcessingJob) -> WorkerResult:
-        execution = self.repository.get_execution_by_job_id(
+        execution = self.execution_service.get_by_job_id(
             organization_id=job.organization_id,
             job_id=job.job_id,
         )
-        if execution and execution.status in TERMINAL_IDEMPOTENT_STATUSES:
-            self._record_audit(job, action="document_processing.worker_skipped")
+        if execution and is_completed_execution(execution.status):
+            self._record_audit(
+                job,
+                action="document_processing.worker_skipped",
+                metadata={"reason": "duplicate_completed"},
+            )
+            return WorkerResult(
+                job_id=job.job_id,
+                document_id=job.document_id,
+                status="completed",
+                reason="duplicate_completed",
+            )
+        if execution and is_busy_execution(execution.status):
+            self._record_audit(
+                job,
+                action="document_processing.worker_skipped",
+                metadata={"reason": "job_already_running"},
+            )
             return WorkerResult(
                 job_id=job.job_id,
                 document_id=job.document_id,
                 status="skipped",
-                reason="duplicate_job",
+                reason="job_already_running",
             )
 
         if execution is None:
-            execution = self.repository.create_execution(job=job, status="queued")
+            execution = self.execution_service.create_queued(job=job)
+        elif self.execution_service.can_retry(execution, job=job):
+            self.execution_service.mark_retrying(execution, job=job)
+        elif execution.status == "failed":
+            self._record_audit(
+                job,
+                action="document_processing.worker_skipped",
+                metadata={"reason": "retry_not_allowed"},
+            )
+            return WorkerResult(
+                job_id=job.job_id,
+                document_id=job.document_id,
+                status="failed",
+                reason="retry_not_allowed",
+            )
 
+        if self.execution_service.max_attempts_exceeded(job=job):
+            self.execution_service.mark_failed(
+                execution,
+                error_message="MaxAttemptsExceeded",
+            )
+            self._record_audit(
+                job,
+                action="document_processing.worker_failed",
+                metadata={"error_type": "MaxAttemptsExceeded"},
+            )
+            return WorkerResult(
+                job_id=job.job_id,
+                document_id=job.document_id,
+                status="failed",
+                reason="MaxAttemptsExceeded",
+            )
+
+        document: Document | None = None
         self._record_audit(job, action="document_processing.worker_started")
 
         try:
@@ -271,6 +264,13 @@ class DocumentProcessingWorker:
             )
             if document is None:
                 raise ResourceNotFoundError("Document not found.")
+
+            case = self.repository.get_case(
+                organization_id=job.organization_id,
+                case_id=job.case_id,
+            )
+            if case is None:
+                raise ResourceNotFoundError("Case not found.")
             if document.case_id != job.case_id:
                 raise ResourceNotFoundError("Document not found for case.")
 
@@ -279,7 +279,7 @@ class DocumentProcessingWorker:
                 document_id=job.document_id,
             )
             if existing_chunks:
-                self.repository.mark_execution_skipped(
+                self.execution_service.mark_skipped(
                     execution,
                     reason="document_already_processed",
                 )
@@ -295,7 +295,11 @@ class DocumentProcessingWorker:
                     reason="document_already_processed",
                 )
 
-            self.repository.mark_execution_started(execution)
+            self.execution_service.mark_running(execution, job=job)
+            self.repository.update_document_status(
+                document,
+                status=DocumentProcessingDocumentStatus.PROCESSING.value,
+            )
             result = self.processing_service.process_local_text(
                 organization_id=job.organization_id,
                 document_id=job.document_id,
@@ -307,10 +311,14 @@ class DocumentProcessingWorker:
                     },
                 ),
             )
-            self.repository.mark_execution_succeeded(execution, result=result)
+            self.execution_service.mark_completed(execution, result=result)
+            self.repository.update_document_status(
+                document,
+                status=DocumentProcessingDocumentStatus.PROCESSED.value,
+            )
             self._record_audit(
                 job,
-                action="document_processing.worker_succeeded",
+                action="document_processing.worker_completed",
                 metadata={
                     "chunk_count": result.chunk_count,
                     "embedding_count": result.embedding_count,
@@ -319,10 +327,15 @@ class DocumentProcessingWorker:
             return WorkerResult(
                 job_id=job.job_id,
                 document_id=job.document_id,
-                status="succeeded",
+                status="completed",
             )
         except Exception as exc:
-            self.repository.mark_execution_failed(
+            if document is not None:
+                self.repository.update_document_status(
+                    document,
+                    status=DocumentProcessingDocumentStatus.FAILED.value,
+                )
+            self.execution_service.mark_failed(
                 execution,
                 error_message=exc.__class__.__name__,
             )
@@ -348,6 +361,8 @@ class DocumentProcessingWorker:
         safe_metadata = {
             "job_id": str(job.job_id),
             "case_id": str(job.case_id),
+            "agent_type": job.agent_type,
+            "attempt": job.attempt,
             "source": job.metadata.get("source", "queue"),
         }
         if metadata:

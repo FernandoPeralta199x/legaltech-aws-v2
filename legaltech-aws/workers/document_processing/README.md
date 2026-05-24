@@ -12,6 +12,7 @@ Use valores ficticios no `.env` da API:
 QUEUE_BACKEND=local
 LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
+DOCUMENT_PROCESSING_MAX_ATTEMPTS=3
 ```
 
 A fila local e um arquivo JSONL em `apps/api/storage/local_queue/`, pasta ignorada pelo Git.
@@ -52,6 +53,59 @@ Invoke-RestMethod `
 6. Rode o worker com `--once`.
 
 O worker grava eventos em `audit_log` para inicio, sucesso, falha ou skip. O conteudo integral do documento nao e transportado no job nem registrado nos logs.
+
+## Estados controlados
+
+`agent_executions.status`:
+
+```text
+queued
+running
+completed
+failed
+retrying
+skipped
+```
+
+`documents.status`:
+
+```text
+uploaded
+processing
+processed
+failed
+```
+
+Fluxo resumido:
+
+1. Job novo cria `agent_executions` como `queued`.
+2. Worker revalida tenant, case e document no banco.
+3. Worker marca execução como `running` e documento como `processing`.
+4. Sucesso marca execução como `completed` e documento como `processed`.
+5. Erro marca execução como `failed` e documento como `failed`.
+6. Job com `job_id` já `completed` retorna sucesso sem reprocessar.
+7. Retry usa `attempt` do job e respeita `DOCUMENT_PROCESSING_MAX_ATTEMPTS`.
+
+Payload interno esperado:
+
+```json
+{
+  "job_id": "job-uuid",
+  "job_type": "document_processing",
+  "agent_type": "document_processing_local",
+  "organization_id": "organization-uuid",
+  "case_id": "case-uuid",
+  "document_id": "document-uuid",
+  "attempt": 1,
+  "requested_by": "user-uuid",
+  "metadata": {
+    "source": "api"
+  },
+  "created_at": "2026-05-24T00:00:00Z"
+}
+```
+
+O worker nunca confia cegamente nesses IDs: ele consulta o PostgreSQL antes de processar e falha o job se `case_id`, `document_id` e `organization_id` nao forem consistentes.
 
 ## Testes
 
