@@ -10,10 +10,11 @@ Esta entrega cria apenas a base da API:
 - estrutura inicial de banco com SQLAlchemy;
 - configuracao Alembic com migrations incrementais;
 - models iniciais do MVP com `organization_id` nas tabelas sensiveis;
+- camada inicial de schemas, repositories e services para clients e cases;
 - placeholders seguros para Cognito/JWT e tenant;
 - README com comandos locais.
 
-Nao foram implementados autenticacao real, APIs externas, S3, SQS ou agentes.
+Nao foram implementados autenticacao real, rotas CRUD, APIs externas, S3, SQS ou agentes.
 
 ## Requisitos
 
@@ -139,6 +140,17 @@ src/
 │   ├── types.py
 │   └── user.py
 ├── modules/
+│   ├── cases/
+│   │   ├── repository.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   ├── clients/
+│   │   ├── repository.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   ├── common/
+│   │   ├── exceptions.py
+│   │   └── identifiers.py
 │   └── health/
 │       └── router.py
 └── main.py
@@ -150,4 +162,4 @@ src/
 2. Implementar validacao JWT/Cognito.
 3. Implementar tenant middleware e RBAC.
 4. Adicionar auditoria para rotas sensiveis.
-5. Criar repositories, services e schemas para clientes/casos.
+5. Criar rotas CRUD autenticadas para clientes/casos usando a camada interna ja criada.
