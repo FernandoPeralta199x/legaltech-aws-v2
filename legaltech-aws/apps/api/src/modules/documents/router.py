@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from src.core.rbac import require_permission
 from src.core.tenant import TenantContext
 from src.db.session import get_db
+from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.common.responses import success_response
 from src.modules.documents.schemas import DocumentCreate, DocumentDownloadUrlRead
@@ -77,7 +78,7 @@ def list_documents(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.list",
+        action=actions.DOCUMENTS_LIST,
         entity_type="document",
         metadata={
             "case_id": str(case_id) if case_id else None,
@@ -108,7 +109,7 @@ def create_document(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.create",
+        action=actions.DOCUMENTS_CREATE,
         entity_type="document",
         entity_id=document.id,
         metadata={
@@ -143,7 +144,7 @@ def upload_document(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.upload",
+        action=actions.DOCUMENTS_UPLOAD,
         entity_type="document",
         entity_id=document.id,
         metadata={
@@ -179,7 +180,7 @@ def generate_download_url(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.download_url",
+        action=actions.DOCUMENTS_DOWNLOAD_URL,
         entity_type="document",
         entity_id=document_id,
         metadata={
@@ -212,7 +213,7 @@ def get_document(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.read",
+        action=actions.DOCUMENTS_READ,
         entity_type="document",
         entity_id=document.id,
         metadata={"case_id": str(document.case_id), "source": "api"},
@@ -240,7 +241,7 @@ def update_document(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.update",
+        action=actions.DOCUMENTS_UPDATE,
         entity_type="document",
         entity_id=document.id,
         metadata={

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.core.rbac import require_permission
 from src.core.tenant import TenantContext
 from src.db.session import get_db
+from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.clients.schemas import ClientCreate, ClientRead, ClientUpdate
 from src.modules.clients.service import ClientService
@@ -47,7 +48,7 @@ def list_clients(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="client.list",
+        action=actions.CLIENTS_LIST,
         entity_type="client",
         metadata={
             "has_search": bool(search),
@@ -77,7 +78,7 @@ def create_client(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="client.create",
+        action=actions.CLIENTS_CREATE,
         entity_type="client",
         entity_id=client.id,
         metadata={"source": "api"},
@@ -103,7 +104,7 @@ def get_client(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="client.read",
+        action=actions.CLIENTS_READ,
         entity_type="client",
         entity_id=client.id,
         metadata={"source": "api"},
@@ -131,7 +132,7 @@ def update_client(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="client.update",
+        action=actions.CLIENTS_UPDATE,
         entity_type="client",
         entity_id=client.id,
         metadata={"updated_fields": list(payload.model_dump(exclude_unset=True))},

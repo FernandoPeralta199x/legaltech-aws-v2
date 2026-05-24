@@ -54,6 +54,19 @@ Invoke-RestMethod `
 
 O worker grava eventos em `audit_log` para inicio, sucesso, falha ou skip. O conteudo integral do documento nao e transportado no job nem registrado nos logs.
 
+Actions de auditoria emitidas pelo fluxo:
+
+```text
+agent_execution.created
+documents.process_started
+agent_execution.started
+documents.process_completed
+agent_execution.completed
+documents.process_failed
+agent_execution.failed
+agent_execution.skipped
+```
+
 ## Estados controlados
 
 `agent_executions.status`:

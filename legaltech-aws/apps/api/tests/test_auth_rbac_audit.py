@@ -229,7 +229,7 @@ class AuthRbacAuditRoutesTest(unittest.TestCase):
         event = self.audit_service.events[0]
         self.assertEqual(ORG_ID, event["organization_id"])
         self.assertEqual(USER_ID, event["user_id"])
-        self.assertEqual("client.create", event["action"])
+        self.assertEqual("clients.create", event["action"])
         self.assertEqual("client", event["entity_type"])
         self.assertEqual("valid-test-token", self.jwt_verifier.token)
         self.assertEqual("clients:write", self.permission_service.calls[0]["permission"])
@@ -244,7 +244,7 @@ class AuthRbacAuditRoutesTest(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(1, len(self.audit_service.events))
         event = self.audit_service.events[0]
-        self.assertEqual("client.read", event["action"])
+        self.assertEqual("clients.read", event["action"])
         self.assertEqual("client", event["entity_type"])
         self.assertEqual(client_id, event["entity_id"])
 
@@ -259,7 +259,7 @@ class AuthRbacAuditRoutesTest(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(1, len(self.audit_service.events))
         event = self.audit_service.events[0]
-        self.assertEqual("case.update", event["action"])
+        self.assertEqual("cases.update", event["action"])
         self.assertEqual("case", event["entity_type"])
         self.assertEqual(case_id, event["entity_id"])
 

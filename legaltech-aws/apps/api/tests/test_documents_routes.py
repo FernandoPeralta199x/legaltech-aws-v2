@@ -202,7 +202,7 @@ class DocumentsRoutesTest(unittest.TestCase):
         self.assertEqual(ORG_ID, kwargs["organization_id"])
         self.assertEqual(USER_ID, kwargs["user_id"])
         self.assertEqual("documents:write", self.permission_service.calls[0]["permission"])
-        self.assertEqual("document.create", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.create", self.audit_service.events[0]["action"])
 
     def test_upload_document_uses_internal_tenant_rbac_and_records_audit(self) -> None:
         case_id = uuid4()
@@ -236,7 +236,7 @@ class DocumentsRoutesTest(unittest.TestCase):
             "documents:upload",
             self.permission_service.calls[0]["permission"],
         )
-        self.assertEqual("document.upload", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.upload", self.audit_service.events[0]["action"])
 
     def test_upload_document_without_permission_is_forbidden(self) -> None:
         self.permission_service.allowed = False
@@ -279,7 +279,7 @@ class DocumentsRoutesTest(unittest.TestCase):
             "documents:download",
             self.permission_service.calls[0]["permission"],
         )
-        self.assertEqual("document.download_url", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.download_url", self.audit_service.events[0]["action"])
 
     def test_generate_download_url_without_permission_is_forbidden(self) -> None:
         self.permission_service.allowed = False
@@ -303,7 +303,7 @@ class DocumentsRoutesTest(unittest.TestCase):
         _, kwargs = self.service.calls[0]
         self.assertEqual(ORG_ID, kwargs["organization_id"])
         self.assertEqual(document_id, kwargs["document_id"])
-        self.assertEqual("document.read", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.read", self.audit_service.events[0]["action"])
 
     def test_update_document_uses_internal_tenant_and_records_audit(self) -> None:
         document_id = uuid4()
@@ -321,7 +321,7 @@ class DocumentsRoutesTest(unittest.TestCase):
         _, kwargs = self.service.calls[0]
         self.assertEqual(ORG_ID, kwargs["organization_id"])
         self.assertEqual(document_id, kwargs["document_id"])
-        self.assertEqual("document.update", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.update", self.audit_service.events[0]["action"])
 
 
 if __name__ == "__main__":

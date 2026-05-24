@@ -149,7 +149,7 @@ class DocumentProcessingRoutesTest(unittest.TestCase):
             "documents:process",
             self.permission_service.calls[0]["permission"],
         )
-        self.assertEqual("document.process_local", self.audit_service.events[0]["action"])
+        self.assertEqual("documents.process_completed", self.audit_service.events[0]["action"])
         self.assertNotIn("text", self.audit_service.events[0]["metadata"])
         self.assertNotIn(
             "Texto local ficticio",
@@ -185,7 +185,7 @@ class DocumentProcessingRoutesTest(unittest.TestCase):
             "document_chunks:read",
             self.permission_service.calls[0]["permission"],
         )
-        self.assertEqual("document_chunks.list", self.audit_service.events[0]["action"])
+        self.assertEqual("document_chunks.read", self.audit_service.events[0]["action"])
 
     def test_list_chunks_without_permission_is_forbidden(self) -> None:
         self.permission_service.allowed = False

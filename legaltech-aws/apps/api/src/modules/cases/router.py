@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.core.rbac import require_permission
 from src.core.tenant import TenantContext
 from src.db.session import get_db
+from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.cases.schemas import CaseCreate, CaseRead, CaseUpdate
 from src.modules.cases.service import CaseService
@@ -51,7 +52,7 @@ def list_cases(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="case.list",
+        action=actions.CASES_LIST,
         entity_type="case",
         metadata={
             "status": status,
@@ -83,7 +84,7 @@ def create_case(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="case.create",
+        action=actions.CASES_CREATE,
         entity_type="case",
         entity_id=case.id,
         metadata={"source": "api"},
@@ -109,7 +110,7 @@ def get_case(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="case.read",
+        action=actions.CASES_READ,
         entity_type="case",
         entity_id=case.id,
         metadata={"source": "api"},
@@ -137,7 +138,7 @@ def update_case(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="case.update",
+        action=actions.CASES_UPDATE,
         entity_type="case",
         entity_id=case.id,
         metadata={"updated_fields": list(payload.model_dump(exclude_unset=True))},

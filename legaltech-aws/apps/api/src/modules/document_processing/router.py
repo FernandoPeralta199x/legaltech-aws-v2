@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.core.rbac import require_permission
 from src.core.tenant import TenantContext
 from src.db.session import get_db
+from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.common.responses import success_response
 from src.modules.document_processing.schemas import DocumentChunkRead
@@ -68,7 +69,7 @@ def enqueue_document_processing(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.processing_enqueue",
+        action=actions.DOCUMENTS_PROCESS_REQUESTED,
         entity_type="document",
         entity_id=document_id,
         metadata={
@@ -106,7 +107,7 @@ def process_document_local(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document.process_local",
+        action=actions.DOCUMENTS_PROCESS_COMPLETED,
         entity_type="document",
         entity_id=document_id,
         metadata={
@@ -146,7 +147,7 @@ def list_document_chunks(
     audit_log.record_event(
         organization_id=tenant.organization_id,
         user_id=tenant.user_id,
-        action="document_chunks.list",
+        action=actions.DOCUMENT_CHUNKS_READ,
         entity_type="document",
         entity_id=document_id,
         metadata={"chunk_count": len(chunks)},

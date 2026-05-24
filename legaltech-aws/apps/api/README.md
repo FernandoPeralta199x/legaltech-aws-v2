@@ -16,7 +16,8 @@ Esta entrega cria apenas a base da API:
 - estrutura JWT/Cognito para `Authorization: Bearer <jwt>`;
 - RBAC consultando `roles_permissions`;
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
-- audit_log service inicial para eventos sensiveis;
+- audit_log avancado com sanitizacao LGPD para eventos sensiveis;
+- rotas administrativas somente leitura para consulta de audit_log;
 - upload local/mock de documents para desenvolvimento;
 - abstracao de storage de documents com modo `local` e modo `s3`;
 - geracao preparada de URL temporaria de download para documents;
@@ -211,6 +212,7 @@ documents:upload
 documents:download
 documents:process
 document_chunks:read
+audit:read
 ```
 
 Se a organizacao local ja tiver sido populada antes desta permissao existir, rode novamente o seed interno de `roles_permissions`. O seed e idempotente e adiciona apenas permissoes faltantes.
@@ -227,6 +229,80 @@ support
 
 Operacoes de leitura e escrita em `clients` e `cases` registram eventos via `AuditLogService`.
 Operacoes de leitura e escrita em `documents` tambem registram eventos via `AuditLogService`.
+
+Rotas administrativas de auditoria:
+
+```text
+GET /api/v1/audit
+GET /api/v1/audit/{audit_id}
+```
+
+Essas rotas exigem `audit:read`, filtram sempre pelo `organization_id` do JWT e nao permitem criar, alterar ou apagar registros de auditoria.
+
+## Auditoria e LGPD
+
+O modulo `src/modules/audit` padroniza actions, repository, service, schemas e rotas somente leitura. Eventos de auditoria sao append-only no comportamento da aplicacao e registram metadados tecnicos seguros:
+
+```text
+organization_id
+user_id
+action
+entity_type
+entity_id
+ip_address
+user_agent
+metadata
+created_at
+```
+
+Actions sensiveis atuais:
+
+```text
+clients.create
+clients.update
+clients.read
+cases.create
+cases.update
+cases.read
+documents.create
+documents.update
+documents.upload
+documents.download_url
+documents.process_requested
+documents.process_started
+documents.process_completed
+documents.process_failed
+agent_execution.created
+agent_execution.started
+agent_execution.completed
+agent_execution.failed
+agent_execution.skipped
+rbac.denied
+```
+
+O `AuditLogService` sanitiza `metadata` antes de persistir, mascarando ou removendo valores como CPF/CNPJ completo, JWT, `Authorization: Bearer`, senha, token, chave API, segredo, texto integral de contrato/documento e conteudo bruto. Use apenas IDs tecnicos, status, `job_id`, `case_id`, `document_id`, provider logico e erros resumidos.
+
+Consultar auditoria localmente:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8000/api/v1/audit?action=documents.upload&page=1&page_size=20" `
+  -Method Get `
+  -Headers @{ Authorization = "Bearer $TOKEN" }
+```
+
+Filtros disponiveis:
+
+```text
+action
+entity_type
+entity_id
+user_id
+date_from
+date_to
+page
+page_size
+```
 
 ## Documents storage e download URL
 
@@ -347,7 +423,7 @@ Resposta esperada:
 }
 ```
 
-A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O backend valida `document_id` pelo `organization_id` do JWT antes de gerar a URL e registra `audit_log` com a acao `document.download_url`.
+A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O backend valida `document_id` pelo `organization_id` do JWT antes de gerar a URL e registra `audit_log` com a acao `documents.download_url`.
 
 ## Document processing local/mock
 
@@ -773,6 +849,7 @@ python -m unittest tests.test_clients_cases_routes -v
 Testar auth/RBAC e auditoria:
 
 ```bash
+python -m unittest tests.test_audit_lgpd -v
 python -m unittest tests.test_auth_rbac_audit -v
 python -m unittest tests.test_roles_permissions -v
 python -m unittest tests.test_admin_seed_roles_permissions -v
@@ -834,6 +911,10 @@ src/
 │   │   ├── seed_roles_permissions.py
 │   │   └── smoke_clients_cases.py
 │   ├── audit/
+│   │   ├── actions.py
+│   │   ├── repository.py
+│   │   ├── router.py
+│   │   ├── schemas.py
 │   │   └── service.py
 │   ├── agent_executions/
 │   │   ├── idempotency.py
@@ -886,5 +967,5 @@ src/
 1. Validar migrations contra um PostgreSQL local com `uuid-ossp` e `pgvector`.
 2. Rodar o seed interno de `roles_permissions` para cada organizacao de desenvolvimento.
 3. Mapear usuario interno a partir de `sub`/Cognito e tabela `users`.
-4. Expandir auditoria para tentativas negadas.
+4. Adicionar `request_id`/correlation id para cruzar API, fila local e worker.
 5. Criar administracao segura para futuras alteracoes de permissoes, com aprovacao e auditoria.

@@ -22,6 +22,7 @@ from src.modules.agent_executions.idempotency import is_busy_execution
 from src.modules.agent_executions.idempotency import is_completed_execution
 from src.modules.agent_executions.schemas import DocumentProcessingDocumentStatus
 from src.modules.agent_executions.service import AgentExecutionService
+from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService
 from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.identifiers import parse_uuid
@@ -198,7 +199,7 @@ class DocumentProcessingWorker:
         if execution and is_completed_execution(execution.status):
             self._record_audit(
                 job,
-                action="document_processing.worker_skipped",
+                action=actions.AGENT_EXECUTION_SKIPPED,
                 metadata={"reason": "duplicate_completed"},
             )
             return WorkerResult(
@@ -210,7 +211,7 @@ class DocumentProcessingWorker:
         if execution and is_busy_execution(execution.status):
             self._record_audit(
                 job,
-                action="document_processing.worker_skipped",
+                action=actions.AGENT_EXECUTION_SKIPPED,
                 metadata={"reason": "job_already_running"},
             )
             return WorkerResult(
@@ -222,12 +223,17 @@ class DocumentProcessingWorker:
 
         if execution is None:
             execution = self.execution_service.create_queued(job=job)
+            self._record_audit(
+                job,
+                action=actions.AGENT_EXECUTION_CREATED,
+                metadata={"status": "queued"},
+            )
         elif self.execution_service.can_retry(execution, job=job):
             self.execution_service.mark_retrying(execution, job=job)
         elif execution.status == "failed":
             self._record_audit(
                 job,
-                action="document_processing.worker_skipped",
+                action=actions.AGENT_EXECUTION_SKIPPED,
                 metadata={"reason": "retry_not_allowed"},
             )
             return WorkerResult(
@@ -244,7 +250,7 @@ class DocumentProcessingWorker:
             )
             self._record_audit(
                 job,
-                action="document_processing.worker_failed",
+                action=actions.AGENT_EXECUTION_FAILED,
                 metadata={"error_type": "MaxAttemptsExceeded"},
             )
             return WorkerResult(
@@ -255,7 +261,7 @@ class DocumentProcessingWorker:
             )
 
         document: Document | None = None
-        self._record_audit(job, action="document_processing.worker_started")
+        self._record_audit(job, action=actions.DOCUMENTS_PROCESS_STARTED)
 
         try:
             document = self.repository.get_document(
@@ -285,7 +291,7 @@ class DocumentProcessingWorker:
                 )
                 self._record_audit(
                     job,
-                    action="document_processing.worker_skipped",
+                    action=actions.AGENT_EXECUTION_SKIPPED,
                     metadata={"reason": "document_already_processed"},
                 )
                 return WorkerResult(
@@ -296,6 +302,11 @@ class DocumentProcessingWorker:
                 )
 
             self.execution_service.mark_running(execution, job=job)
+            self._record_audit(
+                job,
+                action=actions.AGENT_EXECUTION_STARTED,
+                metadata={"status": "running"},
+            )
             self.repository.update_document_status(
                 document,
                 status=DocumentProcessingDocumentStatus.PROCESSING.value,
@@ -318,11 +329,16 @@ class DocumentProcessingWorker:
             )
             self._record_audit(
                 job,
-                action="document_processing.worker_completed",
+                action=actions.DOCUMENTS_PROCESS_COMPLETED,
                 metadata={
                     "chunk_count": result.chunk_count,
                     "embedding_count": result.embedding_count,
                 },
+            )
+            self._record_audit(
+                job,
+                action=actions.AGENT_EXECUTION_COMPLETED,
+                metadata={"status": "completed"},
             )
             return WorkerResult(
                 job_id=job.job_id,
@@ -341,7 +357,12 @@ class DocumentProcessingWorker:
             )
             self._record_audit(
                 job,
-                action="document_processing.worker_failed",
+                action=actions.DOCUMENTS_PROCESS_FAILED,
+                metadata={"error_type": exc.__class__.__name__},
+            )
+            self._record_audit(
+                job,
+                action=actions.AGENT_EXECUTION_FAILED,
                 metadata={"error_type": exc.__class__.__name__},
             )
             return WorkerResult(

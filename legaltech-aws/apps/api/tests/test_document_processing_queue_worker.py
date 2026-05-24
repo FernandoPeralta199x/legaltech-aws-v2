@@ -248,7 +248,7 @@ class EnqueueDocumentProcessingRouteTest(unittest.TestCase):
         self.assertEqual(USER_ID, self.publisher.calls[0]["requested_by"])
         self.assertEqual(document_id, self.publisher.calls[0]["document_id"])
         self.assertEqual(
-            "document.processing_enqueue",
+            "documents.process_requested",
             self.audit_service.events[0]["action"],
         )
         self.assertNotIn("text", self.audit_service.events[0]["metadata"])
@@ -482,8 +482,11 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual(["processing", "processed"], repository.document_statuses)
         self.assertEqual(
             [
-                "document_processing.worker_started",
-                "document_processing.worker_completed",
+                "agent_execution.created",
+                "documents.process_started",
+                "agent_execution.started",
+                "documents.process_completed",
+                "agent_execution.completed",
             ],
             [event["action"] for event in audit_log.events],
         )
@@ -515,7 +518,7 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual("duplicate_completed", result.reason)
         self.assertEqual([], processing_service.calls)
         self.assertEqual([], repository.document_statuses)
-        self.assertEqual("document_processing.worker_skipped", audit_log.events[-1]["action"])
+        self.assertEqual("agent_execution.skipped", audit_log.events[-1]["action"])
 
     def test_worker_rejects_job_when_document_case_does_not_match(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
@@ -549,7 +552,7 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual([], processing_service.calls)
         self.assertIn("failed", execution_service.statuses)
         self.assertEqual(["failed"], repository.document_statuses)
-        self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
+        self.assertEqual("agent_execution.failed", audit_log.events[-1]["action"])
 
     def test_worker_rejects_job_when_case_belongs_to_another_organization(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
@@ -614,7 +617,7 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual("skipped", result.status)
         self.assertEqual([], processing_service.calls)
         self.assertIn("skipped", execution_service.statuses)
-        self.assertEqual("document_processing.worker_skipped", audit_log.events[-1]["action"])
+        self.assertEqual("agent_execution.skipped", audit_log.events[-1]["action"])
 
     def test_worker_fails_job_from_other_organization(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
@@ -636,7 +639,7 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
 
         self.assertEqual("failed", result.status)
         self.assertEqual([], processing_service.calls)
-        self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
+        self.assertEqual("agent_execution.failed", audit_log.events[-1]["action"])
 
     def test_processing_error_marks_execution_failed_and_document_failed(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
@@ -669,7 +672,7 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
         self.assertEqual("failed", result.status)
         self.assertIn("failed", execution_service.statuses)
         self.assertEqual(["processing", "failed"], repository.document_statuses)
-        self.assertEqual("document_processing.worker_failed", audit_log.events[-1]["action"])
+        self.assertEqual("agent_execution.failed", audit_log.events[-1]["action"])
 
     def test_retrying_failed_job_respects_attempt_and_completes(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker
