@@ -30,6 +30,14 @@ class TimestampMixin:
     )
 
 
+class CreatedAtMixin:
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+
 class OrganizationScopedMixin:
     organization_id: Mapped[PythonUUID] = mapped_column(
         UUID(as_uuid=True),

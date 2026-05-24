@@ -8,8 +8,8 @@ Esta entrega cria apenas a base da API:
 - endpoint `GET /health`;
 - configuracao central com Pydantic Settings;
 - estrutura inicial de banco com SQLAlchemy;
-- configuracao Alembic e migration inicial;
-- models iniciais com `organization_id` nas tabelas sensiveis;
+- configuracao Alembic com migrations incrementais;
+- models iniciais do MVP com `organization_id` nas tabelas sensiveis;
 - placeholders seguros para Cognito/JWT e tenant;
 - README com comandos locais.
 
@@ -18,7 +18,8 @@ Nao foram implementados autenticacao real, APIs externas, S3, SQS ou agentes.
 ## Requisitos
 
 - Python 3.12+
-- PostgreSQL local ou remoto para etapas futuras
+- PostgreSQL local ou remoto para migrations
+- Extensoes PostgreSQL `uuid-ossp` e `vector` disponiveis no banco
 
 ## Configuracao local
 
@@ -73,6 +74,11 @@ Resposta esperada:
 
 O Alembic esta configurado em `alembic.ini` e usa `DATABASE_URL` via Pydantic Settings.
 
+Migrations existentes:
+
+- `0001_initial_models.py`: organizations, users, clients, cases, documents, audit_log e agent_executions.
+- `0002_remaining_mvp_models.py`: roles_permissions, case_parties, external_queries_cache, document_chunks, document_embeddings, human_reviews e reports.
+
 Gerar uma nova revision a partir dos models:
 
 ```bash
@@ -119,10 +125,18 @@ src/
 │   ├── agent_execution.py
 │   ├── audit_log.py
 │   ├── case.py
+│   ├── case_party.py
 │   ├── client.py
 │   ├── document.py
+│   ├── document_chunk.py
+│   ├── document_embedding.py
+│   ├── external_query_cache.py
+│   ├── human_review.py
 │   ├── mixins.py
 │   ├── organization.py
+│   ├── report.py
+│   ├── role_permission.py
+│   ├── types.py
 │   └── user.py
 ├── modules/
 │   └── health/
@@ -132,8 +146,8 @@ src/
 
 ## Proximos passos
 
-1. Expandir models para `roles_permissions`, partes, cache externo, chunks, reviews e reports.
+1. Validar migrations contra um PostgreSQL local com `uuid-ossp` e `pgvector`.
 2. Implementar validacao JWT/Cognito.
 3. Implementar tenant middleware e RBAC.
 4. Adicionar auditoria para rotas sensiveis.
-5. Criar repositories e services para clientes/casos.
+5. Criar repositories, services e schemas para clientes/casos.
