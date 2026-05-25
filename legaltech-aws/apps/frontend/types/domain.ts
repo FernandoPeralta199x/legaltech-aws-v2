@@ -1,6 +1,6 @@
 // ─── Enums & literals ─────────────────────────────────────────────────────────
 
-export type Role = "admin" | "analyst" | "client" | "viewer";
+export type Role = "owner" | "admin" | "analyst" | "client" | "support" | "viewer";
 
 export type RiskLevel = "low" | "medium" | "high";
 
@@ -32,7 +32,8 @@ export type DocumentStatus =
   | "processing"
   | "processed"
   | "validated"
-  | "failed";
+  | "failed"
+  | "deleted";
 
 export type ReportStatus =
   | "draft"
@@ -106,14 +107,17 @@ export type User = {
 export type Client = {
   id: string;
   name: string;
+  document?: string | null;
   documentLabel: string;
   email: string;
   phone: string;
   status: ClientStatus;
   riskLevel: RiskLevel;
   casesCount: number;
-  organizationId: string;
+  organizationId?: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type CaseParty = {
@@ -141,6 +145,7 @@ export type Case = {
   assignedTo: string | null;
   notes: string;
   estimatedValue?: number;
+  metadata?: Record<string, unknown>;
   parties: CaseParty[];
   updatedAt: string;
   createdAt: string;
@@ -154,11 +159,47 @@ export type Document = {
   caseCode: string;
   contentType: string;
   status: DocumentStatus;
+  sizeBytes?: number;
   sizeLabel: string;
+  fileHash?: string | null;
   uploadedAt: string;
   processedAt: string | null;
+  metadata?: Record<string, unknown>;
   notes: string;
 };
+
+export type ClientCreate = {
+  name: string;
+  document?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type ClientUpdate = Partial<ClientCreate>;
+
+export type CaseCreate = {
+  client_id: string;
+  case_type: string;
+  priority?: Priority;
+  metadata?: Record<string, unknown>;
+};
+
+export type CaseUpdate = Partial<CaseCreate> & {
+  status?: CaseStatus;
+};
+
+export type DocumentCreate = {
+  case_id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  file_hash?: string | null;
+  status?: DocumentStatus;
+  metadata?: Record<string, unknown>;
+};
+
+export type DocumentUpdate = Partial<DocumentCreate>;
 
 export type AgentExecution = {
   id: string;

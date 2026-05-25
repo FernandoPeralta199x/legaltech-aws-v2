@@ -14,3 +14,5 @@ export type ApiResponse<T> =
       success: false;
       error: ApiError;
     };
+
+export type ApiSuccessResponse<T> = Extract<ApiResponse<T>, { success: true }>;

@@ -1,5 +1,5 @@
 import { getStoredToken } from "../lib/authStorage";
-import type { ApiResponse } from "../../types/api";
+import type { ApiError, ApiResponse, ApiSuccessResponse } from "../../types/api";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -9,6 +9,27 @@ export const apiBaseUrl =
 type ApiClientOptions = RequestInit & {
   token?: string;
 };
+
+export class ApiClientError extends Error {
+  readonly code: string;
+  readonly details?: Record<string, unknown>;
+  readonly status: number;
+
+  constructor(error: ApiError, status: number) {
+    super(error.message);
+    this.name = "ApiClientError";
+    this.code = error.code;
+    this.details = error.details;
+    this.status = status;
+  }
+}
+
+export class ApiNetworkError extends Error {
+  constructor(message = "API indisponivel.") {
+    super(message);
+    this.name = "ApiNetworkError";
+  }
+}
 
 function buildUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -26,7 +47,7 @@ function shouldSetJsonContentType(body: BodyInit | null | undefined): boolean {
 export async function apiRequest<T>(
   path: string,
   options: ApiClientOptions = {}
-): Promise<ApiResponse<T>> {
+): Promise<ApiSuccessResponse<T>> {
   const { token, headers, ...requestOptions } = options;
   const requestHeaders = new Headers(headers);
   const bearerToken = token ?? getStoredToken();
@@ -41,12 +62,43 @@ export async function apiRequest<T>(
     requestHeaders.set("Authorization", `Bearer ${bearerToken}`);
   }
 
-  const response = await fetch(buildUrl(path), {
-    ...requestOptions,
-    headers: requestHeaders
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path), {
+      ...requestOptions,
+      headers: requestHeaders
+    });
+  } catch {
+    throw new ApiNetworkError();
+  }
 
-  return response.json() as Promise<ApiResponse<T>>;
+  let payload: ApiResponse<T>;
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiClientError(
+      {
+        code: "INVALID_RESPONSE",
+        message: "Resposta inválida da API.",
+        details: {}
+      },
+      response.status
+    );
+  }
+
+  if (!response.ok || !payload.success) {
+    const error = payload.success
+      ? {
+          code: "HTTP_ERROR",
+          message: `Erro HTTP ${response.status}.`,
+          details: {}
+        }
+      : payload.error;
+
+    throw new ApiClientError(error, response.status);
+  }
+
+  return payload;
 }
 
 export const apiClient = {
@@ -63,5 +115,11 @@ export const apiClient = {
       ...options,
       method: "PATCH",
       body: JSON.stringify(body)
+    }),
+  postForm: <T>(path: string, body: FormData, options?: ApiClientOptions) =>
+    apiRequest<T>(path, {
+      ...options,
+      method: "POST",
+      body
     })
 };

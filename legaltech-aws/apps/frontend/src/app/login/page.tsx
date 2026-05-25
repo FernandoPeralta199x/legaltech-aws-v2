@@ -10,7 +10,7 @@ import { DEV_ROLES, type DevRole } from "@/src/types/auth";
 
 const roleConfig: Record<DevRole, { label: string; desc: string; icon: typeof User; color: string; bg: string; border: string }> = {
   admin: {
-    label: "Admin",
+    label: "Administrador",
     desc: "Gestão completa da plataforma",
     icon: Shield,
     color: "text-brand-blue-light",
@@ -34,7 +34,7 @@ const roleConfig: Record<DevRole, { label: string; desc: string; icon: typeof Us
     border: "border-violet-500/30"
   },
   owner: {
-    label: "Owner",
+    label: "Proprietário",
     desc: "Acesso total ao sistema",
     icon: Shield,
     color: "text-amber-300",
@@ -51,7 +51,7 @@ const roleConfig: Record<DevRole, { label: string; desc: string; icon: typeof Us
   }
 };
 
-const demoRoles: DevRole[] = ["admin", "analyst", "client"];
+const demoRoles: DevRole[] = [...DEV_ROLES];
 
 function LoginContent() {
   const router = useRouter();
@@ -59,14 +59,23 @@ function LoginContent() {
   const nextPath = searchParams.get("next") || "/dashboard";
   const [role, setRole] = useState<DevRole>("admin");
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+
+    if (token.trim() && token.trim().split(".").length !== 3) {
+      setError("Cole um JWT dev válido com três partes ou deixe o campo vazio para usar apenas a sessão visual local.");
+      return;
+    }
+
     setLoading(true);
     await new Promise((r) => setTimeout(r, 800));
-    saveDevSession({ role, token: undefined });
+    saveDevSession({ role, token: token.trim() || undefined });
     router.replace(nextPath.startsWith("/") ? nextPath : "/dashboard");
   }
 
@@ -212,6 +221,19 @@ function LoginContent() {
                 type="password"
                 value={password}
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                JWT dev do backend
+              </label>
+              <textarea
+                className="min-h-24 w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
+                onChange={(event) => setToken(event.target.value)}
+                placeholder="Cole aqui o token gerado por python -m src.modules.admin.dev_jwt. Deixe vazio para navegar apenas com fallback/mock local."
+                value={token}
+              />
+              {error && <p className="mt-1.5 text-xs text-red-300">{error}</p>}
             </div>
 
             <button

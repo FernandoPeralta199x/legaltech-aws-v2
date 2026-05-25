@@ -11,10 +11,10 @@ import { useDevSession } from "@/src/lib/useDevSession";
 type HeaderProps = { onMenuClick?: () => void };
 
 const roleMeta: Record<string, { label: string; cls: string }> = {
-  admin:   { label: "Admin",    cls: "text-brand-blue-light  bg-brand-blue/12  border-brand-blue/20" },
+  admin:   { label: "Administrador", cls: "text-brand-blue-light  bg-brand-blue/12  border-brand-blue/20" },
   analyst: { label: "Analista", cls: "text-brand-teal-light  bg-brand-teal/12  border-brand-teal/20" },
   client:  { label: "Cliente",  cls: "text-slate-300         bg-white/[0.06]   border-white/[0.1]"  },
-  owner:   { label: "Owner",    cls: "text-purple-300        bg-purple-500/10  border-purple-500/20" },
+  owner:   { label: "Proprietário", cls: "text-purple-300        bg-purple-500/10  border-purple-500/20" },
   support: { label: "Suporte",  cls: "text-amber-300         bg-amber-500/10   border-amber-500/20"  }
 };
 
@@ -153,6 +153,18 @@ export function Header({ onMenuClick }: HeaderProps) {
                 title="Sair da sessão"
               >
                 {initials}
+              </button>
+              <button
+                className={cn(
+                  "hidden h-8 items-center gap-1.5 rounded-lg border border-white/[0.08]",
+                  "bg-white/[0.04] px-2.5 text-[11px] font-semibold text-slate-400",
+                  "transition hover:bg-white/[0.07] hover:text-slate-100 md:flex"
+                )}
+                onClick={handleLogout}
+                type="button"
+              >
+                <LogOut size={13} />
+                Sair
               </button>
             </div>
           ) : (

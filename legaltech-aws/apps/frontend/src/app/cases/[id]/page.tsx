@@ -13,7 +13,7 @@ import {
   Users
 } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 
 import { AgentCard } from "@/components/AgentCard";
 import { AppLayout } from "@/components/AppLayout";
@@ -22,12 +22,14 @@ import { Card } from "@/components/Card";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
-import { formatDate, formatDateTime } from "@/lib/formatters";
+import { formatDate } from "@/lib/formatters";
+import { ApiClientError } from "@/src/services/apiClient";
+import { getCase } from "@/src/services/cases";
+import { listClients } from "@/src/services/clients";
+import { listDocuments } from "@/src/services/documents";
+import type { Case, Document } from "@/types";
 import {
   mockAgentExecutions,
-  mockAuditLogs,
-  mockCases,
-  mockDocuments,
   mockReports,
   mockTimeline
 } from "@/lib/mockData";
@@ -52,20 +54,108 @@ const caseTypeLabel: Record<string, string> = {
 
 type PageProps = { params: Promise<{ id: string }> };
 
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    return `${error.code}: ${error.message}`;
+  }
+
+  return error instanceof Error ? error.message : "Não foi possível carregar o caso.";
+}
+
 export default function CaseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState("overview");
+  const [caseData, setCaseData] = useState<Case | null>(null);
+  const [caseDocuments, setCaseDocuments] = useState<Document[]>([]);
+  const [error, setError] = useState("");
+  const [fallbackReason, setFallbackReason] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const caseData = mockCases.find((c) => c.id === id) ?? mockCases[0];
-  const caseDocuments = mockDocuments.filter((d) => d.caseId === caseData.id);
+  const refreshCase = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const clientsResult = await listClients();
+      const [caseResult, documentsResult] = await Promise.all([
+        getCase(id, clientsResult.data),
+        listDocuments({ caseId: id })
+      ]);
+      setCaseData({
+        ...caseResult.data,
+        documentsCount: documentsResult.data.length
+      });
+      setCaseDocuments(documentsResult.data);
+      setFallbackReason(
+        clientsResult.source === "mock" ||
+          caseResult.source === "mock" ||
+          documentsResult.source === "mock"
+          ? clientsResult.fallbackReason ??
+              caseResult.fallbackReason ??
+              documentsResult.fallbackReason ??
+              ""
+          : ""
+      );
+    } catch (err) {
+      setError(errorMessage(err));
+      setFallbackReason("");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshCase();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [refreshCase]);
+
+  if (loading) {
+    return (
+      <AuthGuard>
+        <AppLayout>
+          <div className="flex min-h-64 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm text-slate-400">
+            Carregando caso...
+          </div>
+        </AppLayout>
+      </AuthGuard>
+    );
+  }
+
+  if (!caseData) {
+    return (
+      <AuthGuard>
+        <AppLayout>
+          <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+            {error || "Caso não encontrado."}
+          </div>
+        </AppLayout>
+      </AuthGuard>
+    );
+  }
+
   const caseTimeline = mockTimeline.filter((t) => t.caseId === caseData.id);
   const caseAgents = mockAgentExecutions.filter((e) => e.caseId === caseData.id);
   const caseReport = mockReports.find((r) => r.caseId === caseData.id);
-  const caseAuditLogs = mockAuditLogs.filter((l) => l.caseId === caseData.id);
 
   return (
     <AuthGuard>
       <AppLayout>
+        {fallbackReason && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+            <AlertTriangle size={14} />
+            Backend indisponível: detalhes carregados por fallback mockado local.
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+            <AlertTriangle size={14} />
+            {error}
+          </div>
+        )}
+
         {/* Breadcrumb */}
         <Link
           className="mb-4 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition"

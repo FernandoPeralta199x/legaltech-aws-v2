@@ -157,7 +157,7 @@ export function Sidebar() {
             </p>
           </div>
           <p className="mt-1 text-[10px] leading-4 text-slate-500">
-            Dados mockados — pronto para API real.
+            API real com fallback local em desenvolvimento.
           </p>
         </div>
       </div>

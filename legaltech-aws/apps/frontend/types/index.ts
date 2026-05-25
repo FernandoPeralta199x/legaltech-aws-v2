@@ -1,2 +1,2 @@
-export type { ApiError, ApiResponse } from "./api";
+export type { ApiError, ApiResponse, ApiSuccessResponse } from "./api";
 export type * from "./domain";
