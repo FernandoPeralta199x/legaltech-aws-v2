@@ -24,6 +24,7 @@ Variaveis publicas usadas nesta etapa:
 
 ```env
 NEXT_PUBLIC_APP_NAME=LegalTech AWS V2
+NEXT_PUBLIC_APP_ENV=local
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true
 ```
@@ -34,6 +35,16 @@ Nao coloque segredos em variaveis `NEXT_PUBLIC_*`. Qualquer valor com esse prefi
 
 ```env
 NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=false
+```
+
+Para `staging` e `prod`, use `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=false` e a URL publica da API do ambiente. O frontend nao deve receber client secret Cognito, chaves AWS, tokens permanentes ou secrets de APIs externas.
+
+Referencia completa de ambientes:
+
+```text
+docs/ENVIRONMENT_VARIABLES.md
+docs/AWS_DEPLOYMENT_PLAN.md
+docs/SECURITY_CHECKLIST_AWS.md
 ```
 
 ## Instalar e rodar
@@ -153,6 +164,7 @@ Importante:
 - nao use Cognito real nesta tela;
 - nao cole tokens reais de usuarios;
 - nao coloque segredos no frontend;
+- `NEXT_PUBLIC_*` e sempre publico no navegador;
 - `organization_id` continua vindo do token/contexto autenticado, nunca de payloads enviados pela UI.
 
 Labels de papeis exibidas no frontend:

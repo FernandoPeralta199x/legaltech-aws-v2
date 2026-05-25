@@ -25,7 +25,7 @@ Esta entrega cria apenas a base da API:
 - fila local/mock para processamento de documents e worker inicial local;
 - README com comandos locais.
 
-Nao foram implementados OCR real, IA real, RAG real, AWS SQS real, Lambda, agentes completos, frontend ou APIs externas.
+Nao foram implementados OCR real, IA real, RAG real, AWS SQS real, Lambda, agentes completos ou APIs externas.
 O modo S3 esta preparado para ambiente futuro AWS ou LocalStack, mas os testes nao exigem AWS real.
 As rotas sensiveis exigem JWT validado pelo provider configurado em `AUTH_PROVIDER` e permissao registrada em `roles_permissions`.
 
@@ -48,10 +48,13 @@ pip install -r requirements.txt
 ```
 
 O arquivo `apps/api/.env.example.local` contem variaveis ficticias para o PostgreSQL local do `docker-compose.yml`.
+Para a matriz completa de variaveis e ambientes, consulte `docs/ENVIRONMENT_VARIABLES.md`.
 
 Exemplo local, sem versionar segredos:
 
 ```env
+PROJECT_NAME=legaltech
+ENVIRONMENT=local
 APP_ENV=local
 APP_NAME=legaltech-api
 APP_VERSION=0.1.0
@@ -60,6 +63,9 @@ LOG_LEVEL=INFO
 AUTH_PROVIDER=dev_jwt
 DATABASE_URL=postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech
 AWS_REGION=sa-east-1
+AWS_ACCOUNT_ID=000000000000
+AWS_PROFILE=legaltech-local
+AWS_ENDPOINT_URL=
 COGNITO_REGION=sa-east-1
 COGNITO_USER_POOL_ID=
 COGNITO_CLIENT_ID=
@@ -75,14 +81,20 @@ DEV_JWT_AUDIENCE=legaltech-local-api
 LOCAL_UPLOAD_ROOT=storage/local_uploads
 MAX_UPLOAD_SIZE_BYTES=10485760
 STORAGE_BACKEND=local
-S3_DOCUMENTS_BUCKET=legaltech-documents-dev
-AWS_ENDPOINT_URL=
-PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+S3_DOCUMENTS_BUCKET=legaltech-local-documents-placeholder
+PRESIGNED_URL_EXPIRES_SECONDS=900
 LOCAL_PROCESSING_MAX_TEXT_CHARS=50000
 DOCUMENT_PROCESSING_MAX_ATTEMPTS=3
 QUEUE_BACKEND=local
 LOCAL_QUEUE_PATH=storage/local_queue/document_processing.jsonl
 SQS_DOCUMENT_PROCESSING_QUEUE_URL=
+SQS_TRIAGE_QUEUE_URL=
+SQS_EXTERNAL_COLLECTION_QUEUE_URL=
+SQS_CONTRACT_ANALYSIS_QUEUE_URL=
+SQS_COMPLIANCE_QUEUE_URL=
+SQS_REPORT_QUEUE_URL=
+SECRETS_EXTERNAL_APIS_NAME=legaltech/local/external-apis
+OPENAI_API_SECRET_NAME=legaltech/local/openai
 ```
 
 Para usar o fluxo local completo, copie o exemplo para `.env` dentro de `apps/api`. O arquivo `.env` segue ignorado pelo Git.
@@ -206,6 +218,17 @@ AUTH_PROVIDER=cognito
 
 Prepara validacao de JWT do AWS Cognito. Neste modo o backend valida assinatura via JWKS, `iss`, `aud` ou `client_id`, `exp`, `token_use` e algoritmo `RS256`. Tokens `alg=none`, tokens dev/HS256, issuer invalido, audience invalida, expirados ou sem claim de tenant sao rejeitados.
 
+Politica por ambiente:
+
+```text
+local    AUTH_PROVIDER=dev_jwt   DEV_JWT_ENABLED=true
+dev      AUTH_PROVIDER=cognito   DEV_JWT_ENABLED=false
+staging  AUTH_PROVIDER=cognito   DEV_JWT_ENABLED=false
+prod     AUTH_PROVIDER=cognito   DEV_JWT_ENABLED=false
+```
+
+O caminho Cognito esta preparado para AWS futura, mas este projeto nao cria User Pool, App Client ou JWKS real nesta etapa.
+
 Variaveis Cognito esperadas, com valores ficticios em exemplos:
 
 ```env
@@ -217,6 +240,26 @@ COGNITO_JWKS_URL=https://cognito-idp.sa-east-1.amazonaws.com/sa-east-1_EXAMPLE/.
 COGNITO_ORGANIZATION_CLAIM=custom:organization_id
 COGNITO_ROLE_CLAIM=custom:role
 COGNITO_TOKEN_USE=id
+```
+
+## Configuracao AWS futura
+
+Esta API reconhece variaveis de preparacao para AWS sem exigir recursos reais:
+
+```env
+STORAGE_BACKEND=s3
+S3_DOCUMENTS_BUCKET=legaltech-staging-documents
+QUEUE_BACKEND=sqs
+SQS_DOCUMENT_PROCESSING_QUEUE_URL=https://sqs.sa-east-1.amazonaws.com/000000000000/legaltech-staging-document-processing
+SECRETS_EXTERNAL_APIS_NAME=legaltech/staging/external-apis
+OPENAI_API_SECRET_NAME=legaltech/staging/openai
+```
+
+Use apenas nomes logicos de secrets no `.env`; valores reais devem ficar em Secrets Manager ou mecanismo equivalente. Antes de qualquer deploy futuro, siga:
+
+```powershell
+python ..\..\scripts\validate_env.py --env-file ..\..\.env.example --environment local --target backend
+python ..\..\scripts\check_project_security.py ..\..
 ```
 
 `COGNITO_ISSUER` e `COGNITO_JWKS_URL` podem ficar vazios quando `COGNITO_REGION` e `COGNITO_USER_POOL_ID` forem suficientes para derivar os valores. Em testes, a API usa JWKS mockado em memoria e nao chama AWS real.
@@ -351,17 +394,17 @@ Configuracao local/mock:
 STORAGE_BACKEND=local
 LOCAL_UPLOAD_ROOT=storage/local_uploads
 MAX_UPLOAD_SIZE_BYTES=10485760
-PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+PRESIGNED_URL_EXPIRES_SECONDS=900
 ```
 
 Configuracao futura S3 ou LocalStack, com valores ficticios:
 
 ```env
 STORAGE_BACKEND=s3
-S3_DOCUMENTS_BUCKET=legaltech-documents-dev
+S3_DOCUMENTS_BUCKET=legaltech-dev-documents
 AWS_REGION=sa-east-1
 AWS_ENDPOINT_URL=http://localhost:4566
-PRESIGNED_URL_EXPIRES_IN_SECONDS=900
+PRESIGNED_URL_EXPIRES_SECONDS=900
 ```
 
 Nao coloque `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` ou credenciais reais em arquivos versionados. Em AWS real, use IAM role, Secrets Manager, SSM ou configuracao segura do ambiente.

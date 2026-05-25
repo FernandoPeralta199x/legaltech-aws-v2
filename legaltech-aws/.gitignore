@@ -13,6 +13,13 @@
 aws-credentials*
 credentials.json
 secrets.*
+.aws/
+*.tfvars
+terraform.tfstate
+terraform.tfstate.*
+.terraform/
+.terraform.lock.hcl
+cdk.out/
 
 # Node / Next.js
 node_modules/

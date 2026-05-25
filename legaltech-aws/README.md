@@ -1,108 +1,149 @@
 # LegalTech AWS V2
 
-## Objetivo
+Plataforma LegalTech modular com frontend Next.js, backend FastAPI,
+PostgreSQL, auditoria LGPD, RBAC, storage de documentos, fila local/mock e
+preparacao para AWS.
 
-Base inicial para o desenvolvimento do projeto LegalTech AWS V2: uma plataforma modular para fluxos juridicos com frontend web, API backend, persistencia relacional, preparo para RAG futuro, armazenamento privado de documentos, filas, workers e infraestrutura AWS.
+Esta etapa organiza ambientes, variaveis, seguranca e infraestrutura futura.
+Nenhum recurso AWS real e criado por este repositorio neste momento.
 
-Esta fase cria a base documental, backend inicial e frontend inicial do repositório. Nenhuma API externa real foi implementada e nenhum agente completo foi criado.
+## Estado Atual
 
-## Stack Tecnica
+- Frontend: Next.js + TypeScript + Tailwind CSS.
+- Backend: FastAPI + SQLAlchemy + Alembic.
+- Banco local: PostgreSQL via Docker Compose com `pgvector`.
+- Auth local: JWT dev apenas para `APP_ENV=local`.
+- Auth futura: validacao Cognito/JWKS preparada no backend.
+- Storage: local/mock e adaptador S3 preparado.
+- Filas: local/mock e adaptador SQS preparado.
+- Workers: processamento local de documentos com chunks/embeddings fake.
+- Auditoria: `audit_log` avancado com sanitizacao LGPD.
+- Infra: documentacao e checklists AWS, sem deploy real.
 
-- Frontend: Next.js + TypeScript
-- Backend: FastAPI + Python
-- ORM: SQLAlchemy
-- Migrations: Alembic
-- Banco: PostgreSQL
-- Vetorial/RAG futuro: pgvector
-- Arquivos: Amazon S3 privado
-- Filas: AWS SQS
-- Workers: AWS Lambda
-- Auth futura: Cognito/JWT/RBAC/Tenant
-- Infra futura: AWS
-
-## Estrutura De Pastas
+## Estrutura
 
 ```text
 legaltech-aws/
-├── apps/
-│   ├── frontend/
-│   └── api/
-├── workers/
-│   └── triagem/
-├── infra/
-├── database/
-├── docs/
-├── .env.example
-├── .gitignore
-├── AGENTS.md
-└── README.md
++-- apps/
+|   +-- api/
+|   +-- frontend/
++-- database/
++-- docs/
++-- infra/
+|   +-- aws/
++-- scripts/
++-- workers/
 ```
 
-## Responsabilidades Iniciais
+## Ambientes
 
-- `apps/frontend/`: aplicacao Next.js com TypeScript.
-- `apps/api/`: API FastAPI organizada em rotas, services, schemas, repositories e models.
-- `workers/triagem/`: worker futuro para processamento assincrono de triagem.
-- `infra/`: definicoes futuras de infraestrutura AWS.
-- `database/`: configuracoes futuras de banco, migrations e extensoes como pgvector.
-- `docs/`: documentacao tecnica, decisoes arquiteturais e guias do projeto.
+- `local`: Docker/PostgreSQL, JWT dev, storage local e fila local.
+- `dev`: AWS futura de desenvolvimento, com Cognito.
+- `staging`: validacao antes de producao.
+- `prod`: producao, sem JWT dev e sem mocks.
 
-## Ordem Recomendada De Implementacao
+Referencias:
 
-1. Definir contratos de dominio, entidades sensiveis e regras de tenant/auditoria.
-2. Criar a base do backend FastAPI com configuracao, health check e estrutura modular.
-3. Configurar SQLAlchemy, Alembic, PostgreSQL e modelos iniciais com `organization_id`.
-4. Criar autenticacao base com validacao de JWT/Cognito simulada em ambiente local.
-5. Implementar RBAC, tenant resolution e `audit_log` para acoes sensiveis.
-6. Criar frontend Next.js com layout base, chamadas futuras ao backend e estados de UI.
-7. Implementar fluxo de upload via presigned URL para S3 privado.
-8. Introduzir SQS e worker de triagem com contrato de mensagem versionado.
-9. Preparar pgvector e pipeline RAG somente depois dos fluxos base estarem testados.
-10. Adicionar agentes e integracoes externas apenas apos contratos, auditoria e revisao humana estarem definidos.
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/AWS_DEPLOYMENT_PLAN.md`
+- `docs/SECURITY_CHECKLIST_AWS.md`
+- `infra/aws/checklist-deploy.md`
 
-## Comandos Locais
+## Configuracao Local
 
-```bash
-# Frontend
-cd apps/frontend
-npm install
-npm run dev
-npm run typecheck
-npm run lint
-npm run build
-```
+Exemplos ficticios:
 
-```bash
-# Backend
-cd apps/api
+- `.env.example`
+- `apps/api/.env.example.local`
+- `apps/frontend/.env.example`
+- `infra/aws/env.example`
+
+Nunca versione `.env` real, tokens, senhas, access keys, chaves privadas ou
+segredos de APIs externas.
+
+## Backend
+
+```powershell
+cd legaltech-aws
+docker compose up -d postgres
+
+cd apps\api
 python -m venv .venv
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-```bash
-# Migrations
-cd apps/api
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example.local .env
 alembic upgrade head
+uvicorn src.main:app --reload
 ```
 
-```bash
-# Testes e validacoes
-cd apps/frontend
+Health check:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
+Validacoes:
+
+```powershell
+cd legaltech-aws\apps\api
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+.venv\Scripts\python.exe -m compileall src tests
+.venv\Scripts\python.exe -m pip check
+```
+
+## Frontend
+
+```powershell
+cd legaltech-aws\apps\frontend
+npm install
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+Abra:
+
+```text
+http://localhost:3000
+```
+
+Validacoes:
+
+```powershell
+cd legaltech-aws\apps\frontend
+npm run test
 npm run typecheck
 npm run lint
 npm run build
-
-cd ../api
-pytest
 ```
 
-## Frontend Inicial
+## Validacoes De Ambiente E Seguranca
 
-O app em `apps/frontend` usa Next.js + TypeScript + Tailwind CSS e inclui rotas iniciais para `/`, `/login`, `/dashboard`, `/clients`, `/cases` e `/documents`.
+Scripts offline, sem AWS real:
 
-Nesta etapa, a UI usa apenas dados mockados e ficticios. O `apiClient` esta preparado para consumir `NEXT_PUBLIC_API_BASE_URL` futuramente, sem autenticacao real e sem expor segredos no navegador.
+```powershell
+cd legaltech-aws
+python scripts\validate_env.py --env-file .env.example --environment local --target backend
+python scripts\validate_env.py --env-file apps\frontend\.env.example --environment local --target frontend
+python scripts\validate_env.py --env-file infra\aws\env.example --environment staging --target aws
+python scripts\check_project_security.py .
+```
 
-## Configuracao
+## Regras De Seguranca
 
-Copie `.env.example` para `.env` apenas em ambiente local e preencha valores reais fora do controle de versao. Nunca commitar chaves, tokens, senhas ou credenciais de provedores externos.
+- `AUTH_PROVIDER=dev_jwt` somente em `APP_ENV=local`.
+- `DEV_JWT_ENABLED=false` em `dev`, `staging` e `prod`.
+- `AUTH_PROVIDER=cognito` e o caminho esperado para AWS.
+- S3 deve ser privado por padrao.
+- Upload/download de documentos deve usar presigned URL.
+- `organization_id` nunca vem do frontend como fonte de verdade.
+- Logs nao devem expor CPF/CNPJ completo, tokens, senhas, chaves ou contratos
+  integrais.
+- Secrets reais devem ficar fora do repositorio.
+
+## Fora Do Escopo Atual
+
+- Deploy real em AWS.
+- Criacao real de Cognito, RDS, S3, SQS, Lambda ou CloudFront.
+- Terraform/CDK completo.
+- Cognito Hosted UI no frontend.
+- OCR, IA, RAG e APIs externas reais.

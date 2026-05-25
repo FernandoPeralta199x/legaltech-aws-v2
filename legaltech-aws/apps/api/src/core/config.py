@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,8 +11,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
+    project_name: str = Field(default="legaltech", alias="PROJECT_NAME")
+    environment: str | None = Field(default=None, alias="ENVIRONMENT")
     app_env: str = Field(default="local", alias="APP_ENV")
     app_name: str = Field(default="legaltech-api", alias="APP_NAME")
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
@@ -29,6 +32,17 @@ class Settings(BaseSettings):
     )
 
     aws_region: str = Field(default="sa-east-1", alias="AWS_REGION")
+    aws_account_id: str | None = Field(default=None, alias="AWS_ACCOUNT_ID")
+    aws_profile: str | None = Field(default=None, alias="AWS_PROFILE")
+    domain_name: str | None = Field(default=None, alias="DOMAIN_NAME")
+    acm_certificate_arn: str | None = Field(
+        default=None,
+        alias="ACM_CERTIFICATE_ARN",
+    )
+    cloudfront_distribution_id: str | None = Field(
+        default=None,
+        alias="CLOUDFRONT_DISTRIBUTION_ID",
+    )
     cognito_region: str | None = Field(default=None, alias="COGNITO_REGION")
     cognito_user_pool_id: str | None = Field(default=None, alias="COGNITO_USER_POOL_ID")
     cognito_client_id: str | None = Field(default=None, alias="COGNITO_CLIENT_ID")
@@ -79,7 +93,10 @@ class Settings(BaseSettings):
     aws_endpoint_url: str | None = Field(default=None, alias="AWS_ENDPOINT_URL")
     presigned_url_expires_in_seconds: int = Field(
         default=900,
-        alias="PRESIGNED_URL_EXPIRES_IN_SECONDS",
+        validation_alias=AliasChoices(
+            "PRESIGNED_URL_EXPIRES_SECONDS",
+            "PRESIGNED_URL_EXPIRES_IN_SECONDS",
+        ),
         gt=0,
         le=3600,
     )
@@ -104,6 +121,34 @@ class Settings(BaseSettings):
     sqs_document_processing_queue_url: str | None = Field(
         default=None,
         alias="SQS_DOCUMENT_PROCESSING_QUEUE_URL",
+    )
+    sqs_triage_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_TRIAGE_QUEUE_URL",
+    )
+    sqs_external_collection_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_EXTERNAL_COLLECTION_QUEUE_URL",
+    )
+    sqs_contract_analysis_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_CONTRACT_ANALYSIS_QUEUE_URL",
+    )
+    sqs_compliance_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_COMPLIANCE_QUEUE_URL",
+    )
+    sqs_report_queue_url: str | None = Field(
+        default=None,
+        alias="SQS_REPORT_QUEUE_URL",
+    )
+    secrets_external_apis_name: str | None = Field(
+        default=None,
+        alias="SECRETS_EXTERNAL_APIS_NAME",
+    )
+    openai_api_secret_name: str | None = Field(
+        default=None,
+        alias="OPENAI_API_SECRET_NAME",
     )
 
     @field_validator("database_url", mode="before")
