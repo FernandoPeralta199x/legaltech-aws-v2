@@ -13,7 +13,7 @@ Esta entrega cria apenas a base da API:
 - camada inicial de schemas, repositories e services para clients e cases;
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
 - rotas iniciais de metadados de documents em `/api/v1`;
-- estrutura JWT/Cognito para `Authorization: Bearer <jwt>`;
+- estrutura JWT dev local e Cognito/JWKS para `Authorization: Bearer <jwt>`;
 - RBAC consultando `roles_permissions`;
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
 - audit_log avancado com sanitizacao LGPD para eventos sensiveis;
@@ -27,7 +27,7 @@ Esta entrega cria apenas a base da API:
 
 Nao foram implementados OCR real, IA real, RAG real, AWS SQS real, Lambda, agentes completos, frontend ou APIs externas.
 O modo S3 esta preparado para ambiente futuro AWS ou LocalStack, mas os testes nao exigem AWS real.
-As rotas sensiveis exigem JWT Cognito e permissao registrada em `roles_permissions`.
+As rotas sensiveis exigem JWT validado pelo provider configurado em `AUTH_PROVIDER` e permissao registrada em `roles_permissions`.
 
 ## Requisitos
 
@@ -57,10 +57,14 @@ APP_NAME=legaltech-api
 APP_VERSION=0.1.0
 ENABLE_DOCS=true
 LOG_LEVEL=INFO
+AUTH_PROVIDER=dev_jwt
 DATABASE_URL=postgresql+psycopg://legaltech:legaltech_dev@localhost:5432/legaltech
 AWS_REGION=sa-east-1
+COGNITO_REGION=sa-east-1
 COGNITO_USER_POOL_ID=
 COGNITO_CLIENT_ID=
+COGNITO_ISSUER=
+COGNITO_JWKS_URL=
 COGNITO_ORGANIZATION_CLAIM=custom:organization_id
 COGNITO_ROLE_CLAIM=custom:role
 COGNITO_TOKEN_USE=id
@@ -185,6 +189,37 @@ Header esperado:
 ```text
 Authorization: Bearer <jwt>
 ```
+
+## Autenticacao: dev_jwt e Cognito
+
+O backend suporta dois providers de autenticacao por configuracao:
+
+```env
+AUTH_PROVIDER=dev_jwt
+```
+
+Use somente em `APP_ENV=local`, com `DEV_JWT_ENABLED=true`, para smoke tests e desenvolvimento local sem Cognito real. Tokens dev usam segredo ficticio local e nao devem existir em producao.
+
+```env
+AUTH_PROVIDER=cognito
+```
+
+Prepara validacao de JWT do AWS Cognito. Neste modo o backend valida assinatura via JWKS, `iss`, `aud` ou `client_id`, `exp`, `token_use` e algoritmo `RS256`. Tokens `alg=none`, tokens dev/HS256, issuer invalido, audience invalida, expirados ou sem claim de tenant sao rejeitados.
+
+Variaveis Cognito esperadas, com valores ficticios em exemplos:
+
+```env
+COGNITO_REGION=sa-east-1
+COGNITO_USER_POOL_ID=sa-east-1_EXAMPLE
+COGNITO_CLIENT_ID=example-client-id
+COGNITO_ISSUER=https://cognito-idp.sa-east-1.amazonaws.com/sa-east-1_EXAMPLE
+COGNITO_JWKS_URL=https://cognito-idp.sa-east-1.amazonaws.com/sa-east-1_EXAMPLE/.well-known/jwks.json
+COGNITO_ORGANIZATION_CLAIM=custom:organization_id
+COGNITO_ROLE_CLAIM=custom:role
+COGNITO_TOKEN_USE=id
+```
+
+`COGNITO_ISSUER` e `COGNITO_JWKS_URL` podem ficar vazios quando `COGNITO_REGION` e `COGNITO_USER_POOL_ID` forem suficientes para derivar os valores. Em testes, a API usa JWKS mockado em memoria e nao chama AWS real.
 
 Claims esperadas por padrao:
 
@@ -637,6 +672,7 @@ docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT role, COU
 Para testar rotas reais localmente sem Cognito, habilite apenas em `APP_ENV=local`:
 
 ```env
+AUTH_PROVIDER=dev_jwt
 DEV_JWT_ENABLED=true
 DEV_JWT_SECRET=fictitious-local-dev-secret-32-bytes-minimum
 DEV_JWT_ISSUER=legaltech-local-dev
@@ -666,6 +702,14 @@ $TOKEN = python -m src.modules.admin.dev_jwt `
 ```
 
 As claims do token carregam `organization_id`, `user_id` e `role`. Nao envie `organization_id` nos payloads de frontend.
+
+Para validar o caminho Cognito sem conta AWS real, rode os testes com JWKS mockado:
+
+```bash
+python -m unittest tests.test_cognito_auth -v
+```
+
+Esses testes geram uma chave RSA efemera em memoria, montam um JWKS ficticio, assinam tokens Cognito-like e validam issuer, audience/client_id, expiracao, algoritmo, tenant claim e RBAC. Nao ha chamada para AWS real.
 
 ## Smoke local de clients e cases
 
@@ -849,6 +893,7 @@ python -m unittest tests.test_clients_cases_routes -v
 Testar auth/RBAC e auditoria:
 
 ```bash
+python -m unittest tests.test_cognito_auth -v
 python -m unittest tests.test_audit_lgpd -v
 python -m unittest tests.test_auth_rbac_audit -v
 python -m unittest tests.test_roles_permissions -v
@@ -880,7 +925,10 @@ Esses testes usam services/verifiers mockados via `dependency_overrides`, entao 
 ```text
 src/
 ├── core/
+│   ├── auth.py
 │   ├── config.py
+│   ├── cognito.py
+│   ├── jwks.py
 │   ├── logging.py
 │   ├── rbac.py
 │   ├── security.py

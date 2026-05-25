@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
     enable_docs: bool = Field(default=True, alias="ENABLE_DOCS")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    auth_provider: Literal["dev_jwt", "cognito"] = Field(
+        default="dev_jwt",
+        alias="AUTH_PROVIDER",
+    )
 
     database_url: str = Field(
         default="postgresql+psycopg://legaltech:legaltech@localhost:5432/legaltech",
@@ -25,8 +29,14 @@ class Settings(BaseSettings):
     )
 
     aws_region: str = Field(default="sa-east-1", alias="AWS_REGION")
+    cognito_region: str | None = Field(default=None, alias="COGNITO_REGION")
     cognito_user_pool_id: str | None = Field(default=None, alias="COGNITO_USER_POOL_ID")
     cognito_client_id: str | None = Field(default=None, alias="COGNITO_CLIENT_ID")
+    cognito_issuer_override: str | None = Field(default=None, alias="COGNITO_ISSUER")
+    cognito_jwks_url_override: str | None = Field(
+        default=None,
+        alias="COGNITO_JWKS_URL",
+    )
     cognito_organization_claim: str = Field(
         default="custom:organization_id",
         alias="COGNITO_ORGANIZATION_CLAIM",
@@ -106,16 +116,23 @@ class Settings(BaseSettings):
 
     @property
     def cognito_issuer(self) -> str | None:
+        if self.cognito_issuer_override:
+            return self.cognito_issuer_override
+
         if not self.cognito_user_pool_id:
             return None
 
+        region = self.cognito_region or self.aws_region
         return (
-            f"https://cognito-idp.{self.aws_region}.amazonaws.com/"
+            f"https://cognito-idp.{region}.amazonaws.com/"
             f"{self.cognito_user_pool_id}"
         )
 
     @property
     def cognito_jwks_url(self) -> str | None:
+        if self.cognito_jwks_url_override:
+            return self.cognito_jwks_url_override
+
         if not self.cognito_issuer:
             return None
 
