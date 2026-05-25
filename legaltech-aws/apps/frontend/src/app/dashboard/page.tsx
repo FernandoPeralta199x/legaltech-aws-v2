@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   ArrowRight,
   Bot,
   BriefcaseBusiness,
@@ -19,6 +18,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { LoadingState } from "@/components/LoadingState";
+import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -36,6 +39,11 @@ function errorMessage(error: unknown): string {
   }
 
   return error instanceof Error ? error.message : "Não foi possível carregar o dashboard.";
+}
+
+function caseDisplayTitle(legalCase: Case): string {
+  const title = legalCase.metadata?.title;
+  return typeof title === "string" && title.trim() ? title : legalCase.caseType;
 }
 
 export default function DashboardPage() {
@@ -103,39 +111,40 @@ export default function DashboardPage() {
   const humanReviews = cases.filter(
     (legalCase) => legalCase.status === "revisao_humana" || legalCase.status === "review"
   ).length;
+  const dataSourceLabel = fallbackReason ? "Fallback mockado" : "API real";
 
   const metrics = [
     {
-      label: "Casos em análise",
-      value: casesInAnalysis,
+      bg: "bg-brand-blue/10 border-brand-blue/20",
+      color: "text-brand-blue-light",
       detail: "Processando ou em revisão",
       icon: BriefcaseBusiness,
-      color: "text-brand-blue-light",
-      bg: "bg-brand-blue/10 border-brand-blue/20"
+      label: "Casos em análise",
+      value: casesInAnalysis
     },
     {
-      label: "Revisões humanas",
-      value: humanReviews,
+      bg: "bg-yellow-500/10 border-yellow-500/20",
+      color: "text-yellow-400",
       detail: "Aguardando analista",
       icon: ClipboardCheck,
-      color: "text-yellow-400",
-      bg: "bg-yellow-500/10 border-yellow-500/20"
+      label: "Revisões humanas",
+      value: humanReviews
     },
     {
-      label: "Documentos",
-      value: documents.length,
+      bg: "bg-teal-500/10 border-teal-500/20",
+      color: "text-teal-400",
       detail: "Metadados carregados",
       icon: FileText,
-      color: "text-teal-400",
-      bg: "bg-teal-500/10 border-teal-500/20"
+      label: "Documentos",
+      value: documents.length
     },
     {
-      label: "Clientes ativos",
-      value: clients.length,
-      detail: "Fonte integrável",
-      icon: UsersRound,
+      bg: "bg-violet-500/10 border-violet-500/20",
       color: "text-violet-400",
-      bg: "bg-violet-500/10 border-violet-500/20"
+      detail: "Clientes da organização",
+      icon: UsersRound,
+      label: "Clientes ativos",
+      value: clients.length
     }
   ];
 
@@ -147,6 +156,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
+                loading={loading}
                 onClick={() => void refreshDashboard()}
                 variant="secondary"
               >
@@ -163,21 +173,51 @@ export default function DashboardPage() {
         />
 
         {fallbackReason && (
-          <StatusNotice message="Backend indisponível: dashboard usando fallback mockado local." />
+          <Notification title="Fallback local ativo" tone="warning">
+            O backend não respondeu. Métricas e listas estão usando dados fictícios de desenvolvimento.
+          </Notification>
         )}
-        {error && <StatusNotice message={error} tone="error" />}
+        {error && !loading && (
+          <Notification onDismiss={() => setError("")} title="Atenção" tone="error">
+            {error}
+          </Notification>
+        )}
 
         {loading ? (
-          <div className="flex min-h-64 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm text-slate-400">
-            Carregando dados operacionais...
-          </div>
+          <LoadingState
+            description="Consolidando clientes, casos e documentos."
+            label="Carregando dados operacionais"
+            rows={4}
+          />
+        ) : error && cases.length === 0 && clients.length === 0 && documents.length === 0 ? (
+          <ErrorState
+            action={
+              <Button icon={<RefreshCw size={15} />} onClick={() => void refreshDashboard()} variant="secondary">
+                Tentar novamente
+              </Button>
+            }
+            description="Não foi possível montar a visão geral. Erros de autorização e validação do backend não são substituídos por fallback."
+            details={error}
+          />
         ) : (
           <>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                Fonte atual:{" "}
+                <span className={fallbackReason ? "font-semibold text-amber-200" : "font-semibold text-teal-200"}>
+                  {dataSourceLabel}
+                </span>
+              </p>
+              <p className="text-xs text-slate-500">
+                Atualizado nesta sessão local
+              </p>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {metrics.map((metric) => {
                 const Icon = metric.icon;
                 return (
-                  <Card className="group hover:border-white/[0.14] transition-all" key={metric.label}>
+                  <Card className="group transition-all hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-card-hover" key={metric.label}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs text-slate-400">{metric.label}</p>
@@ -197,25 +237,33 @@ export default function DashboardPage() {
               <Card
                 actions={
                   <Link
-                    className="flex items-center gap-1.5 text-xs text-brand-blue-light hover:text-brand-blue transition"
+                    className="flex items-center gap-1.5 text-xs text-brand-blue-light transition hover:text-brand-blue"
                     href="/cases"
                   >
                     Ver todos
                     <ArrowRight size={13} />
                   </Link>
                 }
-                description="Casos mais recentes com status e prioridade."
+                description="Casos mais recentes com status, prioridade e fonte integrável."
                 title="Fila de casos"
               >
                 {recentCases.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-slate-400">
-                    Nenhum caso carregado.
-                  </p>
+                  <EmptyState
+                    action={
+                      <Button href="/cases" icon={<Plus size={15} />}>
+                        Criar caso
+                      </Button>
+                    }
+                    description="Nenhum caso carregado. Crie clientes e casos fictícios para validar o fluxo."
+                    icon={<BriefcaseBusiness size={20} />}
+                    title="Fila vazia"
+                    variant="compact"
+                  />
                 ) : (
                   <div className="divide-y divide-white/[0.06]">
                     {recentCases.map((legalCase) => (
                       <Link
-                        className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between hover:bg-white/[0.02] -mx-2 px-2 rounded-lg transition group"
+                        className="-mx-2 flex flex-col gap-2 rounded-lg px-2 py-4 transition hover:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-between"
                         href={`/cases/${legalCase.id}`}
                         key={legalCase.id}
                       >
@@ -227,12 +275,12 @@ export default function DashboardPage() {
                             <PriorityBadge priority={legalCase.priority} />
                           </div>
                           <p className="mt-0.5 truncate text-sm font-medium text-slate-100">
-                            {legalCase.caseType}
+                            {caseDisplayTitle(legalCase)}
                           </p>
                           <p className="text-xs text-slate-400">{legalCase.clientName}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <div className="hidden sm:block text-right">
+                          <div className="hidden text-right sm:block">
                             <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                               <FileText size={11} />
                               {legalCase.documentsCount} docs
@@ -252,10 +300,12 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <Card title="Agentes ativos" description="Execuções mockadas até haver endpoint dedicado.">
                   {activeAgents.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 py-6 text-center">
-                      <Bot className="text-slate-600" size={24} />
-                      <p className="text-xs text-slate-400">Nenhum agente ativo no momento</p>
-                    </div>
+                    <EmptyState
+                      description="Nenhum worker de agente aparece como ativo nos dados mockados."
+                      icon={<Bot size={20} />}
+                      title="Sem agentes ativos"
+                      variant="compact"
+                    />
                   ) : (
                     <div className="space-y-3">
                       {activeAgents.map((agent) => (
@@ -277,27 +327,36 @@ export default function DashboardPage() {
                 </Card>
 
                 <Card title="Progresso dos casos" description="Distribuição por etapa.">
-                  <div className="space-y-3">
-                    {[
-                      { label: "Em análise", count: casesInAnalysis, color: "bg-violet-500" },
-                      { label: "Revisão humana", count: humanReviews, color: "bg-yellow-500" },
-                      { label: "Relatórios aprovados", count: reportsApproved, color: "bg-teal-500" },
-                      { label: "Rascunho", count: cases.filter((legalCase) => legalCase.status === "draft").length, color: "bg-slate-500" }
-                    ].map((item) => (
-                      <div key={item.label}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs text-slate-400">{item.label}</p>
-                          <p className="text-xs font-semibold text-slate-200">{item.count}</p>
+                  {cases.length === 0 ? (
+                    <EmptyState
+                      description="A distribuição será exibida após haver casos carregados."
+                      icon={<CheckCircle2 size={20} />}
+                      title="Sem métricas de fluxo"
+                      variant="compact"
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {[
+                        { label: "Em análise", count: casesInAnalysis, color: "bg-violet-500" },
+                        { label: "Revisão humana", count: humanReviews, color: "bg-yellow-500" },
+                        { label: "Relatórios aprovados", count: reportsApproved, color: "bg-teal-500" },
+                        { label: "Rascunho", count: cases.filter((legalCase) => legalCase.status === "draft").length, color: "bg-slate-500" }
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <div className="mb-1.5 flex items-center justify-between">
+                            <p className="text-xs text-slate-400">{item.label}</p>
+                            <p className="text-xs font-semibold text-slate-200">{item.count}</p>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                            <div
+                              className={`h-1.5 rounded-full ${item.color}`}
+                              style={{ width: `${cases.length ? (item.count / cases.length) * 100 : 0}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                          <div
-                            className={`h-1.5 rounded-full ${item.color}`}
-                            style={{ width: `${cases.length ? (item.count / cases.length) * 100 : 0}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
@@ -305,27 +364,5 @@ export default function DashboardPage() {
         )}
       </AppLayout>
     </AuthGuard>
-  );
-}
-
-function StatusNotice({
-  message,
-  tone = "warning"
-}: {
-  message: string;
-  tone?: "error" | "warning";
-}) {
-  const isError = tone === "error";
-  return (
-    <div
-      className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs ${
-        isError
-          ? "border-red-500/25 bg-red-500/10 text-red-200"
-          : "border-amber-500/25 bg-amber-500/10 text-amber-200"
-      }`}
-    >
-      <AlertTriangle size={14} />
-      {message}
-    </div>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   BriefcaseBusiness,
   Calendar,
   FileText,
@@ -11,13 +10,17 @@ import {
   Search
 } from "lucide-react";
 import Link from "next/link";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { FormField, SelectInput, TextArea, TextInput } from "@/components/FormField";
+import { LoadingState } from "@/components/LoadingState";
+import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -25,17 +28,18 @@ import { formatDate } from "@/lib/formatters";
 import { ApiClientError } from "@/src/services/apiClient";
 import { createCase, listCases } from "@/src/services/cases";
 import { listClients } from "@/src/services/clients";
+import { validateCaseForm, type ValidationErrors } from "@/src/lib/validation";
 import type { Case, CaseCreate, Client, Priority, ProductType } from "@/types";
 
 const caseTypeLabel: Record<string, string> = {
   compra_venda: "Compra e Venda",
-  prestacao_servicos: "Prestação de Serviços",
-  locacao: "Locação",
-  parceria: "Parceria",
   confidencialidade: "Confidencialidade (NDA)",
-  due_diligence: "Due Diligence",
   contract_analysis: "Análise Contratual",
-  outro: "Outro"
+  due_diligence: "Due Diligence",
+  locacao: "Locação",
+  outro: "Outro",
+  parceria: "Parceria",
+  prestacao_servicos: "Prestação de Serviços"
 };
 
 const contractTypes = [
@@ -61,6 +65,16 @@ type CaseForm = {
   notes: string;
   priority: Priority;
   product: ProductType;
+  title: string;
+};
+
+const emptyCaseForm: CaseForm = {
+  caseType: "contract_analysis",
+  clientId: "",
+  notes: "",
+  priority: "normal",
+  product: "analise_contratual",
+  title: ""
 };
 
 function errorMessage(error: unknown): string {
@@ -71,27 +85,31 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Não foi possível carregar casos.";
 }
 
+function caseDisplayTitle(legalCase: Case): string {
+  const title = legalCase.metadata?.title;
+  return typeof title === "string" && title.trim()
+    ? title
+    : caseTypeLabel[legalCase.caseType] ?? legalCase.caseType;
+}
+
 export default function CasesPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [error, setError] = useState("");
   const [fallbackReason, setFallbackReason] = useState("");
   const [filter, setFilter] = useState("");
-  const [form, setForm] = useState<CaseForm>({
-    caseType: "contract_analysis",
-    clientId: "",
-    notes: "",
-    priority: "normal",
-    product: "analise_contratual"
-  });
+  const [form, setForm] = useState<CaseForm>(emptyCaseForm);
+  const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const refreshCases = useCallback(async () => {
     setLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const clientsResult = await listClients();
@@ -128,7 +146,12 @@ export default function CasesPage() {
     return cases.filter((legalCase) => {
       const matchesStatus = filter ? legalCase.status === filter : true;
       const matchesQuery = normalized
-        ? [legalCase.code, legalCase.clientName, legalCase.caseType]
+        ? [
+            legalCase.code,
+            legalCase.clientName,
+            legalCase.caseType,
+            caseDisplayTitle(legalCase)
+          ]
             .join(" ")
             .toLowerCase()
             .includes(normalized)
@@ -137,16 +160,29 @@ export default function CasesPage() {
     });
   }, [cases, filter, query]);
 
+  function updateForm<K extends keyof CaseForm>(field: K, value: CaseForm[K]) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormErrors((current) => ({ ...current, [field]: "" }));
+    setError("");
+    setSuccessMessage("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) {
+      return;
+    }
 
-    if (!form.clientId) {
-      setError("Crie ou carregue um cliente antes de criar um caso.");
+    const validation = validateCaseForm(form);
+    setFormErrors(validation.errors);
+    if (!validation.valid) {
+      setError("Revise os campos destacados antes de criar o caso.");
       return;
     }
 
     setSubmitting(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const payload: CaseCreate = {
@@ -155,15 +191,25 @@ export default function CasesPage() {
         metadata: {
           notes: form.notes.trim(),
           product: form.product,
-          source: "frontend"
+          source: "frontend",
+          title: form.title.trim()
         },
         priority: form.priority
       };
       const result = await createCase(payload, clients);
       setCases((current) => [result.data, ...current]);
       setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
+      setSuccessMessage(
+        result.source === "mock"
+          ? "Caso criado no fallback local de desenvolvimento."
+          : "Caso criado com sucesso no backend."
+      );
       setShowForm(false);
-      setForm((current) => ({ ...current, notes: "" }));
+      setForm((current) => ({
+        ...emptyCaseForm,
+        clientId: current.clientId || clients[0]?.id || ""
+      }));
+      setFormErrors({});
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -179,6 +225,7 @@ export default function CasesPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
+                loading={loading}
                 onClick={() => void refreshCases()}
                 variant="secondary"
               >
@@ -186,48 +233,81 @@ export default function CasesPage() {
               </Button>
               <Button
                 icon={<Plus aria-hidden="true" size={15} />}
-                onClick={() => setShowForm((current) => !current)}
+                onClick={() => {
+                  setShowForm((current) => !current);
+                  setError("");
+                  setSuccessMessage("");
+                }}
               >
                 Novo caso
               </Button>
             </div>
           }
-          description="Casos jurídicos carregados do backend FastAPI, vinculados a clientes da organização autenticada."
+          description="Casos jurídicos carregados do backend FastAPI e vinculados a clientes da organização autenticada."
           eyebrow="Casos"
           title="Fluxos jurídicos"
         />
 
         {fallbackReason && (
-          <StatusNotice
-            message="Backend indisponível: exibindo dados mockados locais."
-            tone="warning"
-          />
+          <Notification title="Fallback local ativo" tone="warning">
+            A API não respondeu. A lista usa dados fictícios e não substitui validação com PostgreSQL local.
+          </Notification>
         )}
-        {error && <StatusNotice message={error} tone="error" />}
+        {successMessage && (
+          <Notification onDismiss={() => setSuccessMessage("")} title="Operação concluída" tone="success">
+            {successMessage}
+          </Notification>
+        )}
+        {error && !loading && (
+          <Notification onDismiss={() => setError("")} title="Atenção" tone="error">
+            {error}
+          </Notification>
+        )}
 
         {showForm && (
           <form
-            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-5"
+            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
+            <div className="mb-4 flex flex-col gap-1">
+              <h2 className="text-sm font-semibold text-slate-100">Novo caso</h2>
+              <p className="text-xs leading-5 text-slate-500">
+                O tenant vem do JWT dev. Selecione apenas cliente e metadados do fluxo jurídico.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Cliente vinculado">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, clientId: event.target.value }))}
+              <div className="md:col-span-2">
+                <FormField error={formErrors.title} label="Título do caso" required>
+                  <TextInput
+                    invalid={Boolean(formErrors.title)}
+                    onChange={(event) => updateForm("title", event.target.value)}
+                    placeholder="Análise contratual fictícia"
+                    value={form.title}
+                  />
+                </FormField>
+              </div>
+              <FormField error={formErrors.clientId} label="Cliente vinculado" required>
+                <SelectInput
+                  disabled={clients.length === 0}
+                  invalid={Boolean(formErrors.clientId)}
+                  onChange={(event) => updateForm("clientId", event.target.value)}
                   value={form.clientId}
                 >
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Tipo de caso">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, caseType: event.target.value }))}
+                  {clients.length === 0 ? (
+                    <option value="">Nenhum cliente disponível</option>
+                  ) : (
+                    clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))
+                  )}
+                </SelectInput>
+              </FormField>
+              <FormField error={formErrors.caseType} label="Tipo de caso" required>
+                <SelectInput
+                  invalid={Boolean(formErrors.caseType)}
+                  onChange={(event) => updateForm("caseType", event.target.value)}
                   value={form.caseType}
                 >
                   {contractTypes.map((type) => (
@@ -235,12 +315,11 @@ export default function CasesPage() {
                       {type.label}
                     </option>
                   ))}
-                </select>
-              </Field>
-              <Field label="Produto">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, product: event.target.value as ProductType }))}
+                </SelectInput>
+              </FormField>
+              <FormField label="Produto">
+                <SelectInput
+                  onChange={(event) => updateForm("product", event.target.value as ProductType)}
                   value={form.product}
                 >
                   {productOptions.map((product) => (
@@ -248,32 +327,34 @@ export default function CasesPage() {
                       {product.label}
                     </option>
                   ))}
-                </select>
-              </Field>
-              <Field label="Prioridade">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as Priority }))}
+                </SelectInput>
+              </FormField>
+              <FormField error={formErrors.priority} label="Prioridade" required>
+                <SelectInput
+                  invalid={Boolean(formErrors.priority)}
+                  onChange={(event) => updateForm("priority", event.target.value as Priority)}
                   value={form.priority}
                 >
                   <option value="low">Baixa</option>
                   <option value="normal">Normal</option>
                   <option value="high">Alta</option>
                   <option value="urgent">Urgente</option>
-                </select>
-              </Field>
+                </SelectInput>
+              </FormField>
               <div className="md:col-span-2">
-                <Field label="Observações">
-                  <textarea
-                    className={`${inputClass} min-h-24 resize-y py-2`}
-                    onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                <FormField label="Observações">
+                  <TextArea
+                    onChange={(event) => updateForm("notes", event.target.value)}
                     placeholder="Observação fictícia de desenvolvimento"
                     value={form.notes}
                   />
-                </Field>
+                </FormField>
               </div>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button disabled={submitting} onClick={() => setShowForm(false)} variant="secondary">
+                Cancelar
+              </Button>
               <Button loading={submitting} type="submit">
                 Criar caso
               </Button>
@@ -281,44 +362,64 @@ export default function CasesPage() {
           </form>
         )}
 
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1 max-w-sm">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-              size={14}
-            />
-            <input
-              className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar casos..."
-              type="search"
-              value={query}
-            />
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full max-w-sm sm:w-80">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                size={14}
+              />
+              <input
+                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar casos..."
+                type="search"
+                value={query}
+              />
+            </div>
+            <div className="relative w-full sm:w-auto">
+              <Filter
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                size={13}
+              />
+              <select
+                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-xs font-medium text-slate-300 outline-none transition focus:border-brand-blue/40 [&_option]:bg-surface-800"
+                onChange={(event) => setFilter(event.target.value)}
+                value={filter}
+              >
+                <option value="">Todos os status</option>
+                <option value="draft">Rascunho</option>
+                <option value="submitted">Enviado</option>
+                <option value="processing">Processando</option>
+                <option value="review">Revisão</option>
+                <option value="approved">Aprovado</option>
+                <option value="delivered">Entregue</option>
+                <option value="failed">Falha</option>
+              </select>
+            </div>
           </div>
-          <div className="relative">
-            <Filter
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-              size={13}
-            />
-            <select
-              className="h-9 rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-xs font-medium text-slate-300 outline-none transition focus:border-brand-blue/40 [&_option]:bg-surface-800"
-              onChange={(event) => setFilter(event.target.value)}
-              value={filter}
-            >
-              <option value="">Todos os status</option>
-              <option value="draft">Rascunho</option>
-              <option value="submitted">Enviado</option>
-              <option value="processing">Processando</option>
-              <option value="review">Revisão</option>
-              <option value="approved">Aprovado</option>
-              <option value="delivered">Entregue</option>
-              <option value="failed">Falha</option>
-            </select>
-          </div>
+          {!loading && (
+            <p className="text-xs text-slate-500">
+              {filteredCases.length} caso{filteredCases.length !== 1 ? "s" : ""} exibido{filteredCases.length !== 1 ? "s" : ""}
+            </p>
+          )}
         </div>
 
         {loading ? (
-          <LoadingState label="Carregando casos..." />
+          <LoadingState
+            description="Carregando clientes e casos da API real ou fallback local."
+            label="Carregando casos"
+          />
+        ) : error && cases.length === 0 ? (
+          <ErrorState
+            action={
+              <Button icon={<RefreshCw size={15} />} onClick={() => void refreshCases()} variant="secondary">
+                Tentar novamente
+              </Button>
+            }
+            description="A listagem de casos não pôde ser carregada. Se for 401/403, gere um JWT dev com permissões adequadas."
+            details={error}
+          />
         ) : filteredCases.length === 0 ? (
           <EmptyState
             action={
@@ -326,21 +427,22 @@ export default function CasesPage() {
                 Criar caso
               </Button>
             }
-            description="Crie um novo caso para iniciar a análise jurídica."
-            title="Nenhum caso encontrado"
+            description={clients.length === 0 ? "Cadastre um cliente antes de criar casos." : "Crie um caso fictício para validar o fluxo integrado com backend."}
+            icon={<BriefcaseBusiness size={20} />}
+            title={query || filter ? "Nenhum caso corresponde aos filtros" : "Nenhum caso encontrado"}
           />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {filteredCases.map((c) => (
               <Link
-                className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:border-brand-blue/25 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-card-hover"
+                className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:-translate-y-0.5 hover:border-brand-blue/25 hover:bg-white/[0.05] hover:shadow-card-hover"
                 href={`/cases/${c.id}`}
                 key={c.id}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] group-hover:border-brand-blue/20 group-hover:bg-brand-blue/5 transition">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition group-hover:border-brand-blue/20 group-hover:bg-brand-blue/5">
                     <BriefcaseBusiness
-                      className="text-slate-400 group-hover:text-brand-blue-light transition"
+                      className="text-slate-400 transition group-hover:text-brand-blue-light"
                       size={18}
                     />
                   </div>
@@ -350,13 +452,16 @@ export default function CasesPage() {
                 <p className="mt-4 text-[11px] font-semibold text-brand-blue-light">
                   {c.code}
                 </p>
-                <h2 className="mt-1 text-sm font-semibold text-slate-100">
-                  {caseTypeLabel[c.caseType] ?? c.caseType}
+                <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-100">
+                  {caseDisplayTitle(c)}
                 </h2>
-                <p className="mt-1 text-xs text-slate-400">{c.clientName}</p>
+                <p className="mt-1 truncate text-xs text-slate-400">{c.clientName}</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {caseTypeLabel[c.caseType] ?? c.caseType}
+                </p>
 
                 <div className="mt-4">
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-[10px] text-slate-500">Progresso</span>
                     <span className="text-[10px] font-semibold text-slate-300">
                       {c.progressPercent}%
@@ -384,7 +489,7 @@ export default function CasesPage() {
                   <PriorityBadge priority={c.priority} />
                 </dl>
 
-                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 border-t border-white/[0.06] pt-3">
+                <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-slate-500">
                   <Calendar size={11} />
                   Atualizado em {formatDate(c.updatedAt)}
                 </div>
@@ -394,41 +499,5 @@ export default function CasesPage() {
         )}
       </AppLayout>
     </AuthGuard>
-  );
-}
-
-const inputClass =
-  "h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06] [&_option]:bg-surface-800";
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function LoadingState({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-48 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm text-slate-400">
-      {label}
-    </div>
-  );
-}
-
-function StatusNotice({ message, tone }: { message: string; tone: "error" | "warning" }) {
-  const isError = tone === "error";
-  return (
-    <div
-      className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs ${
-        isError
-          ? "border-red-500/25 bg-red-500/10 text-red-200"
-          : "border-amber-500/25 bg-amber-500/10 text-amber-200"
-      }`}
-    >
-      <AlertTriangle size={14} />
-      {message}
-    </div>
   );
 }

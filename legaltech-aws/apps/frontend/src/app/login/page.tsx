@@ -1,53 +1,58 @@
 "use client";
 
-import { ArrowRight, Lock, Scale, Shield, User, Users } from "lucide-react";
+import { ArrowRight, KeyRound, Lock, LogOut, Scale, Shield, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 
-import { saveDevSession } from "@/src/services/auth";
+import { Button } from "@/components/Button";
+import { FormField, TextArea, TextInput } from "@/components/FormField";
+import { Notification } from "@/components/Notification";
+import { saveDevSession, logoutDevSession } from "@/src/services/auth";
+import { useDevSession } from "@/src/lib/useDevSession";
+import { validateDevJwtForm } from "@/src/lib/validation";
 import { DEV_ROLES, type DevRole } from "@/src/types/auth";
 
 const roleConfig: Record<DevRole, { label: string; desc: string; icon: typeof User; color: string; bg: string; border: string }> = {
   admin: {
-    label: "Administrador",
+    bg: "bg-brand-blue/10",
+    border: "border-brand-blue/30",
+    color: "text-brand-blue-light",
     desc: "Gestão completa da plataforma",
     icon: Shield,
-    color: "text-brand-blue-light",
-    bg: "bg-brand-blue/10",
-    border: "border-brand-blue/30"
+    label: "Administrador"
   },
   analyst: {
-    label: "Analista",
+    bg: "bg-brand-teal/10",
+    border: "border-brand-teal/30",
+    color: "text-brand-teal-light",
     desc: "Revisão e aprovação de relatórios",
     icon: Users,
-    color: "text-brand-teal-light",
-    bg: "bg-brand-teal/10",
-    border: "border-brand-teal/30"
+    label: "Analista"
   },
   client: {
-    label: "Cliente",
+    bg: "bg-violet-500/10",
+    border: "border-violet-500/30",
+    color: "text-violet-300",
     desc: "Criação e acompanhamento de casos",
     icon: User,
-    color: "text-violet-300",
-    bg: "bg-violet-500/10",
-    border: "border-violet-500/30"
+    label: "Cliente"
   },
   owner: {
-    label: "Proprietário",
+    bg: "bg-amber-500/10",
+    border: "border-amber-500/30",
+    color: "text-amber-300",
     desc: "Acesso total ao sistema",
     icon: Shield,
-    color: "text-amber-300",
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30"
+    label: "Proprietário"
   },
   support: {
-    label: "Suporte",
+    bg: "bg-slate-500/10",
+    border: "border-slate-500/30",
+    color: "text-slate-300",
     desc: "Monitoramento e atendimento",
     icon: Users,
-    color: "text-slate-300",
-    bg: "bg-slate-500/10",
-    border: "border-slate-500/30"
+    label: "Suporte"
   }
 };
 
@@ -57,8 +62,9 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/dashboard";
-  const [role, setRole] = useState<DevRole>("admin");
-  const [email, setEmail] = useState("");
+  const session = useDevSession();
+  const [role, setRole] = useState<DevRole>(session?.role ?? "admin");
+  const [email, setEmail] = useState(session?.email ?? "");
   const [error, setError] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,23 +72,33 @@ function LoginContent() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
+    if (loading) {
+      return;
+    }
 
-    if (token.trim() && token.trim().split(".").length !== 3) {
-      setError("Cole um JWT dev válido com três partes ou deixe o campo vazio para usar apenas a sessão visual local.");
+    setError("");
+    const validation = validateDevJwtForm(token);
+    if (!validation.valid) {
+      setError(validation.errors.token ?? "Token dev inválido.");
       return;
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((resolve) => setTimeout(resolve, 350));
     saveDevSession({ role, token: token.trim() || undefined });
     router.replace(nextPath.startsWith("/") ? nextPath : "/dashboard");
   }
 
+  function handleLogout() {
+    logoutDevSession();
+    setToken("");
+    setPassword("");
+    setError("");
+  }
+
   return (
     <main className="flex min-h-screen bg-surface-900">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-surface-800 border-r border-white/[0.06] p-12">
+      <div className="hidden border-r border-white/[0.06] bg-surface-800 p-12 lg:flex lg:w-1/2 lg:flex-col lg:justify-between">
         <Link className="flex items-center gap-3" href="/">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-teal">
             <Scale className="text-white" size={20} />
@@ -91,27 +107,28 @@ function LoginContent() {
         </Link>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand-teal mb-3">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-teal">
             Plataforma LegalTech
           </p>
-          <h2 className="text-3xl font-bold text-white leading-snug">
-            Análise jurídica inteligente
+          <h2 className="text-3xl font-bold leading-snug text-white">
+            Ambiente local para validar
             <br />
-            para contratos, partes
-            <br />e documentos.
+            casos, clientes e documentos
+            <br />
+            com segurança.
           </h2>
           <p className="mt-4 text-sm leading-6 text-slate-400">
-            Agilize a análise contratual, organize casos e entregue relatórios
-            jurídicos com mais clareza e segurança.
+            Use JWT dev para testar rotas protegidas do backend. Não insira dados reais,
+            segredos ou informações confidenciais nesta etapa.
           </p>
         </div>
 
         <div className="space-y-3">
           {[
-            "IA analisa cláusulas e riscos automaticamente",
-            "Revisão humana obrigatória antes da entrega",
-            "Auditoria completa de todas as ações",
-            "LGPD compliance por design"
+            "JWT dev apenas para desenvolvimento local",
+            "Tenant continua vindo do token/contexto interno",
+            "Fallback mockado é indicado visualmente",
+            "Cognito real ainda não está implementado"
           ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-teal/20">
@@ -123,8 +140,7 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
         <div className="w-full max-w-md">
           <Link className="mb-8 flex items-center gap-3 lg:hidden" href="/">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand">
@@ -134,29 +150,56 @@ function LoginContent() {
           </Link>
 
           <h1 className="text-2xl font-bold text-white">Entrar na plataforma</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Selecione um perfil demo para explorar a plataforma.
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Selecione um perfil dev e cole o JWT gerado pelo backend local. Sem token colado,
+            a UI cria uma sessão visual local para fallback/mock.
           </p>
 
-          {/* Role selector */}
+          <Notification className="mt-5" title="Fluxo apenas para desenvolvimento local" tone="warning">
+            Não é autenticação de produção. Não há Cognito real, refresh token real ou segredo no frontend.
+          </Notification>
+
+          {session && (
+            <div className="mb-5 rounded-xl border border-teal-500/20 bg-teal-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-teal-400/20 bg-teal-500/10 text-teal-200">
+                  <KeyRound size={17} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-teal-100">Sessão dev ativa</p>
+                  <p className="mt-1 break-words text-xs leading-5 text-teal-100/75">
+                    {session.email} · {roleConfig[session.role].label} ·{" "}
+                    {session.source === "pasted" ? "JWT colado" : "token visual local"}
+                  </p>
+                </div>
+                <Button icon={<LogOut size={14} />} onClick={handleLogout} size="sm" variant="secondary">
+                  Sair
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Perfil de acesso (demonstração)
+              Perfil de acesso dev
             </p>
             <div className="space-y-2">
-              {demoRoles.map((r) => {
-                const cfg = roleConfig[r];
+              {demoRoles.map((candidateRole) => {
+                const cfg = roleConfig[candidateRole];
                 const Icon = cfg.icon;
-                const active = role === r;
+                const active = role === candidateRole;
                 return (
                   <button
-                    className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all ${
+                    className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all ${
                       active
                         ? `${cfg.border} ${cfg.bg}`
                         : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]"
                     }`}
-                    key={r}
-                    onClick={() => setRole(r)}
+                    key={candidateRole}
+                    onClick={() => {
+                      setRole(candidateRole);
+                      setError("");
+                    }}
                     type="button"
                   >
                     <div
@@ -164,26 +207,15 @@ function LoginContent() {
                         active ? `${cfg.border} ${cfg.bg}` : "border-white/[0.08] bg-white/[0.04]"
                       }`}
                     >
-                      <Icon
-                        className={active ? cfg.color : "text-slate-500"}
-                        size={16}
-                      />
+                      <Icon className={active ? cfg.color : "text-slate-500"} size={16} />
                     </div>
-                    <div className="flex-1">
-                      <p
-                        className={`text-sm font-semibold ${
-                          active ? cfg.color : "text-slate-300"
-                        }`}
-                      >
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-semibold ${active ? cfg.color : "text-slate-300"}`}>
                         {cfg.label}
                       </p>
                       <p className="text-xs text-slate-500">{cfg.desc}</p>
                     </div>
-                    {active && (
-                      <div className={`h-2 w-2 rounded-full ${cfg.bg.replace("bg-", "bg-").replace("/10", "")} animate-pulse`}>
-                        <div className="h-2 w-2 rounded-full bg-current" />
-                      </div>
-                    )}
+                    {active && <div className="h-2 w-2 rounded-full bg-current text-brand-blue-light" />}
                   </button>
                 );
               })}
@@ -191,77 +223,58 @@ function LoginContent() {
           </div>
 
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                E-mail
-              </label>
-              <input
-                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com (qualquer valor)"
+            <FormField label="E-mail">
+              <TextInput
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="dev.admin@example.test"
                 type="email"
                 value={email}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-slate-400">Senha</label>
-                <button
-                  className="text-xs text-brand-blue-light hover:underline"
-                  type="button"
-                >
-                  Recuperar senha
-                </button>
-              </div>
-              <input
-                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••  (qualquer valor)"
+            <FormField
+              hint="Campo visual para desenvolvimento. Não use senha real."
+              label="Senha"
+            >
+              <TextInput
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Qualquer valor fictício"
                 type="password"
                 value={password}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                JWT dev do backend
-              </label>
-              <textarea
-                className="min-h-24 w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
-                onChange={(event) => setToken(event.target.value)}
-                placeholder="Cole aqui o token gerado por python -m src.modules.admin.dev_jwt. Deixe vazio para navegar apenas com fallback/mock local."
+            <FormField
+              error={error}
+              hint="Gere no backend local e cole aqui. Deixe vazio apenas para navegar com fallback/mock."
+              label="JWT dev do backend"
+            >
+              <TextArea
+                invalid={Boolean(error)}
+                onChange={(event) => {
+                  setToken(event.target.value);
+                  setError("");
+                }}
+                placeholder="Cole aqui o token gerado pelo comando interno do backend. Exemplo: python -m src.modules.admin.dev_jwt --role admin"
                 value={token}
               />
-              {error && <p className="mt-1.5 text-xs text-red-300">{error}</p>}
-            </div>
+            </FormField>
 
-            <button
-              className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-brand-blue-dark ${
-                loading ? "opacity-70 cursor-wait" : ""
-              }`}
-              disabled={loading}
+            <Button
+              fullWidth
+              iconRight={<ArrowRight size={16} />}
+              loading={loading}
               type="submit"
             >
-              {loading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Entrando...
-                </>
-              ) : (
-                <>
-                  Entrar como {roleConfig[role].label}
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
+              Entrar como {roleConfig[role].label}
+            </Button>
           </form>
 
-          <div className="mt-6 flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-            <Lock className="shrink-0 text-slate-500" size={14} />
-            <p className="text-[11px] leading-4 text-slate-500">
-              Este é um ambiente de demonstração. Nenhum dado real é processado.
-              Não insira informações confidenciais.
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+            <Lock className="mt-0.5 shrink-0 text-slate-500" size={14} />
+            <p className="text-[11px] leading-5 text-slate-500">
+              Use dados fictícios. O frontend nunca deve receber segredos, credenciais AWS,
+              chaves de API ou dados jurídicos reais.
             </p>
           </div>
         </div>

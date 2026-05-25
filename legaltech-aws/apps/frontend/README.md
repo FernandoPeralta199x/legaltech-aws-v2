@@ -2,7 +2,7 @@
 
 Frontend inicial em Next.js + TypeScript para o projeto LegalTech AWS V2.
 
-Esta entrega cria a base visual e estrutural do app web, com login/JWT local de desenvolvimento e integracao inicial das telas de `clients`, `cases` e `documents` com o backend FastAPI real. Ainda nao ha Cognito real, refresh token, cadastro real de usuario, upload real em S3, OCR, IA/RAG ou APIs externas.
+Esta entrega cria a base visual e estrutural do app web, com login/JWT local de desenvolvimento, integracao inicial das telas de `clients`, `cases` e `documents` com o backend FastAPI real e refinamentos de UX para loading, erro, vazio, formularios e feedback visual. Ainda nao ha Cognito real, refresh token, cadastro real de usuario, upload real em S3, OCR, IA/RAG ou APIs externas.
 
 ## Stack
 
@@ -83,11 +83,31 @@ Invoke-RestMethod http://127.0.0.1:8000/health
 ## Comandos de validacao
 
 ```powershell
+npm run test
 npm run typecheck
 npm run lint
-npm run test
 npm run build
 ```
+
+## Estados de UX
+
+As telas integradas usam componentes compartilhados para manter feedback consistente:
+
+- `LoadingState`: carregamento com contexto e skeletons.
+- `ErrorState`: falhas de carregamento com acao de tentar novamente.
+- `EmptyState`: telas vazias com CTA claro.
+- `FormField`, `TextInput`, `TextArea`, `SelectInput`: campos com erro, hint e estado disabled/loading.
+- `Notification`: aviso inline para sucesso, erro, fallback e mensagens informativas.
+- `ConfirmDialog`: confirmacao para acoes sensiveis, como enfileirar processamento.
+
+Validacoes atuais:
+
+- Clients: nome obrigatorio; documento opcional com validacao leve; e-mail opcional com formato basico.
+- Cases: titulo obrigatorio; cliente vinculado obrigatorio; tipo e prioridade controlados.
+- Documents: caso vinculado obrigatorio; nome obrigatorio; tipo, status e tamanho controlados; cria apenas metadata.
+- Login: JWT dev pode ficar vazio para sessao visual local; se preenchido, precisa ter tres partes no formato JWT.
+
+Quando `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true`, falhas de rede/conexao exibem aviso de fallback local. Erros `401`, `403`, validacao e respostas de erro do backend continuam visiveis e nao sao mascarados por mock.
 
 ## Rotas iniciais
 
@@ -97,6 +117,7 @@ npm run build
 /dashboard    Resumo da operacao usando clients/cases/documents integraveis
 /clients      Lista e cria clientes via backend real
 /cases        Lista e cria casos via backend real
+/cases/[id]   Detalhe do caso com abas e fallback controlado
 /documents    Lista documentos, cria metadados, gera URL e enfileira processamento
 ```
 
@@ -144,6 +165,19 @@ client  = Cliente
 support = Suporte
 ```
 
+## Como testar telas manualmente
+
+Com backend rodando e JWT dev colado:
+
+1. Acesse `/login`, selecione um papel e cole o JWT dev.
+2. Abra `/clients`, tente enviar o formulario vazio, depois crie um cliente ficticio.
+3. Abra `/cases`, tente criar sem titulo ou sem cliente, depois crie um caso ficticio vinculado ao cliente.
+4. Abra `/documents`, tente criar sem caso/nome/tamanho valido, depois crie um metadado ficticio.
+5. Em `/documents`, gere URL temporaria e confirme o enfileiramento de processamento.
+6. Abra `/dashboard` e `/cases/[id]` para validar loading, empty states, fallback e dados integraveis.
+
+Com backend desligado e `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true`, as mesmas telas devem mostrar aviso de fallback mockado. Com `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=false`, falhas de conexao devem aparecer como erro sem trocar para dados mockados.
+
 ## Estrutura
 
 ```text
@@ -152,8 +186,13 @@ apps/frontend/
 |   +-- AppLayout.tsx
 |   +-- Button.tsx
 |   +-- Card.tsx
+|   +-- ConfirmDialog.tsx
 |   +-- EmptyState.tsx
+|   +-- ErrorState.tsx
+|   +-- FormField.tsx
 |   +-- Header.tsx
+|   +-- LoadingState.tsx
+|   +-- Notification.tsx
 |   +-- PageTitle.tsx
 |   +-- Sidebar.tsx
 |   +-- StatusBadge.tsx
@@ -179,6 +218,7 @@ apps/frontend/
 +-- src/lib/
 |   +-- authStorage.ts
 |   +-- useDevSession.ts
+|   +-- validation.ts
 +-- src/services/
 |   +-- apiClient.ts
 |   +-- auth.ts

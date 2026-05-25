@@ -7,6 +7,7 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  fullWidth?: boolean;
   href?: string;
   icon?: ReactNode;
   iconRight?: ReactNode;
@@ -65,6 +66,8 @@ const Spinner = () => (
 export function Button({
   children,
   className,
+  disabled,
+  fullWidth = false,
   href,
   icon,
   iconRight,
@@ -73,7 +76,8 @@ export function Button({
   variant = "primary",
   ...props
 }: ButtonProps) {
-  const classes = cn(base, sizes[size], variants[variant], className);
+  const classes = cn(base, sizes[size], variants[variant], fullWidth && "w-full", className);
+  const isDisabled = loading || disabled;
 
   const content = (
     <>
@@ -85,14 +89,20 @@ export function Button({
 
   if (href) {
     return (
-      <Link className={classes} href={href}>
+      <Link aria-disabled={isDisabled || undefined} className={classes} href={href}>
         {content}
       </Link>
     );
   }
 
   return (
-    <button className={classes} disabled={loading || props.disabled} type="button" {...props}>
+    <button
+      aria-busy={loading || undefined}
+      className={classes}
+      disabled={isDisabled}
+      type="button"
+      {...props}
+    >
       {content}
     </button>
   );

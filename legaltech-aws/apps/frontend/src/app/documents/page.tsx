@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   Download,
   FileText,
   Plus,
@@ -16,6 +15,12 @@ import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { FormField, SelectInput, TextInput } from "@/components/FormField";
+import { LoadingState } from "@/components/LoadingState";
+import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
@@ -27,6 +32,7 @@ import {
   getDocumentDownloadUrl,
   listDocuments
 } from "@/src/services/documents";
+import { validateDocumentForm, type ValidationErrors } from "@/src/lib/validation";
 import type { Case, Document, DocumentCreate, DocumentStatus } from "@/types";
 
 type DocumentForm = {
@@ -36,6 +42,15 @@ type DocumentForm = {
   notes: string;
   sizeBytes: string;
   status: DocumentStatus;
+};
+
+const emptyDocumentForm: DocumentForm = {
+  caseId: "",
+  contentType: "application/pdf",
+  filename: "",
+  notes: "",
+  sizeBytes: "1024",
+  status: "pending_upload"
 };
 
 function errorMessage(error: unknown): string {
@@ -48,19 +63,15 @@ function errorMessage(error: unknown): string {
 
 export default function DocumentsPage() {
   const [actionMessage, setActionMessage] = useState("");
+  const [actionBusyId, setActionBusyId] = useState("");
   const [cases, setCases] = useState<Case[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [error, setError] = useState("");
   const [fallbackReason, setFallbackReason] = useState("");
-  const [form, setForm] = useState<DocumentForm>({
-    caseId: "",
-    contentType: "application/pdf",
-    filename: "",
-    notes: "",
-    sizeBytes: "1024",
-    status: "pending_upload"
-  });
+  const [form, setForm] = useState<DocumentForm>(emptyDocumentForm);
+  const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(true);
+  const [pendingEnqueue, setPendingEnqueue] = useState<Document | null>(null);
   const [selectedCase, setSelectedCase] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -108,20 +119,27 @@ export default function DocumentsPage() {
       : documents;
   }, [documents, selectedCase]);
 
+  function updateForm<K extends keyof DocumentForm>(field: K, value: DocumentForm[K]) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormErrors((current) => ({ ...current, [field]: "" }));
+    setError("");
+    setActionMessage("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) {
+      return;
+    }
 
-    if (!form.caseId || !form.filename.trim()) {
-      setError("Informe o caso e o nome do documento.");
+    const validation = validateDocumentForm(form);
+    setFormErrors(validation.errors);
+    if (!validation.valid) {
+      setError("Revise os campos destacados antes de criar o metadado do documento.");
       return;
     }
 
     const sizeBytes = Number(form.sizeBytes);
-    if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
-      setError("Informe um tamanho válido para o documento.");
-      return;
-    }
-
     setSubmitting(true);
     setError("");
     setActionMessage("");
@@ -141,8 +159,14 @@ export default function DocumentsPage() {
       const result = await createDocument(payload);
       setDocuments((current) => [result.data, ...current]);
       setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
+      setActionMessage(
+        result.source === "mock"
+          ? "Metadado criado no fallback local. Nenhum arquivo real foi enviado."
+          : "Metadado do documento criado com sucesso no backend. Upload real não faz parte desta tela."
+      );
       setShowForm(false);
-      setForm((current) => ({ ...current, filename: "", notes: "", sizeBytes: "1024" }));
+      setForm((current) => ({ ...emptyDocumentForm, caseId: current.caseId }));
+      setFormErrors({});
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -153,28 +177,41 @@ export default function DocumentsPage() {
   async function handleDownloadUrl(documentId: string) {
     setActionMessage("");
     setError("");
+    setActionBusyId(`download-${documentId}`);
 
     try {
       const result = await getDocumentDownloadUrl(documentId);
+      setFallbackReason(result.source === "mock" ? result.fallbackReason ?? fallbackReason : fallbackReason);
       setActionMessage(
         result.source === "mock"
-          ? "Backend indisponível: link temporário simulado para desenvolvimento."
+          ? "Backend indisponível: URL temporária simulada para desenvolvimento."
           : `URL temporária gerada. Expiração: ${result.data.expires_in_seconds}s.`
       );
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setActionBusyId("");
     }
   }
 
-  async function handleEnqueue(documentId: string) {
+  async function confirmEnqueue() {
+    if (!pendingEnqueue) {
+      return;
+    }
+
+    const documentId = pendingEnqueue.id;
     setActionMessage("");
     setError("");
+    setActionBusyId(`enqueue-${documentId}`);
 
     try {
       const result = await enqueueDocumentProcessing(documentId);
       setActionMessage(`Processamento enfileirado: ${result.data.job_id}.`);
+      setPendingEnqueue(null);
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setActionBusyId("");
     }
   }
 
@@ -186,6 +223,7 @@ export default function DocumentsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
+                loading={loading}
                 onClick={() => void refreshDocuments()}
                 variant="secondary"
               >
@@ -193,95 +231,119 @@ export default function DocumentsPage() {
               </Button>
               <Button
                 icon={<Plus aria-hidden="true" size={15} />}
-                onClick={() => setShowForm((current) => !current)}
+                onClick={() => {
+                  setShowForm((current) => !current);
+                  setError("");
+                  setActionMessage("");
+                }}
               >
                 Novo metadado
               </Button>
             </div>
           }
-          description="Metadados de documentos vinculados a casos, consumindo o backend FastAPI quando disponível."
+          description="Metadados de documentos vinculados a casos. Upload real, S3 e OCR continuam fora desta tela."
           eyebrow="Documentos"
           title="Documentos enviados"
         />
 
         {fallbackReason && (
-          <StatusNotice
-            message="Backend indisponível: exibindo dados mockados locais."
-            tone="warning"
-          />
+          <Notification title="Fallback local ativo" tone="warning">
+            A API não respondeu. Estes documentos são mockados ou simulados para desenvolvimento.
+          </Notification>
         )}
-        {error && <StatusNotice message={error} tone="error" />}
-        {actionMessage && <StatusNotice message={actionMessage} tone="success" />}
+        {error && !loading && (
+          <Notification onDismiss={() => setError("")} title="Atenção" tone="error">
+            {error}
+          </Notification>
+        )}
+        {actionMessage && (
+          <Notification onDismiss={() => setActionMessage("")} title="Operação concluída" tone="success">
+            {actionMessage}
+          </Notification>
+        )}
 
         {showForm && (
           <form
-            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-5"
+            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
+            <div className="mb-4 flex flex-col gap-1">
+              <h2 className="text-sm font-semibold text-slate-100">Novo metadado de documento</h2>
+              <p className="text-xs leading-5 text-slate-500">
+                Esta tela cria apenas metadata. Nenhum upload real, S3, OCR ou IA é executado aqui.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Caso vinculado">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, caseId: event.target.value }))}
+              <FormField error={formErrors.caseId} label="Caso vinculado" required>
+                <SelectInput
+                  disabled={cases.length === 0}
+                  invalid={Boolean(formErrors.caseId)}
+                  onChange={(event) => updateForm("caseId", event.target.value)}
                   value={form.caseId}
                 >
-                  {cases.map((legalCase) => (
-                    <option key={legalCase.id} value={legalCase.id}>
-                      {legalCase.code} · {legalCase.clientName}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Nome do arquivo">
-                <input
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, filename: event.target.value }))}
+                  {cases.length === 0 ? (
+                    <option value="">Nenhum caso disponível</option>
+                  ) : (
+                    cases.map((legalCase) => (
+                      <option key={legalCase.id} value={legalCase.id}>
+                        {legalCase.code} · {legalCase.clientName}
+                      </option>
+                    ))
+                  )}
+                </SelectInput>
+              </FormField>
+              <FormField error={formErrors.filename} label="Nome do documento" required>
+                <TextInput
+                  invalid={Boolean(formErrors.filename)}
+                  onChange={(event) => updateForm("filename", event.target.value)}
                   placeholder="contrato-exemplo.pdf"
                   value={form.filename}
                 />
-              </Field>
-              <Field label="Tipo MIME">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, contentType: event.target.value }))}
+              </FormField>
+              <FormField error={formErrors.contentType} label="Tipo do arquivo" required>
+                <SelectInput
+                  invalid={Boolean(formErrors.contentType)}
+                  onChange={(event) => updateForm("contentType", event.target.value)}
                   value={form.contentType}
                 >
                   <option value="application/pdf">PDF</option>
                   <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">DOCX</option>
                   <option value="text/plain">TXT</option>
-                </select>
-              </Field>
-              <Field label="Tamanho em bytes">
-                <input
-                  className={inputClass}
+                </SelectInput>
+              </FormField>
+              <FormField error={formErrors.sizeBytes} label="Tamanho em bytes" required>
+                <TextInput
+                  invalid={Boolean(formErrors.sizeBytes)}
                   min={1}
-                  onChange={(event) => setForm((current) => ({ ...current, sizeBytes: event.target.value }))}
+                  onChange={(event) => updateForm("sizeBytes", event.target.value)}
                   type="number"
                   value={form.sizeBytes}
                 />
-              </Field>
-              <Field label="Status">
-                <select
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as DocumentStatus }))}
+              </FormField>
+              <FormField error={formErrors.status} label="Status" required>
+                <SelectInput
+                  invalid={Boolean(formErrors.status)}
+                  onChange={(event) => updateForm("status", event.target.value as DocumentStatus)}
                   value={form.status}
                 >
                   <option value="pending_upload">Aguardando upload</option>
                   <option value="uploaded">Enviado</option>
                   <option value="processing">Processando</option>
                   <option value="processed">Processado</option>
-                </select>
-              </Field>
-              <Field label="Observação">
-                <input
-                  className={inputClass}
-                  onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                </SelectInput>
+              </FormField>
+              <FormField label="Observação">
+                <TextInput
+                  onChange={(event) => updateForm("notes", event.target.value)}
                   placeholder="Metadado fictício de desenvolvimento"
                   value={form.notes}
                 />
-              </Field>
+              </FormField>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button disabled={submitting} onClick={() => setShowForm(false)} variant="secondary">
+                Cancelar
+              </Button>
               <Button loading={submitting} type="submit">
                 Criar metadado
               </Button>
@@ -290,12 +352,8 @@ export default function DocumentsPage() {
         )}
 
         <div className="mb-6 max-w-sm">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-slate-400">
-              Filtrar por caso
-            </span>
-            <select
-              className={inputClass}
+          <FormField label="Filtrar por caso">
+            <SelectInput
               onChange={(event) => setSelectedCase(event.target.value)}
               value={selectedCase}
             >
@@ -305,8 +363,8 @@ export default function DocumentsPage() {
                   {legalCase.code}
                 </option>
               ))}
-            </select>
-          </label>
+            </SelectInput>
+          </FormField>
         </div>
 
         <Card
@@ -314,27 +372,41 @@ export default function DocumentsPage() {
           description="Metadata real quando o backend está disponível; fallback local em desenvolvimento."
         >
           {loading ? (
-            <LoadingState label="Carregando documentos..." />
+            <LoadingState
+              description="Carregando casos e documentos vinculados."
+              label="Carregando documentos"
+              rows={4}
+            />
+          ) : error && documents.length === 0 ? (
+            <ErrorState
+              action={
+                <Button icon={<RefreshCw size={15} />} onClick={() => void refreshDocuments()} variant="secondary">
+                  Tentar novamente
+                </Button>
+              }
+              description="A listagem de documentos não pôde ser carregada. Erros do backend são exibidos sem fallback indevido."
+              details={error}
+            />
           ) : visibleDocuments.length === 0 ? (
-            <div className="flex min-h-40 flex-col items-center justify-center text-center">
-              <p className="text-sm font-semibold text-slate-200">Sem documentos</p>
-              <p className="mt-2 max-w-md text-xs leading-5 text-slate-400">
-                Nenhum documento encontrado para os filtros atuais.
-              </p>
-              <div className="mt-5">
+            <EmptyState
+              action={
                 <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)}>
                   Criar metadado
                 </Button>
-              </div>
-            </div>
+              }
+              description={selectedCase ? "Nenhum documento encontrado para o caso selecionado." : "Crie metadata para validar o vínculo documento-caso sem upload real."}
+              icon={<FileText size={20} />}
+              title="Sem documentos"
+              variant="compact"
+            />
           ) : (
             <div className="space-y-3">
               {visibleDocuments.map((doc) => (
                 <div
-                  className="flex flex-wrap items-center gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3"
+                  className="flex flex-col gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3 md:flex-row md:items-center"
                   key={doc.id}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06]">
                       <FileText className="text-slate-400" size={16} />
                     </div>
@@ -345,32 +417,43 @@ export default function DocumentsPage() {
                       <p className="text-[11px] text-slate-500">
                         {doc.sizeLabel} · {doc.contentType.split("/")[1]?.toUpperCase()}
                       </p>
+                      <span className="mt-1 inline-flex rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                        Metadata apenas
+                      </span>
                     </div>
                   </div>
-                  <div className="hidden sm:block">
-                    <p className="text-[11px] text-slate-500">Caso</p>
-                    <Link
-                      className="text-xs font-medium text-brand-blue-light hover:underline"
-                      href={`/cases/${doc.caseId}`}
-                    >
-                      {doc.caseCode}
-                    </Link>
+                  <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3 md:flex md:items-center md:gap-5">
+                    <div>
+                      <p className="text-[11px] text-slate-500">Caso</p>
+                      <Link
+                        className="font-medium text-brand-blue-light hover:underline"
+                        href={`/cases/${doc.caseId}`}
+                      >
+                        {doc.caseCode}
+                      </Link>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-500">Upload</p>
+                      <p className="text-slate-300">{formatDate(doc.uploadedAt)}</p>
+                    </div>
+                    <div className="self-center">
+                      <StatusBadge status={doc.status} />
+                    </div>
                   </div>
-                  <div className="hidden md:block">
-                    <p className="text-[11px] text-slate-500">Upload</p>
-                    <p className="text-xs text-slate-300">{formatDate(doc.uploadedAt)}</p>
-                  </div>
-                  <StatusBadge status={doc.status} />
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 md:ml-auto">
                     <IconButton
+                      disabled={Boolean(actionBusyId)}
                       label="Gerar URL temporária"
+                      loading={actionBusyId === `download-${doc.id}`}
                       onClick={() => void handleDownloadUrl(doc.id)}
                     >
                       <Download size={13} />
                     </IconButton>
                     <IconButton
+                      disabled={Boolean(actionBusyId)}
                       label="Enfileirar processamento"
-                      onClick={() => void handleEnqueue(doc.id)}
+                      loading={actionBusyId === `enqueue-${doc.id}`}
+                      onClick={() => setPendingEnqueue(doc)}
                     >
                       <Send size={13} />
                     </IconButton>
@@ -380,69 +463,48 @@ export default function DocumentsPage() {
             </div>
           )}
         </Card>
+
+        <ConfirmDialog
+          confirmLabel="Enfileirar"
+          description="A API vai validar RBAC, tenant, case e document antes de publicar o job. O payload envia apenas IDs e metadados mínimos."
+          loading={Boolean(actionBusyId)}
+          onCancel={() => setPendingEnqueue(null)}
+          onConfirm={() => void confirmEnqueue()}
+          open={Boolean(pendingEnqueue)}
+          title={`Enfileirar processamento de ${pendingEnqueue?.filename ?? "documento"}?`}
+        />
       </AppLayout>
     </AuthGuard>
   );
 }
 
-const inputClass =
-  "h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06] [&_option]:bg-surface-800";
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-slate-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-
 function IconButton({
   children,
+  disabled = false,
   label,
+  loading = false,
   onClick
 }: {
   children: ReactNode;
+  disabled?: boolean;
   label: string;
+  loading?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-slate-400 transition hover:bg-white/[0.08] hover:text-slate-100"
+      aria-label={label}
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-slate-400 transition hover:bg-white/[0.08] hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
+      disabled={disabled || loading}
       onClick={onClick}
       title={label}
       type="button"
     >
-      {children}
+      {loading ? (
+        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+      ) : (
+        children
+      )}
     </button>
-  );
-}
-
-function LoadingState({ label }: { label: string }) {
-  return (
-    <div className="flex min-h-40 items-center justify-center text-sm text-slate-400">
-      {label}
-    </div>
-  );
-}
-
-function StatusNotice({
-  message,
-  tone
-}: {
-  message: string;
-  tone: "error" | "success" | "warning";
-}) {
-  const classes = {
-    error: "border-red-500/25 bg-red-500/10 text-red-200",
-    success: "border-teal-500/25 bg-teal-500/10 text-teal-200",
-    warning: "border-amber-500/25 bg-amber-500/10 text-amber-200"
-  };
-
-  return (
-    <div className={`mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs ${classes[tone]}`}>
-      <AlertTriangle size={14} />
-      {message}
-    </div>
   );
 }

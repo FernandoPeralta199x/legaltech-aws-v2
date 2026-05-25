@@ -18,7 +18,12 @@ import { use, useCallback, useEffect, useState } from "react";
 import { AgentCard } from "@/components/AgentCard";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
+import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { LoadingState } from "@/components/LoadingState";
+import { Notification } from "@/components/Notification";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
@@ -47,8 +52,10 @@ const caseTypeLabel: Record<string, string> = {
   compra_venda: "Compra e Venda",
   prestacao_servicos: "Prestação de Serviços",
   locacao: "Locação",
+  parceria: "Parceria",
   confidencialidade: "Confidencialidade (NDA)",
   due_diligence: "Due Diligence",
+  contract_analysis: "Análise Contratual",
   outro: "Outro"
 };
 
@@ -60,6 +67,13 @@ function errorMessage(error: unknown): string {
   }
 
   return error instanceof Error ? error.message : "Não foi possível carregar o caso.";
+}
+
+function caseDisplayTitle(legalCase: Case): string {
+  const title = legalCase.metadata?.title;
+  return typeof title === "string" && title.trim()
+    ? title
+    : caseTypeLabel[legalCase.caseType] ?? legalCase.caseType;
 }
 
 export default function CaseDetailPage({ params }: PageProps) {
@@ -116,9 +130,11 @@ export default function CaseDetailPage({ params }: PageProps) {
     return (
       <AuthGuard>
         <AppLayout>
-          <div className="flex min-h-64 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm text-slate-400">
-            Carregando caso...
-          </div>
+          <LoadingState
+            description="Consultando caso, cliente e documentos vinculados."
+            label="Carregando caso"
+            rows={4}
+          />
         </AppLayout>
       </AuthGuard>
     );
@@ -128,9 +144,16 @@ export default function CaseDetailPage({ params }: PageProps) {
     return (
       <AuthGuard>
         <AppLayout>
-          <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-            {error || "Caso não encontrado."}
-          </div>
+          <ErrorState
+            action={
+              <Button href="/cases" variant="secondary">
+                Voltar para casos
+              </Button>
+            }
+            description="Não foi possível carregar o detalhe do caso. Verifique o token dev, permissões e se o backend está disponível."
+            details={error || "Caso não encontrado."}
+            title="Caso não encontrado"
+          />
         </AppLayout>
       </AuthGuard>
     );
@@ -144,16 +167,14 @@ export default function CaseDetailPage({ params }: PageProps) {
     <AuthGuard>
       <AppLayout>
         {fallbackReason && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-            <AlertTriangle size={14} />
+          <Notification title="Fallback local ativo" tone="warning">
             Backend indisponível: detalhes carregados por fallback mockado local.
-          </div>
+          </Notification>
         )}
         {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-            <AlertTriangle size={14} />
+          <Notification title="Atenção" tone="error">
             {error}
-          </div>
+          </Notification>
         )}
 
         {/* Breadcrumb */}
@@ -177,9 +198,11 @@ export default function CaseDetailPage({ params }: PageProps) {
                 <PriorityBadge priority={caseData.priority} />
               </div>
               <h1 className="text-xl font-bold text-white">
-                {caseTypeLabel[caseData.caseType] ?? caseData.caseType}
+                {caseDisplayTitle(caseData)}
               </h1>
-              <p className="mt-1 text-sm text-slate-400">{caseData.clientName}</p>
+              <p className="mt-1 text-sm text-slate-400">
+                {caseData.clientName} · {caseTypeLabel[caseData.caseType] ?? caseData.caseType}
+              </p>
               {caseData.notes && (
                 <p className="mt-2 text-xs leading-5 text-slate-400">{caseData.notes}</p>
               )}
@@ -314,10 +337,11 @@ export default function CaseDetailPage({ params }: PageProps) {
         {activeTab === "parties" && (
           <div className="animate-in">
             {caseData.parties.length === 0 ? (
-              <div className="flex flex-col items-center py-16 text-center">
-                <Users className="mb-3 text-slate-600" size={32} />
-                <p className="text-sm text-slate-400">Nenhuma parte cadastrada neste caso.</p>
-              </div>
+              <EmptyState
+                description="A aba de partes será preenchida quando o backend expuser cadastro detalhado de partes."
+                icon={<Users size={20} />}
+                title="Nenhuma parte cadastrada"
+              />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {caseData.parties.map((party) => (
@@ -365,12 +389,16 @@ export default function CaseDetailPage({ params }: PageProps) {
         {activeTab === "documents" && (
           <div className="animate-in space-y-3">
             {caseDocuments.length === 0 ? (
-              <div className="flex flex-col items-center py-16 text-center">
-                <FileText className="mb-3 text-slate-600" size={32} />
-                <p className="text-sm text-slate-400">
-                  Nenhum documento enviado para este caso.
-                </p>
-              </div>
+              <EmptyState
+                action={
+                  <Button href="/documents" variant="secondary">
+                    Abrir documentos
+                  </Button>
+                }
+                description="Nenhum metadado de documento foi encontrado para este caso."
+                icon={<FileText size={20} />}
+                title="Sem documentos"
+              />
             ) : (
               caseDocuments.map((doc) => (
                 <div
@@ -414,12 +442,11 @@ export default function CaseDetailPage({ params }: PageProps) {
               </h2>
             </div>
             {caseAgents.length === 0 ? (
-              <div className="flex flex-col items-center py-16 text-center">
-                <Bot className="mb-3 text-slate-600" size={32} />
-                <p className="text-sm text-slate-400">
-                  Nenhum agente executado ainda neste caso.
-                </p>
-              </div>
+              <EmptyState
+                description="Execuções de agentes ainda são mockadas nesta tela até haver endpoint dedicado."
+                icon={<Bot size={20} />}
+                title="Nenhum agente executado"
+              />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {caseAgents.map((exec) => (
@@ -434,15 +461,11 @@ export default function CaseDetailPage({ params }: PageProps) {
         {activeTab === "report" && (
           <div className="animate-in">
             {!caseReport ? (
-              <div className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.08] py-20 text-center">
-                <Shield className="mb-3 text-slate-600" size={32} />
-                <p className="text-sm font-semibold text-slate-300">
-                  Relatório não disponível
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  O relatório será gerado após a conclusão das análises de IA.
-                </p>
-              </div>
+              <EmptyState
+                description="O relatório será disponibilizado após processamento e revisão humana. Não há IA real integrada nesta etapa."
+                icon={<Shield size={20} />}
+                title="Relatório não disponível"
+              />
             ) : (
               <div className="space-y-6">
                 <Card>
