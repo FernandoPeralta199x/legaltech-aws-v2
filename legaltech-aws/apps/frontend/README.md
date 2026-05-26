@@ -85,6 +85,9 @@ python -m src.modules.admin.seed_roles_permissions `
 uvicorn src.main:app --reload
 ```
 
+O backend local deve permitir CORS para `http://localhost:3000` ou
+`http://127.0.0.1:3000` via `CORS_ALLOWED_ORIGINS`.
+
 Health check esperado:
 
 ```powershell

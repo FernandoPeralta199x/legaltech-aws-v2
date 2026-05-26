@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
     enable_docs: bool = Field(default=True, alias="ENABLE_DOCS")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    cors_allowed_origins: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        alias="CORS_ALLOWED_ORIGINS",
+    )
     auth_provider: Literal["dev_jwt", "cognito"] = Field(
         default="dev_jwt",
         alias="AUTH_PROVIDER",
@@ -182,6 +186,14 @@ class Settings(BaseSettings):
             return None
 
         return f"{self.cognito_issuer}/.well-known/jwks.json"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_allowed_origins.split(",")
+            if origin.strip()
+        ]
 
 
 @lru_cache

@@ -55,7 +55,14 @@ def validate_backend(
 ) -> None:
     require(
         values,
-        ["APP_ENV", "APP_NAME", "LOG_LEVEL", "DATABASE_URL", "AUTH_PROVIDER"],
+        [
+            "APP_ENV",
+            "APP_NAME",
+            "LOG_LEVEL",
+            "CORS_ALLOWED_ORIGINS",
+            "DATABASE_URL",
+            "AUTH_PROVIDER",
+        ],
         errors,
         context="backend",
     )

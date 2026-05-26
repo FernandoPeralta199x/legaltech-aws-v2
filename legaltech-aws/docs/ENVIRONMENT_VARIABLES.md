@@ -23,6 +23,7 @@ docs, codigo ou testes.
 | `APP_VERSION` | Nao | todos | Versao exibida pela aplicacao. |
 | `ENABLE_DOCS` | Nao | todos | Em producao, avaliar `false`. |
 | `LOG_LEVEL` | Sim | todos | `INFO` por padrao. Nao usar logs com dados sensiveis. |
+| `CORS_ALLOWED_ORIGINS` | Sim | todos | Lista separada por virgula. Use apenas origens conhecidas do frontend. |
 | `DATABASE_URL` | Sim | todos | URL do PostgreSQL. Valor real deve ficar fora do Git. |
 | `AUTH_PROVIDER` | Sim | todos | `dev_jwt` apenas local; `cognito` em AWS. |
 | `DEV_JWT_ENABLED` | Sim | todos | `true` apenas com `APP_ENV=local`. |
