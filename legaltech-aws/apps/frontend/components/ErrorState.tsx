@@ -15,17 +15,17 @@ export function ErrorState({
   title = "Não foi possível carregar os dados"
 }: ErrorStateProps) {
   return (
-    <section className="rounded-xl border border-red-500/25 bg-red-500/10 p-5">
+    <section className="rounded-lg border border-red-200 bg-red-50 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-400/25 bg-red-500/10 text-red-200">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600">
             <AlertTriangle aria-hidden="true" size={18} />
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-red-100">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-red-100/80">{description}</p>
+            <h2 className="text-sm font-semibold text-red-900">{title}</h2>
+            <p className="mt-1 text-xs leading-5 text-red-800">{description}</p>
             {details && (
-              <p className="mt-2 break-words rounded-lg border border-red-400/15 bg-black/10 px-3 py-2 text-[11px] leading-5 text-red-100/70">
+              <p className="mt-2 break-words rounded-lg border border-red-200 bg-white px-3 py-2 text-[11px] leading-5 text-red-700">
                 {details}
               </p>
             )}

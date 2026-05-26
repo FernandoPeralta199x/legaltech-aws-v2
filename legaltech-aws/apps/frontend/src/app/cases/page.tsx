@@ -266,11 +266,11 @@ export default function CasesPage() {
 
         {showForm && (
           <form
-            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
+            className="mb-6 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-slate-100">Novo caso</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Novo caso</h2>
               <p className="text-xs leading-5 text-slate-500">
                 O tenant vem do JWT dev. Selecione apenas cliente e metadados do fluxo jurídico.
               </p>
@@ -370,7 +370,7 @@ export default function CasesPage() {
                 size={14}
               />
               <input
-                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-emerald-300 focus:bg-slate-100"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar casos..."
                 type="search"
@@ -383,7 +383,7 @@ export default function CasesPage() {
                 size={13}
               />
               <select
-                className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] pl-9 pr-3 text-xs font-medium text-slate-300 outline-none transition focus:border-brand-blue/40 [&_option]:bg-surface-800"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-300 [&_option]:bg-white"
                 onChange={(event) => setFilter(event.target.value)}
                 value={filter}
               >
@@ -435,27 +435,27 @@ export default function CasesPage() {
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {filteredCases.map((c) => (
               <Link
-                className="group block rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:-translate-y-0.5 hover:border-brand-blue/25 hover:bg-white/[0.05] hover:shadow-card-hover"
+                className="group block rounded-lg border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-slate-100 hover:shadow-card-hover"
                 href={`/cases/${c.id}`}
                 key={c.id}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04] transition group-hover:border-brand-blue/20 group-hover:bg-brand-blue/5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 transition group-hover:border-emerald-200 group-hover:bg-emerald-50">
                     <BriefcaseBusiness
-                      className="text-slate-400 transition group-hover:text-brand-blue-light"
+                      className="text-slate-600 transition group-hover:text-brand-teal"
                       size={18}
                     />
                   </div>
                   <StatusBadge status={c.status} />
                 </div>
 
-                <p className="mt-4 text-[11px] font-semibold text-brand-blue-light">
+                <p className="mt-4 text-[11px] font-semibold text-brand-teal">
                   {c.code}
                 </p>
-                <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-100">
+                <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-900">
                   {caseDisplayTitle(c)}
                 </h2>
-                <p className="mt-1 truncate text-xs text-slate-400">{c.clientName}</p>
+                <p className="mt-1 truncate text-xs text-slate-600">{c.clientName}</p>
                 <p className="mt-1 text-[11px] text-slate-500">
                   {caseTypeLabel[c.caseType] ?? c.caseType}
                 </p>
@@ -463,17 +463,17 @@ export default function CasesPage() {
                 <div className="mt-4">
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-[10px] text-slate-500">Progresso</span>
-                    <span className="text-[10px] font-semibold text-slate-300">
+                    <span className="text-[10px] font-semibold text-slate-700">
                       {c.progressPercent}%
                     </span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                  <div className="h-1 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-1 rounded-full transition-all ${
                         c.progressPercent === 100
                           ? "bg-teal-500"
                           : c.progressPercent > 60
-                            ? "bg-brand-blue"
+                            ? "bg-brand-teal"
                             : "bg-violet-500"
                       }`}
                       style={{ width: `${c.progressPercent}%` }}
@@ -482,14 +482,14 @@ export default function CasesPage() {
                 </div>
 
                 <dl className="mt-4 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-400">
+                  <div className="flex items-center gap-1.5 text-slate-600">
                     <FileText size={11} />
                     {c.documentsCount} documentos
                   </div>
                   <PriorityBadge priority={c.priority} />
                 </dl>
 
-                <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-slate-500">
+                <div className="mt-3 flex items-center gap-1.5 border-t border-slate-200 pt-3 text-[11px] text-slate-500">
                   <Calendar size={11} />
                   Atualizado em {formatDate(c.updatedAt)}
                 </div>

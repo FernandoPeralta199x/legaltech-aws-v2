@@ -24,25 +24,25 @@ type AgentCardProps = {
 
 export function AgentCard({ execution }: AgentCardProps) {
   const statusIcon = {
-    queued: <Clock className="text-slate-400" size={16} />,
-    running: <Loader2 className="animate-spin text-brand-blue" size={16} />,
-    completed: <CheckCircle2 className="text-teal-400" size={16} />,
-    failed: <AlertCircle className="text-red-400" size={16} />,
+    queued: <Clock className="text-slate-500" size={16} />,
+    running: <Loader2 className="animate-spin text-brand-teal" size={16} />,
+    completed: <CheckCircle2 className="text-emerald-600" size={16} />,
+    failed: <AlertCircle className="text-red-600" size={16} />,
     skipped: <SkipForward className="text-slate-500" size={16} />
   };
 
   const statusClass: Record<string, string> = {
-    queued: "border-white/[0.08] bg-white/[0.02]",
-    running: "border-brand-blue/30 bg-brand-blue/5 shadow-glow",
-    completed: "border-teal-500/20 bg-teal-500/5",
-    failed: "border-red-500/20 bg-red-500/5",
-    skipped: "border-white/[0.06] bg-white/[0.02] opacity-60"
+    queued: "border-slate-200 bg-white",
+    running: "border-emerald-200 bg-emerald-50 shadow-glow-teal",
+    completed: "border-emerald-200 bg-emerald-50",
+    failed: "border-red-200 bg-red-50",
+    skipped: "border-slate-200 bg-slate-50 opacity-70"
   };
 
   return (
     <div
       className={cn(
-        "rounded-xl border p-4 transition-all",
+        "rounded-lg border p-4 transition-all",
         statusClass[execution.status]
       )}
     >
@@ -52,18 +52,18 @@ export function AgentCard({ execution }: AgentCardProps) {
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
               execution.status === "running"
-                ? "border-brand-blue/30 bg-brand-blue/10"
+                ? "border-emerald-200 bg-emerald-100"
                 : execution.status === "completed"
-                ? "border-teal-500/20 bg-teal-500/10"
+                ? "border-emerald-200 bg-white"
                 : execution.status === "failed"
-                ? "border-red-500/20 bg-red-500/10"
-                : "border-white/[0.08] bg-white/[0.04]"
+                ? "border-red-200 bg-white"
+                : "border-slate-200 bg-slate-50"
             )}
           >
             {statusIcon[execution.status]}
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-100">
+            <p className="text-xs font-semibold text-slate-900">
               {execution.agentName}
             </p>
             <p className="text-[11px] text-slate-500">
@@ -71,24 +71,24 @@ export function AgentCard({ execution }: AgentCardProps) {
             </p>
           </div>
         </div>
-        <span className="text-[11px] text-slate-400">
+        <span className="text-[11px] text-slate-500">
           {formatDuration(execution.durationMs)}
         </span>
       </div>
 
       {execution.outputSummary && (
-        <p className="mt-3 text-xs leading-5 text-slate-300">
+        <p className="mt-3 text-xs leading-5 text-slate-700">
           {execution.outputSummary}
         </p>
       )}
 
       {execution.errorMessage && (
-        <p className="mt-2 text-xs text-red-300">{execution.errorMessage}</p>
+        <p className="mt-2 text-xs text-red-700">{execution.errorMessage}</p>
       )}
 
       {execution.status === "running" && (
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.08]">
-          <div className="h-1 w-1/2 animate-pulse rounded-full bg-brand-blue" />
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-emerald-100">
+          <div className="h-1 w-1/2 animate-pulse rounded-full bg-brand-teal" />
         </div>
       )}
     </div>

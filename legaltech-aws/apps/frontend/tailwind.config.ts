@@ -22,19 +22,19 @@ const config: Config = {
         ]
       },
       fontSize: {
-        "2xs": ["0.625rem", { lineHeight: "1rem", letterSpacing: "0.02em" }],
+        "2xs": ["0.625rem", { lineHeight: "1rem", letterSpacing: "0" }],
         xs:   ["0.75rem",  { lineHeight: "1.25rem" }],
         sm:   ["0.8125rem", { lineHeight: "1.375rem" }],
         base: ["0.9375rem", { lineHeight: "1.6rem" }]
       },
       letterSpacing: {
-        tightest: "-0.04em",
-        tighter:  "-0.025em",
-        tight:    "-0.015em",
-        normal:   "-0.01em",
-        wide:     "0.02em",
-        wider:    "0.06em",
-        widest:   "0.12em"
+        tightest: "0",
+        tighter:  "0",
+        tight:    "0",
+        normal:   "0",
+        wide:     "0",
+        wider:    "0",
+        widest:   "0"
       },
 
       /* ── Brand colours ──────────────────────────────────────────────────── */
@@ -43,41 +43,41 @@ const config: Config = {
         registry: "#0f766e",
         parchment:"#f8faf7",
         surface: {
-          950: "#02060f",
-          900: "#050b18",
-          800: "#0b1628",
-          700: "#0f1e36",
-          600: "#142244",
-          500: "#1a2a52"
+          950: "#102033",
+          900: "#f6f8f5",
+          800: "#ffffff",
+          700: "#edf2ed",
+          600: "#dbe5dc",
+          500: "#c7d6c8"
         },
         brand: {
-          blue:       "#3b82f6",
-          "blue-light": "#60a5fa",
+          blue:       "#2563eb",
+          "blue-light": "#3b82f6",
           "blue-dark":  "#1d4ed8",
-          teal:         "#10b981",
-          "teal-light": "#34d399",
-          "teal-dark":  "#059669"
+          teal:         "#059669",
+          "teal-light": "#10b981",
+          "teal-dark":  "#047857"
         }
       },
 
       /* ── Shadows ────────────────────────────────────────────────────────── */
       boxShadow: {
         panel:
-          "0 12px 30px rgba(20, 33, 61, 0.08)",
+          "0 18px 44px rgba(15, 23, 42, 0.08)",
         glass:
-          "0 8px 32px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255,255,255,0.06)",
+          "0 18px 44px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255,255,255,0.9)",
         "card-rest":
-          "0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
+          "0 1px 2px rgba(15,23,42,0.05), 0 12px 32px rgba(15,23,42,0.06)",
         "card-hover":
-          "0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.07)",
+          "0 18px 44px rgba(15,23,42,0.1), 0 0 0 1px rgba(5,150,105,0.14)",
         glow:
-          "0 0 20px rgba(59, 130, 246, 0.18)",
+          "0 0 0 3px rgba(5, 150, 105, 0.12), 0 12px 28px rgba(5, 150, 105, 0.16)",
         "glow-lg":
-          "0 0 40px rgba(59, 130, 246, 0.25)",
+          "0 0 0 4px rgba(5, 150, 105, 0.16), 0 18px 38px rgba(5, 150, 105, 0.2)",
         "glow-teal":
-          "0 0 20px rgba(16, 185, 129, 0.22)",
+          "0 0 0 3px rgba(5, 150, 105, 0.12), 0 12px 28px rgba(5, 150, 105, 0.16)",
         "glow-teal-lg":
-          "0 0 40px rgba(16, 185, 129, 0.3)",
+          "0 0 0 4px rgba(5, 150, 105, 0.18), 0 18px 38px rgba(5, 150, 105, 0.22)",
         "inner-highlight":
           "inset 0 1px 0 rgba(255,255,255,0.08)"
       },
@@ -99,19 +99,19 @@ const config: Config = {
       /* ── Background images ──────────────────────────────────────────────── */
       backgroundImage: {
         "gradient-brand":
-          "linear-gradient(135deg, #3b82f6 0%, #10b981 100%)",
+          "linear-gradient(135deg, #047857 0%, #10b981 100%)",
         "gradient-brand-hover":
-          "linear-gradient(135deg, #2563eb 0%, #059669 100%)",
+          "linear-gradient(135deg, #065f46 0%, #059669 100%)",
         "gradient-dark":
-          "linear-gradient(180deg, #050b18 0%, #0b1628 100%)",
+          "linear-gradient(180deg, #f8faf7 0%, #edf7ef 100%)",
         "gradient-card":
-          "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(16,185,129,0.03) 100%)",
+          "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(236,253,245,0.75) 100%)",
         "gradient-glow":
-          "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,0.18) 0%, transparent 70%)",
+          "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(5,150,105,0.16) 0%, transparent 70%)",
         "gradient-glow-teal":
-          "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16,185,129,0.15) 0%, transparent 70%)",
+          "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16,185,129,0.16) 0%, transparent 70%)",
         "gradient-card-top":
-          "linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%)"
+          "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, transparent 100%)"
       },
 
       /* ── Blur ───────────────────────────────────────────────────────────── */
@@ -146,8 +146,8 @@ const config: Config = {
           "100%": { opacity: "1", transform: "translateX(0)" }
         },
         pulseGlow: {
-          "0%, 100%": { boxShadow: "0 0 8px rgba(59,130,246,0.2)" },
-          "50%":      { boxShadow: "0 0 24px rgba(59,130,246,0.5)" }
+          "0%, 100%": { boxShadow: "0 0 8px rgba(5,150,105,0.16)" },
+          "50%":      { boxShadow: "0 0 24px rgba(5,150,105,0.36)" }
         },
         shimmer: {
           from: { backgroundPosition: "-200% 0" },

@@ -94,31 +94,31 @@ const trustItems = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-surface-900 text-slate-100">
+    <div className="min-h-screen bg-surface-900 text-slate-900">
       {/* ── Navbar ─────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-surface-900/95 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-surface-900/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link className="flex items-center gap-3" href="/">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-teal">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand shadow-glow-teal">
               <Scale className="text-white" size={18} />
             </span>
-            <span className="text-sm font-bold text-white">Contrato Visto</span>
+            <span className="text-sm font-bold text-slate-950">Contrato Visto</span>
           </Link>
           <div className="hidden items-center gap-6 md:flex">
             <Link
-              className="text-sm text-slate-400 transition hover:text-slate-100"
+              className="text-sm text-slate-600 transition hover:text-slate-900"
               href="#como-funciona"
             >
               Como funciona
             </Link>
             <Link
-              className="text-sm text-slate-400 transition hover:text-slate-100"
+              className="text-sm text-slate-600 transition hover:text-slate-900"
               href="#produtos"
             >
               Produtos
             </Link>
             <Link
-              className="text-sm text-slate-400 transition hover:text-slate-100"
+              className="text-sm text-slate-600 transition hover:text-slate-900"
               href="#seguranca"
             >
               Segurança
@@ -126,13 +126,13 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link
-              className="hidden text-sm text-slate-300 hover:text-white transition sm:block"
+              className="hidden text-sm text-slate-700 hover:text-slate-950 transition sm:block"
               href="/login"
             >
               Entrar
             </Link>
             <Link
-              className="rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white shadow-glow hover:bg-brand-blue-dark transition"
+              className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
               href="/login"
             >
               Solicitar demo
@@ -145,40 +145,40 @@ export default function LandingPage() {
       <section className="relative overflow-hidden px-6 pb-20 pt-24 text-center">
         <div className="pointer-events-none absolute inset-0 bg-gradient-glow" />
         <div className="relative mx-auto max-w-4xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-blue/30 bg-brand-blue/10 px-4 py-1.5">
-            <Sparkles className="text-brand-blue-light" size={13} />
-            <span className="text-xs font-semibold text-brand-blue-light">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-4 py-1.5">
+            <Sparkles className="text-brand-teal" size={13} />
+            <span className="text-xs font-semibold text-brand-teal">
               Plataforma LegalTech com IA
             </span>
           </div>
-          <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
             Análise jurídica inteligente
             <br />
             <span className="text-gradient-brand">
               para contratos, partes e documentos
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-slate-400">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-slate-600">
             Uma plataforma com inteligência artificial para agilizar a análise
             contratual, organizar casos, acompanhar etapas e entregar relatórios
             jurídicos com mais clareza e segurança.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-blue px-6 py-3 text-sm font-semibold text-white shadow-glow hover:bg-brand-blue-dark transition"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-teal px-6 py-3 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
               href="/login"
             >
               Solicitar demonstração
               <ArrowRight size={16} />
             </Link>
             <a
-              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.04] px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-100 transition"
               href="#como-funciona"
             >
               Ver como funciona
             </a>
             <Link
-              className="inline-flex items-center gap-2 rounded-xl border border-brand-teal/30 bg-brand-teal/10 px-6 py-3 text-sm font-semibold text-brand-teal-light hover:bg-brand-teal/20 transition"
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-teal/30 bg-brand-teal/10 px-6 py-3 text-sm font-semibold text-brand-teal-dark hover:bg-brand-teal/20 transition"
               href="/login"
             >
               Entrar na plataforma
@@ -188,7 +188,7 @@ export default function LandingPage() {
 
         {/* Dashboard preview mockup */}
         <div className="relative mx-auto mt-20 max-w-5xl">
-          <div className="rounded-2xl border border-white/[0.08] bg-surface-800 p-4 shadow-card">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card-rest">
             <div className="mb-3 flex items-center gap-2 px-2">
               <div className="h-3 w-3 rounded-full bg-red-500/60" />
               <div className="h-3 w-3 rounded-full bg-yellow-500/60" />
@@ -197,38 +197,38 @@ export default function LandingPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
               {[
-                { l: "Casos em análise", v: "3", c: "text-brand-blue-light" },
-                { l: "Relatórios aprovados", v: "2", c: "text-teal-400" },
-                { l: "Documentos enviados", v: "9", c: "text-violet-400" },
-                { l: "Revisões pendentes", v: "1", c: "text-amber-400" }
+                { l: "Casos em análise", v: "3", c: "text-brand-teal" },
+                { l: "Relatórios aprovados", v: "2", c: "text-teal-700" },
+                { l: "Documentos enviados", v: "9", c: "text-violet-700" },
+                { l: "Revisões pendentes", v: "1", c: "text-amber-700" }
               ].map((m) => (
                 <div
-                  className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-4"
+                  className="rounded-lg border border-slate-200 bg-white p-4"
                   key={m.l}
                 >
-                  <p className="text-xs text-slate-400">{m.l}</p>
+                  <p className="text-xs text-slate-600">{m.l}</p>
                   <p className={`mt-2 text-3xl font-bold ${m.c}`}>{m.v}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-3 rounded-lg border border-white/[0.06] bg-white/[0.03] p-4">
+            <div className="mt-3 rounded-lg border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold text-slate-300">Casos recentes</p>
-                <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-[10px] text-brand-blue-light">
+                <p className="text-xs font-semibold text-slate-700">Casos recentes</p>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-brand-teal">
                   Live
                 </span>
               </div>
               {[
-                { code: "CASO-2026-001", type: "Análise contratual", status: "Revisão humana", color: "text-yellow-400 bg-yellow-500/10" },
-                { code: "CASO-2026-002", type: "Due diligence", status: "Análise IA", color: "text-violet-400 bg-violet-500/10" },
-                { code: "CASO-2026-003", type: "Consulta de objeto", status: "Processando", color: "text-purple-400 bg-purple-500/10" }
+                { code: "CASO-2026-001", type: "Análise contratual", status: "Revisão humana", color: "border border-amber-200 bg-amber-50 text-amber-700" },
+                { code: "CASO-2026-002", type: "Due diligence", status: "Análise IA", color: "border border-violet-200 bg-violet-50 text-violet-700" },
+                { code: "CASO-2026-003", type: "Consulta de objeto", status: "Processando", color: "border border-emerald-200 bg-emerald-50 text-emerald-700" }
               ].map((c) => (
                 <div
-                  className="flex items-center justify-between border-t border-white/[0.04] py-2"
+                  className="flex items-center justify-between border-t border-slate-100 py-2"
                   key={c.code}
                 >
                   <div>
-                    <p className="text-xs font-medium text-slate-200">{c.code}</p>
+                    <p className="text-xs font-medium text-slate-800">{c.code}</p>
                     <p className="text-[11px] text-slate-500">{c.type}</p>
                   </div>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${c.color}`}>
@@ -248,26 +248,26 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-teal">
               Processo
             </p>
-            <h2 className="mt-2 text-3xl font-bold text-white">
+            <h2 className="mt-2 text-3xl font-bold text-slate-950">
               Como funciona
             </h2>
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-slate-600">
               Do envio do documento ao relatório final em 4 etapas claras.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => (
               <div
-                className="group relative rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 transition-all hover:border-brand-blue/30 hover:bg-white/[0.05]"
+                className="group relative rounded-lg border border-slate-200 bg-white p-6 transition-all hover:border-emerald-300 hover:bg-slate-100"
                 key={step.num}
               >
-                <span className="text-4xl font-black text-white/10 group-hover:text-brand-blue/20 transition">
+                <span className="text-4xl font-black text-slate-950/10 group-hover:text-brand-teal/20 transition">
                   {step.num}
                 </span>
-                <h3 className="mt-3 text-sm font-semibold text-slate-100">
+                <h3 className="mt-3 text-sm font-semibold text-slate-900">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-xs leading-5 text-slate-400">
+                <p className="mt-2 text-xs leading-5 text-slate-600">
                   {step.description}
                 </p>
               </div>
@@ -283,7 +283,7 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-teal">
               Funcionalidades
             </p>
-            <h2 className="mt-2 text-3xl font-bold text-white">
+            <h2 className="mt-2 text-3xl font-bold text-slate-950">
               Tudo que você precisa
             </h2>
           </div>
@@ -292,16 +292,16 @@ export default function LandingPage() {
               const Icon = feat.icon;
               return (
                 <div
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 transition-all hover:border-brand-blue/20 hover:bg-white/[0.05]"
+                  className="rounded-lg border border-slate-200 bg-white p-6 transition-all hover:border-emerald-200 hover:bg-slate-100"
                   key={feat.title}
                 >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/10 border border-brand-blue/20">
-                    <Icon className="text-brand-blue-light" size={20} />
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200">
+                    <Icon className="text-brand-teal" size={20} />
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-900">
                     {feat.title}
                   </h3>
-                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
                     {feat.description}
                   </p>
                 </div>
@@ -318,22 +318,22 @@ export default function LandingPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-teal">
               Produtos
             </p>
-            <h2 className="mt-2 text-3xl font-bold text-white">
+            <h2 className="mt-2 text-3xl font-bold text-slate-950">
               Escolha o tipo de análise
             </h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {products.map((p) => (
               <div
-                className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:border-brand-teal/30"
+                className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-5 transition-all hover:border-brand-teal/30"
                 key={p.label}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-teal/10 border border-brand-teal/20">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-teal/10 border border-brand-teal/20">
                   <Zap className="text-brand-teal" size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-100">{p.label}</p>
-                  <p className="text-xs text-slate-400">{p.desc}</p>
+                  <p className="text-sm font-semibold text-slate-900">{p.label}</p>
+                  <p className="text-xs text-slate-600">{p.desc}</p>
                 </div>
               </div>
             ))}
@@ -344,12 +344,12 @@ export default function LandingPage() {
       {/* ── Segurança e confiança ──────────────────────────────── */}
       <section className="px-6 py-20" id="seguranca">
         <div className="mx-auto max-w-4xl">
-          <div className="rounded-2xl border border-brand-teal/20 bg-brand-teal/5 p-10 text-center">
+          <div className="rounded-lg border border-brand-teal/20 bg-brand-teal/5 p-10 text-center">
             <Lock className="mx-auto mb-4 text-brand-teal" size={32} />
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-2xl font-bold text-slate-950">
               Segurança e conformidade
             </h2>
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-slate-600">
               Construído com boas práticas de segurança, privacidade e compliance
               jurídico em cada etapa.
             </p>
@@ -357,7 +357,7 @@ export default function LandingPage() {
               {trustItems.map((item) => (
                 <li className="flex items-center justify-center gap-3" key={item}>
                   <CheckCircle2 className="shrink-0 text-brand-teal" size={16} />
-                  <span className="text-sm text-slate-300">{item}</span>
+                  <span className="text-sm text-slate-700">{item}</span>
                 </li>
               ))}
             </ul>
@@ -368,23 +368,23 @@ export default function LandingPage() {
       {/* ── CTA final ──────────────────────────────────────────── */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-bold text-white">
+          <h2 className="text-3xl font-bold text-slate-950">
             Pronto para começar?
           </h2>
-          <p className="mt-4 text-sm text-slate-400">
+          <p className="mt-4 text-sm text-slate-600">
             Solicite uma demonstração e veja como o Contrato Visto pode
             transformar a análise jurídica da sua equipe.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-blue px-6 py-3 text-sm font-semibold text-white shadow-glow hover:bg-brand-blue-dark transition"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-teal px-6 py-3 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
               href="/login"
             >
               Solicitar demonstração
               <ArrowRight size={16} />
             </Link>
             <Link
-              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.04] px-6 py-3 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] transition"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-100 transition"
               href="/login"
             >
               Entrar na plataforma
@@ -394,11 +394,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── Rodapé ─────────────────────────────────────────────── */}
-      <footer className="border-t border-white/[0.06] px-6 py-8">
+      <footer className="border-t border-slate-200 px-6 py-8">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <Scale className="text-brand-teal" size={18} />
-            <span className="text-sm font-semibold text-slate-300">
+            <span className="text-sm font-semibold text-slate-700">
               Contrato Visto
             </span>
           </div>

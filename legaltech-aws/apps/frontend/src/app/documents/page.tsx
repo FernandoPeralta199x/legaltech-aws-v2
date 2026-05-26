@@ -264,11 +264,11 @@ export default function DocumentsPage() {
 
         {showForm && (
           <form
-            className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5"
+            className="mb-6 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-slate-100">Novo metadado de documento</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Novo metadado de documento</h2>
               <p className="text-xs leading-5 text-slate-500">
                 Esta tela cria apenas metadata. Nenhum upload real, S3, OCR ou IA é executado aqui.
               </p>
@@ -403,21 +403,21 @@ export default function DocumentsPage() {
             <div className="space-y-3">
               {visibleDocuments.map((doc) => (
                 <div
-                  className="flex flex-col gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3 md:flex-row md:items-center"
+                  className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center"
                   key={doc.id}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06]">
-                      <FileText className="text-slate-400" size={16} />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                      <FileText className="text-slate-600" size={16} />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-slate-100">
+                      <p className="truncate text-xs font-semibold text-slate-900">
                         {doc.filename}
                       </p>
                       <p className="text-[11px] text-slate-500">
                         {doc.sizeLabel} · {doc.contentType.split("/")[1]?.toUpperCase()}
                       </p>
-                      <span className="mt-1 inline-flex rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                      <span className="mt-1 inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600">
                         Metadata apenas
                       </span>
                     </div>
@@ -426,7 +426,7 @@ export default function DocumentsPage() {
                     <div>
                       <p className="text-[11px] text-slate-500">Caso</p>
                       <Link
-                        className="font-medium text-brand-blue-light hover:underline"
+                        className="font-medium text-brand-teal hover:underline"
                         href={`/cases/${doc.caseId}`}
                       >
                         {doc.caseCode}
@@ -434,7 +434,7 @@ export default function DocumentsPage() {
                     </div>
                     <div>
                       <p className="text-[11px] text-slate-500">Upload</p>
-                      <p className="text-slate-300">{formatDate(doc.uploadedAt)}</p>
+                      <p className="text-slate-700">{formatDate(doc.uploadedAt)}</p>
                     </div>
                     <div className="self-center">
                       <StatusBadge status={doc.status} />
@@ -494,7 +494,7 @@ function IconButton({
   return (
     <button
       aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-slate-400 transition hover:bg-white/[0.08] hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
       disabled={disabled || loading}
       onClick={onClick}
       title={label}

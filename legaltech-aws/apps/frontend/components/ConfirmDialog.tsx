@@ -32,17 +32,17 @@ export function ConfirmDialog({
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-surface-950/70 px-4 py-8 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-8 backdrop-blur-sm"
       role="dialog"
     >
-      <section className="w-full max-w-md rounded-xl border border-white/[0.10] bg-surface-800 p-5 shadow-2xl">
+      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl">
         <div className="flex gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-200">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
             <AlertTriangle aria-hidden="true" size={18} />
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-slate-100">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">{description}</p>
+            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
           </div>
         </div>
 

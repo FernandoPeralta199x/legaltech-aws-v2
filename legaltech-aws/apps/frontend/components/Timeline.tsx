@@ -11,7 +11,7 @@ type TimelineProps = {
 export function Timeline({ events }: TimelineProps) {
   if (events.length === 0) {
     return (
-      <p className="text-sm text-slate-400 py-4">Nenhum evento na timeline.</p>
+      <p className="text-sm text-slate-600 py-4">Nenhum evento na timeline.</p>
     );
   }
 
@@ -28,18 +28,18 @@ export function Timeline({ events }: TimelineProps) {
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition",
                   isCurrent
-                    ? "border-brand-blue bg-brand-blue/20 text-brand-blue shadow-glow"
-                    : "border-white/[0.12] bg-white/[0.04] text-slate-400"
+                    ? "border-brand-teal bg-emerald-50 text-brand-teal shadow-glow-teal"
+                    : "border-slate-200 bg-white text-slate-500"
                 )}
               >
                 {isCurrent ? (
-                  <Clock className="text-brand-blue" size={14} />
+                  <Clock className="text-brand-teal" size={14} />
                 ) : (
-                  <CheckCircle2 className="text-teal-400" size={14} />
+                  <CheckCircle2 className="text-emerald-600" size={14} />
                 )}
               </div>
               {!isLast && (
-                <div className="mt-1 h-full w-px bg-white/[0.08]" />
+                <div className="mt-1 h-full w-px bg-slate-200" />
               )}
             </div>
 
@@ -48,18 +48,18 @@ export function Timeline({ events }: TimelineProps) {
                 <span
                   className={cn(
                     "text-sm font-semibold",
-                    isCurrent ? "text-white" : "text-slate-200"
+                    isCurrent ? "text-slate-950" : "text-slate-800"
                   )}
                 >
                   {event.label}
                 </span>
                 {isCurrent && (
-                  <span className="rounded-full bg-brand-blue/20 px-2 py-0.5 text-[10px] font-semibold text-brand-blue-light">
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                     Atual
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-xs text-slate-400">{event.description}</p>
+              <p className="mt-0.5 text-xs text-slate-600">{event.description}</p>
               <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-500">
                 <span>{event.actor}</span>
                 <span>·</span>

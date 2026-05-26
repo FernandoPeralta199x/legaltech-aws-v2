@@ -140,14 +140,14 @@ export default function NewCasePage() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            className="mb-4 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition"
+            className="mb-4 flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-800 transition"
             href="/cases"
           >
             <ArrowLeft size={14} />
             Voltar para casos
           </Link>
           <h1 className="text-2xl font-bold text-white">Criar novo caso</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-600">
             Preencha as informações para iniciar a análise jurídica.
           </p>
         </div>
@@ -166,8 +166,8 @@ export default function NewCasePage() {
                         done
                           ? "border-teal-500 bg-teal-500 text-white"
                           : current
-                          ? "border-brand-blue bg-brand-blue/20 text-brand-blue-light shadow-glow"
-                          : "border-white/[0.12] bg-white/[0.04] text-slate-500"
+                          ? "border-brand-blue bg-brand-blue/20 text-brand-teal-dark shadow-glow"
+                          : "border-slate-200 bg-white text-slate-500"
                       }`}
                     >
                       {done ? <Check size={14} /> : idx + 1}
@@ -175,7 +175,7 @@ export default function NewCasePage() {
                     <span
                       className={`mt-1.5 whitespace-nowrap text-[11px] font-medium ${
                         current
-                          ? "text-brand-blue-light"
+                          ? "text-brand-teal-dark"
                           : done
                           ? "text-teal-400"
                           : "text-slate-500"
@@ -187,7 +187,7 @@ export default function NewCasePage() {
                   {idx < STEPS.length - 1 && (
                     <div
                       className={`mx-3 h-px w-12 transition ${
-                        done ? "bg-teal-500" : "bg-white/[0.08]"
+                        done ? "bg-teal-500" : "bg-slate-200"
                       }`}
                     />
                   )}
@@ -204,7 +204,7 @@ export default function NewCasePage() {
               <h2 className="mb-1 text-lg font-semibold text-white">
                 Escolha o produto
               </h2>
-              <p className="mb-6 text-sm text-slate-400">
+              <p className="mb-6 text-sm text-slate-600">
                 Selecione o tipo de análise jurídica que deseja realizar.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -213,20 +213,20 @@ export default function NewCasePage() {
                   const active = product === p.id;
                   return (
                     <button
-                      className={`group flex flex-col gap-3 rounded-xl border p-5 text-left transition-all ${
+                      className={`group flex flex-col gap-3 rounded-lg border p-5 text-left transition-all ${
                         active
-                          ? "border-brand-blue/40 bg-brand-blue/10 shadow-glow"
-                          : "border-white/[0.08] bg-white/[0.02] hover:border-brand-blue/20 hover:bg-white/[0.04]"
+                          ? "border-brand-teal/40 bg-brand-teal/10 shadow-glow"
+                          : "border-slate-200 bg-white hover:border-brand-teal/20 hover:bg-slate-50"
                       }`}
                       key={p.id}
                       onClick={() => setProduct(p.id)}
                       type="button"
                     >
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
                           active
-                            ? "border-brand-blue/40 bg-brand-blue/20 text-brand-blue-light"
-                            : "border-white/[0.08] bg-white/[0.04] text-slate-400"
+                            ? "border-brand-teal/40 bg-brand-blue/20 text-brand-teal-dark"
+                            : "border-slate-200 bg-white text-slate-600"
                         }`}
                       >
                         <Icon size={18} />
@@ -234,12 +234,12 @@ export default function NewCasePage() {
                       <div>
                         <p
                           className={`text-sm font-semibold ${
-                            active ? "text-white" : "text-slate-200"
+                            active ? "text-white" : "text-slate-800"
                           }`}
                         >
                           {p.label}
                         </p>
-                        <p className="mt-0.5 text-xs leading-4 text-slate-400">
+                        <p className="mt-0.5 text-xs leading-4 text-slate-600">
                           {p.desc}
                         </p>
                       </div>
@@ -255,7 +255,7 @@ export default function NewCasePage() {
             <div className="animate-in space-y-5">
               <div>
                 <h2 className="mb-1 text-lg font-semibold text-white">Dados do caso</h2>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Informações básicas sobre o caso jurídico.
                 </p>
               </div>
@@ -328,7 +328,7 @@ export default function NewCasePage() {
             <div className="animate-in">
               <div className="mb-6">
                 <h2 className="mb-1 text-lg font-semibold text-white">Partes envolvidas</h2>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Cadastre todas as partes do contrato ou operação.
                 </p>
               </div>
@@ -336,16 +336,16 @@ export default function NewCasePage() {
               <div className="space-y-4">
                 {parties.map((party, i) => (
                   <div
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-5"
+                    className="rounded-lg border border-slate-200 bg-white p-5"
                     key={i}
                   >
                     <div className="mb-4 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-300">
+                      <p className="text-xs font-semibold text-slate-700">
                         Parte {i + 1}
                       </p>
                       {parties.length > 1 && (
                         <button
-                          className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 transition"
+                          className="flex items-center gap-1.5 text-[11px] text-red-700 hover:text-red-700 transition"
                           onClick={() => removeParty(i)}
                           type="button"
                         >
@@ -415,7 +415,7 @@ export default function NewCasePage() {
               </div>
 
               <button
-                className="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-white/[0.12] bg-white/[0.02] px-4 py-3 text-xs font-medium text-slate-400 hover:border-brand-blue/30 hover:text-brand-blue-light w-full justify-center transition"
+                className="mt-4 flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-600 hover:border-brand-teal/30 hover:text-brand-teal-dark w-full justify-center transition"
                 onClick={addParty}
                 type="button"
               >
@@ -430,7 +430,7 @@ export default function NewCasePage() {
             <div className="animate-in space-y-5">
               <div>
                 <h2 className="mb-1 text-lg font-semibold text-white">Objeto do contrato</h2>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Descreva o objeto ou bem envolvido na operação.
                 </p>
               </div>
@@ -481,7 +481,7 @@ export default function NewCasePage() {
             <div className="animate-in">
               <div className="mb-6">
                 <h2 className="mb-1 text-lg font-semibold text-white">Upload de documentos</h2>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Envie contratos, certidões, documentos das partes e materiais complementares.
                 </p>
               </div>
@@ -494,45 +494,45 @@ export default function NewCasePage() {
             <div className="animate-in">
               <div className="mb-6">
                 <h2 className="mb-1 text-lg font-semibold text-white">Revisão antes de enviar</h2>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Confirme as informações antes de enviar para análise.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <ReviewSection label="Produto selecionado">
-                  <p className="text-sm text-slate-100">{selectedProduct?.label}</p>
-                  <p className="text-xs text-slate-400">{selectedProduct?.desc}</p>
+                  <p className="text-sm text-slate-900">{selectedProduct?.label}</p>
+                  <p className="text-xs text-slate-600">{selectedProduct?.desc}</p>
                 </ReviewSection>
 
                 <ReviewSection label="Dados do caso">
                   <dl className="grid gap-2 sm:grid-cols-2">
                     <div>
                       <dt className="text-[11px] text-slate-500">Nome</dt>
-                      <dd className="text-xs text-slate-200">{caseName || "—"}</dd>
+                      <dd className="text-xs text-slate-800">{caseName || "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-slate-500">Cliente</dt>
-                      <dd className="text-xs text-slate-200">{selectedClient?.name}</dd>
+                      <dd className="text-xs text-slate-800">{selectedClient?.name}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-slate-500">Tipo de contrato</dt>
-                      <dd className="text-xs text-slate-200">{contractType}</dd>
+                      <dd className="text-xs text-slate-800">{contractType}</dd>
                     </div>
                     <div>
                       <dt className="text-[11px] text-slate-500">Prioridade</dt>
-                      <dd className="text-xs text-slate-200">{priority}</dd>
+                      <dd className="text-xs text-slate-800">{priority}</dd>
                     </div>
                   </dl>
                   {notes && (
-                    <p className="mt-2 text-xs text-slate-400">{notes}</p>
+                    <p className="mt-2 text-xs text-slate-600">{notes}</p>
                   )}
                 </ReviewSection>
 
                 <ReviewSection label={`Partes (${parties.length})`}>
                   {parties.map((p, i) => (
                     <div className="py-1" key={i}>
-                      <p className="text-xs font-medium text-slate-200">
+                      <p className="text-xs font-medium text-slate-800">
                         {p.name || "—"} <span className="text-slate-500">({p.type})</span>
                       </p>
                     </div>
@@ -540,17 +540,17 @@ export default function NewCasePage() {
                 </ReviewSection>
 
                 <ReviewSection label="Objeto do contrato">
-                  <p className="text-xs text-slate-200">{objectDesc || "—"}</p>
+                  <p className="text-xs text-slate-800">{objectDesc || "—"}</p>
                 </ReviewSection>
 
-                <div className="rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-5">
+                <div className="rounded-lg border border-brand-teal/20 bg-brand-teal/5 p-5">
                   <div className="flex items-center gap-2.5 mb-3">
-                    <Send className="text-brand-blue" size={16} />
+                    <Send className="text-brand-teal" size={16} />
                     <p className="text-sm font-semibold text-white">
                       Pronto para enviar
                     </p>
                   </div>
-                  <p className="text-xs leading-5 text-slate-400">
+                  <p className="text-xs leading-5 text-slate-600">
                     Ao confirmar, o caso será criado e os agentes de análise serão
                     ativados. O relatório final só será disponibilizado após revisão
                     humana de um analista especializado.
@@ -561,9 +561,9 @@ export default function NewCasePage() {
           )}
 
           {/* Navigation */}
-          <div className="mt-8 flex items-center justify-between border-t border-white/[0.06] pt-6">
+          <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
             <button
-              className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.07] transition disabled:opacity-40"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 transition disabled:opacity-40"
               disabled={step === 0}
               onClick={() => setStep((s) => s - 1)}
               type="button"
@@ -611,12 +611,12 @@ export default function NewCasePage() {
 }
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06] [&_option]:bg-surface-800";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-brand-teal/40 focus:bg-white [&_option]:bg-surface-800";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5 text-xs font-medium text-slate-400">{label}</label>
+      <label className="block mb-1.5 text-xs font-medium text-slate-600">{label}</label>
       {children}
     </div>
   );
@@ -624,7 +624,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function ReviewSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </p>

@@ -29,14 +29,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-900 px-4 py-10">
-      <section className="w-full max-w-md rounded-xl border border-white/[0.08] bg-white/[0.04] p-8 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-blue/10 border border-brand-blue/20 text-brand-blue-light">
+      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-card-rest">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-brand-teal">
           <LockKeyhole aria-hidden="true" size={22} />
         </span>
-        <h1 className="mt-5 text-xl font-semibold text-white">
+        <h1 className="mt-5 text-xl font-semibold text-slate-950">
           Acesso restrito
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p className="mt-2 text-sm leading-6 text-slate-600">
           Faça login para acessar esta página.
         </p>
         <Button className="mt-6" href="/login">

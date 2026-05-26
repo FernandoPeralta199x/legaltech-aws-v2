@@ -22,19 +22,19 @@ type NotificationProps = {
 
 const toneConfig: Record<NotificationTone, { className: string; icon: typeof Info }> = {
   error: {
-    className: "border-red-500/25 bg-red-500/10 text-red-100",
+    className: "border-red-200 bg-red-50 text-red-900",
     icon: AlertTriangle
   },
   info: {
-    className: "border-brand-blue/25 bg-brand-blue/10 text-blue-100",
+    className: "border-blue-200 bg-blue-50 text-blue-900",
     icon: Info
   },
   success: {
-    className: "border-teal-500/25 bg-teal-500/10 text-teal-100",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-900",
     icon: CheckCircle2
   },
   warning: {
-    className: "border-amber-500/25 bg-amber-500/10 text-amber-100",
+    className: "border-amber-200 bg-amber-50 text-amber-900",
     icon: AlertTriangle
   }
 };
@@ -54,7 +54,7 @@ export function Notification({
   return (
     <div
       className={cn(
-        "mb-4 rounded-xl border",
+        "mb-4 rounded-lg border",
         compact ? "px-3 py-2" : "px-4 py-3",
         config.className,
         className
@@ -71,7 +71,7 @@ export function Notification({
         {onDismiss && (
           <button
             aria-label="Fechar aviso"
-            className="rounded-lg p-1 opacity-70 transition hover:bg-white/10 hover:opacity-100"
+            className="rounded-lg p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100"
             onClick={onDismiss}
             type="button"
           >

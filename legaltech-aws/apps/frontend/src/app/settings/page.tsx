@@ -57,14 +57,14 @@ export default function SettingsPage() {
                 <button
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-medium whitespace-nowrap transition ${
                     active
-                      ? "bg-brand-blue/15 text-brand-blue-light"
-                      : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                      ? "bg-brand-blue/15 text-brand-teal-dark"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   type="button"
                 >
-                  <Icon size={14} className={active ? "text-brand-blue" : ""} />
+                  <Icon size={14} className={active ? "text-brand-teal" : ""} />
                   {tab.label}
                 </button>
               );
@@ -97,7 +97,7 @@ export default function SettingsPage() {
                         disabled
                         value={org.plan.charAt(0).toUpperCase() + org.plan.slice(1)}
                       />
-                      <button className="shrink-0 rounded-lg border border-brand-blue/30 bg-brand-blue/10 px-3 py-2.5 text-xs font-semibold text-brand-blue-light hover:bg-brand-blue/20 transition">
+                      <button className="shrink-0 rounded-lg border border-brand-teal/30 bg-brand-teal/10 px-3 py-2.5 text-xs font-semibold text-brand-teal-dark hover:bg-brand-blue/20 transition">
                         Upgrade
                       </button>
                     </div>
@@ -127,14 +127,14 @@ export default function SettingsPage() {
                         {user.avatarInitials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-slate-100">
+                        <p className="text-xs font-semibold text-slate-900">
                           {user.name}
                         </p>
-                        <p className="truncate text-[11px] text-slate-400">
+                        <p className="truncate text-[11px] text-slate-600">
                           {user.email}
                         </p>
                       </div>
-                      <select className="h-8 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 text-[11px] text-slate-300 outline-none">
+                      <select className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] text-slate-700 outline-none">
                         <option value="admin">Admin</option>
                         <option value="analyst">Analista</option>
                         <option value="client">Cliente</option>
@@ -143,8 +143,8 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                  <button className="flex items-center gap-2 rounded-lg border border-dashed border-white/[0.12] bg-white/[0.02] px-4 py-2.5 text-xs font-medium text-slate-400 hover:border-brand-blue/30 hover:text-brand-blue-light transition">
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <button className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-white px-4 py-2.5 text-xs font-medium text-slate-600 hover:border-brand-teal/30 hover:text-brand-teal-dark transition">
                     <User size={13} />
                     Convidar novo membro
                   </button>
@@ -190,11 +190,11 @@ export default function SettingsPage() {
                     { device: "macOS — Safari", location: "Rio de Janeiro, RJ", current: false }
                   ].map((s) => (
                     <div
-                      className="flex items-center justify-between border-t border-white/[0.06] py-3 first:border-0 first:pt-0"
+                      className="flex items-center justify-between border-t border-slate-200 py-3 first:border-0 first:pt-0"
                       key={s.device}
                     >
                       <div>
-                        <p className="text-xs font-medium text-slate-200">{s.device}</p>
+                        <p className="text-xs font-medium text-slate-800">{s.device}</p>
                         <p className="text-[11px] text-slate-500">{s.location}</p>
                       </div>
                       {s.current ? (
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                           Sessão atual
                         </span>
                       ) : (
-                        <button className="text-[10px] font-semibold text-red-400 hover:text-red-300 transition">
+                        <button className="text-[10px] font-semibold text-red-700 hover:text-red-700 transition">
                           Encerrar
                         </button>
                       )}
@@ -227,7 +227,7 @@ export default function SettingsPage() {
                       key={n.label}
                     >
                       <div>
-                        <p className="text-xs font-medium text-slate-200">{n.label}</p>
+                        <p className="text-xs font-medium text-slate-800">{n.label}</p>
                         <p className="text-[11px] text-slate-500">{n.desc}</p>
                       </div>
                       <label className="relative flex h-5 w-9 cursor-pointer items-center">
@@ -236,7 +236,7 @@ export default function SettingsPage() {
                           defaultChecked
                           type="checkbox"
                         />
-                        <div className="h-5 w-9 rounded-full bg-white/[0.08] transition peer-checked:bg-brand-teal" />
+                        <div className="h-5 w-9 rounded-full bg-slate-200 transition peer-checked:bg-brand-teal" />
                         <div className="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow transition peer-checked:translate-x-4" />
                       </label>
                     </div>
@@ -249,25 +249,25 @@ export default function SettingsPage() {
               <Card title="Aparência">
                 <div className="space-y-6">
                   <div>
-                    <p className="mb-3 text-xs font-medium text-slate-400">Tema</p>
+                    <p className="mb-3 text-xs font-medium text-slate-600">Tema</p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {[
                         { id: "dark", label: "Escuro", desc: "Tema padrão da plataforma", active: true },
                         { id: "light", label: "Claro", desc: "Em desenvolvimento", active: false }
                       ].map((t) => (
                         <button
-                          className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${
+                          className={`flex items-center gap-3 rounded-lg border p-4 text-left transition ${
                             t.active
-                              ? "border-brand-blue/40 bg-brand-blue/10"
-                              : "border-white/[0.06] bg-white/[0.02] opacity-50 cursor-not-allowed"
+                              ? "border-brand-teal/40 bg-brand-teal/10"
+                              : "border-slate-200 bg-white opacity-50 cursor-not-allowed"
                           }`}
                           disabled={!t.active}
                           key={t.id}
                           type="button"
                         >
-                          <Moon size={18} className={t.active ? "text-brand-blue-light" : "text-slate-500"} />
+                          <Moon size={18} className={t.active ? "text-brand-teal-dark" : "text-slate-500"} />
                           <div>
-                            <p className="text-xs font-semibold text-slate-100">{t.label}</p>
+                            <p className="text-xs font-semibold text-slate-900">{t.label}</p>
                             <p className="text-[11px] text-slate-500">{t.desc}</p>
                           </div>
                         </button>
@@ -285,12 +285,12 @@ export default function SettingsPage() {
 }
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none transition focus:border-brand-blue/40 focus:bg-white/[0.06]";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-brand-teal/40 focus:bg-white";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block mb-1.5 text-xs font-medium text-slate-400">{label}</label>
+      <label className="block mb-1.5 text-xs font-medium text-slate-600">{label}</label>
       {children}
     </div>
   );

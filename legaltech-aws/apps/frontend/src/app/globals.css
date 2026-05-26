@@ -4,7 +4,7 @@
 
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -30,14 +30,14 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  background: #050b18;
-  color: #f1f5f9;
+  background: #f6f8f5;
+  color: #102033;
   font-family:
     "Inter var", Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.6;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   font-variation-settings: normal;
   -webkit-font-smoothing: antialiased;
@@ -56,13 +56,13 @@ select {
 
 /* ── Selection ──────────────────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(59, 130, 246, 0.28);
-  color: #f1f5f9;
+  background: rgba(5, 150, 105, 0.18);
+  color: #102033;
 }
 
 /* ── Focus ring — accessible & elegant ─────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline: 2px solid rgba(5, 150, 105, 0.72);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -76,22 +76,22 @@ select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.16);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.45);
+  background: rgba(5, 150, 105, 0.45);
 }
 
 /* ── Glass card ─────────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 4px 24px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 16px 42px rgba(15, 23, 42, 0.08);
 }
 
 /* ── Glow utilities ─────────────────────────────────────────────────────────── */
@@ -101,7 +101,7 @@ select {
 /* ── Gradient text ──────────────────────────────────────────────────────────── */
 @layer utilities {
   .text-gradient-brand {
-    background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+    background: linear-gradient(135deg, #047857 0%, #10b981 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -116,19 +116,19 @@ select {
 
   /* Card with inner top highlight (glass reflection) */
   .card-highlight {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(15, 23, 42, 0.08);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 4px 20px rgba(0, 0, 0, 0.25);
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 14px 36px rgba(15, 23, 42, 0.08);
   }
 
   .card-highlight:hover {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(5, 150, 105, 0.28);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(59, 130, 246, 0.08);
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 18px 44px rgba(15, 23, 42, 0.1),
+      0 0 0 1px rgba(5, 150, 105, 0.1);
     transform: translateY(-1px);
   }
 
@@ -174,8 +174,8 @@ select {
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.2); }
-  50%       { box-shadow: 0 0 22px rgba(59, 130, 246, 0.45); }
+  0%, 100% { box-shadow: 0 0 8px rgba(5, 150, 105, 0.16); }
+  50%       { box-shadow: 0 0 22px rgba(5, 150, 105, 0.34); }
 }
 
 @keyframes shimmer {
@@ -187,9 +187,9 @@ select {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 75%
+    rgba(203, 213, 225, 0.28) 25%,
+    rgba(226, 232, 240, 0.72) 50%,
+    rgba(203, 213, 225, 0.28) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;

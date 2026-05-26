@@ -27,9 +27,9 @@ export function Card({
     <section
       className={cn(
         /* Base */
-        "rounded-2xl border border-white/[0.07] p-5",
+        "rounded-lg border border-slate-200 p-5",
         /* Background: subtle gradient + inner highlight via box-shadow */
-        "bg-gradient-to-b from-white/[0.05] to-white/[0.03]",
+        "bg-white",
         "shadow-card-rest",
         /* Transition */
         "transition-all duration-base ease-smooth",
@@ -37,7 +37,7 @@ export function Card({
         glow && "shadow-glow",
         /* Interactive hover lift */
         interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:shadow-card-hover hover:border-white/[0.12]",
+          "cursor-pointer hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-card-hover",
         className
       )}
     >
@@ -45,7 +45,7 @@ export function Card({
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             {title && (
-              <h2 className="text-sm font-semibold leading-snug tracking-tight text-slate-100">
+              <h2 className="text-sm font-semibold leading-snug text-slate-900">
                 {title}
               </h2>
             )}

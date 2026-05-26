@@ -14,14 +14,14 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-surface-900 text-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-surface-900 text-slate-900">
       <div className="flex">
         <Sidebar />
         <MobileSidebar onClose={() => setMobileOpen(false)} open={mobileOpen} />
 
         <div className="min-w-0 flex-1">
           <Header onMenuClick={() => setMobileOpen(true)} />
-          <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-6">
+          <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 sm:py-7">
             {children}
           </main>
         </div>

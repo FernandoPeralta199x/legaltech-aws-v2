@@ -83,7 +83,7 @@ export default function AnalystPage() {
         />
 
         {successMsg && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-teal-500/30 bg-teal-500/10 px-5 py-4">
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4">
             <CheckCircle2 className="shrink-0 text-teal-400" size={18} />
             <p className="text-sm font-medium text-teal-300">{successMsg}</p>
             <button
@@ -101,24 +101,24 @@ export default function AnalystPage() {
             {
               label: "Pendentes de revisão",
               value: pendingCases.length,
-              color: "text-yellow-400",
-              bg: "bg-yellow-500/10 border-yellow-500/20"
+              color: "text-amber-700",
+              bg: "bg-amber-50 border-amber-200"
             },
             {
               label: "Revisados hoje",
               value: 2,
               color: "text-teal-400",
-              bg: "bg-teal-500/10 border-teal-500/20"
+              bg: "bg-emerald-50 border-teal-500/20"
             },
             {
               label: "SLA médio",
               value: "4h",
-              color: "text-brand-blue-light",
-              bg: "bg-brand-blue/10 border-brand-blue/20"
+              color: "text-brand-teal-dark",
+              bg: "bg-brand-teal/10 border-brand-teal/20"
             }
           ].map((m) => (
-            <div className={`rounded-xl border ${m.bg} p-5`} key={m.label}>
-              <p className="text-xs text-slate-400">{m.label}</p>
+            <div className={`rounded-lg border ${m.bg} p-5`} key={m.label}>
+              <p className="text-xs text-slate-600">{m.label}</p>
               <p className={`mt-2 text-3xl font-bold ${m.color}`}>{m.value}</p>
             </div>
           ))}
@@ -127,35 +127,35 @@ export default function AnalystPage() {
         <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
           {/* Cases queue */}
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-300">
+            <h2 className="text-sm font-semibold text-slate-700">
               Casos aguardando revisão
             </h2>
             {pendingCases.length === 0 ? (
-              <div className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.08] py-16 text-center">
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-slate-200 py-16 text-center">
                 <ClipboardCheck className="mb-3 text-slate-600" size={28} />
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Nenhum caso pendente de revisão.
                 </p>
               </div>
             ) : (
               pendingCases.map((c) => (
                 <div
-                  className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-5"
+                  className="rounded-lg border border-amber-200 bg-amber-50 p-5"
                   key={c.id}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-[11px] font-semibold text-brand-blue-light">
+                        <span className="text-[11px] font-semibold text-brand-teal-dark">
                           {c.code}
                         </span>
                         <StatusBadge status={c.status} />
                         <PriorityBadge priority={c.priority} />
                       </div>
-                      <p className="text-sm font-semibold text-slate-100">
+                      <p className="text-sm font-semibold text-slate-900">
                         {c.caseType}
                       </p>
-                      <p className="text-xs text-slate-400">{c.clientName}</p>
+                      <p className="text-xs text-slate-600">{c.clientName}</p>
                       <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
                         <Clock size={11} />
                         Atualizado {formatDate(c.updatedAt)}
@@ -163,7 +163,7 @@ export default function AnalystPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Link
-                        className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/[0.07] transition"
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
                         href={`/cases/${c.id}`}
                       >
                         <FileText size={13} />
@@ -175,11 +175,11 @@ export default function AnalystPage() {
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-1.5 text-[11px]">
                       <span className="text-slate-500">SLA</span>
-                      <span className="font-semibold text-yellow-400">
+                      <span className="font-semibold text-amber-700">
                         6h restantes
                       </span>
                     </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                    <div className="h-1 overflow-hidden rounded-full bg-slate-200">
                       <div className="h-1 w-1/3 rounded-full bg-yellow-500" />
                     </div>
                   </div>
@@ -194,11 +194,11 @@ export default function AnalystPage() {
               <Card title="Painel de revisão" description={reviewCase.code}>
                 <div className="space-y-4">
                   {/* Report summary */}
-                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] p-4">
+                  <div className="rounded-lg border border-slate-200 bg-white p-4">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                       Resumo do relatório
                     </p>
-                    <p className="text-xs leading-5 text-slate-300 line-clamp-4">
+                    <p className="text-xs leading-5 text-slate-700 line-clamp-4">
                       {reviewReport.summary}
                     </p>
                   </div>
@@ -206,7 +206,7 @@ export default function AnalystPage() {
                   {/* Checklist */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-slate-300">
+                      <p className="text-xs font-semibold text-slate-700">
                         Checklist de revisão
                       </p>
                       <span className="text-[11px] text-slate-500">
@@ -216,7 +216,7 @@ export default function AnalystPage() {
                     <div className="space-y-2">
                       {checklist.map((item) => (
                         <label
-                          className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-white/[0.03] transition"
+                          className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-slate-50 transition"
                           key={item.id}
                         >
                           <input
@@ -229,7 +229,7 @@ export default function AnalystPage() {
                             className={`text-xs ${
                               item.checked
                                 ? "text-teal-400 line-through decoration-teal-600"
-                                : "text-slate-300"
+                                : "text-slate-700"
                             }`}
                           >
                             {item.label}
@@ -237,7 +237,7 @@ export default function AnalystPage() {
                         </label>
                       ))}
                     </div>
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200">
                       <div
                         className="h-1 rounded-full bg-teal-500 transition-all"
                         style={{
@@ -249,11 +249,11 @@ export default function AnalystPage() {
 
                   {/* Observation */}
                   <div>
-                    <label className="block mb-1.5 text-xs font-medium text-slate-400">
+                    <label className="block mb-1.5 text-xs font-medium text-slate-600">
                       Observações do analista
                     </label>
                     <textarea
-                      className="min-h-20 w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-brand-blue/40 transition"
+                      className="min-h-20 w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 placeholder:text-slate-500 outline-none focus:border-brand-teal/40 transition"
                       onChange={(e) => setObservation(e.target.value)}
                       placeholder="Adicione observações, ressalvas ou instruções de ajuste..."
                       value={observation}
@@ -261,9 +261,9 @@ export default function AnalystPage() {
                   </div>
 
                   {/* Action buttons */}
-                  <div className="space-y-2 border-t border-white/[0.06] pt-4">
+                  <div className="space-y-2 border-t border-slate-200 pt-4">
                     <button
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-teal py-3 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-teal py-3 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
                       onClick={() => {
                         setAction({ type: "approve", reviewId: review.id });
                         handleAction();
@@ -274,7 +274,7 @@ export default function AnalystPage() {
                       Aprovar relatório
                     </button>
                     <button
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-3 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 transition"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
                       onClick={() => {
                         setAction({ type: "adjust", reviewId: review.id });
                         handleAction();
@@ -285,7 +285,7 @@ export default function AnalystPage() {
                       Solicitar ajuste
                     </button>
                     <button
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-sm font-semibold text-red-300 hover:bg-red-500/20 transition"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
                       onClick={() => {
                         setAction({ type: "reject", reviewId: review.id });
                         handleAction();
@@ -299,9 +299,9 @@ export default function AnalystPage() {
                 </div>
               </Card>
             ) : (
-              <div className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.08] py-16 text-center">
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-slate-200 py-16 text-center">
                 <ClipboardCheck className="mb-3 text-slate-600" size={28} />
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-slate-600">
                   Selecione um caso para iniciar a revisão.
                 </p>
               </div>

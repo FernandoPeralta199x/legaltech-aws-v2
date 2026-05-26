@@ -15,41 +15,41 @@ import { DEV_ROLES, type DevRole } from "@/src/types/auth";
 
 const roleConfig: Record<DevRole, { label: string; desc: string; icon: typeof User; color: string; bg: string; border: string }> = {
   admin: {
-    bg: "bg-brand-blue/10",
-    border: "border-brand-blue/30",
-    color: "text-brand-blue-light",
+    bg: "bg-emerald-50",
+    border: "border-emerald-300",
+    color: "text-brand-teal",
     desc: "Gestão completa da plataforma",
     icon: Shield,
     label: "Administrador"
   },
   analyst: {
-    bg: "bg-brand-teal/10",
-    border: "border-brand-teal/30",
-    color: "text-brand-teal-light",
+    bg: "bg-emerald-50",
+    border: "border-emerald-300",
+    color: "text-emerald-700",
     desc: "Revisão e aprovação de relatórios",
     icon: Users,
     label: "Analista"
   },
   client: {
-    bg: "bg-violet-500/10",
-    border: "border-violet-500/30",
-    color: "text-violet-300",
+    bg: "bg-violet-50",
+    border: "border-violet-200",
+    color: "text-violet-700",
     desc: "Criação e acompanhamento de casos",
     icon: User,
     label: "Cliente"
   },
   owner: {
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    color: "text-amber-300",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    color: "text-amber-700",
     desc: "Acesso total ao sistema",
     icon: Shield,
     label: "Proprietário"
   },
   support: {
-    bg: "bg-slate-500/10",
-    border: "border-slate-500/30",
-    color: "text-slate-300",
+    bg: "bg-slate-100",
+    border: "border-slate-200",
+    color: "text-slate-700",
     desc: "Monitoramento e atendimento",
     icon: Users,
     label: "Suporte"
@@ -98,26 +98,26 @@ function LoginContent() {
 
   return (
     <main className="flex min-h-screen bg-surface-900">
-      <div className="hidden border-r border-white/[0.06] bg-surface-800 p-12 lg:flex lg:w-1/2 lg:flex-col lg:justify-between">
+      <div className="hidden border-r border-slate-200 bg-white p-12 lg:flex lg:w-1/2 lg:flex-col lg:justify-between">
         <Link className="flex items-center gap-3" href="/">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-teal">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-brand shadow-glow-teal">
             <Scale className="text-white" size={20} />
           </span>
-          <span className="text-sm font-bold text-white">Contrato Visto</span>
+          <span className="text-sm font-bold text-slate-950">Contrato Visto</span>
         </Link>
 
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-brand-teal">
             Plataforma LegalTech
           </p>
-          <h2 className="text-3xl font-bold leading-snug text-white">
+          <h2 className="text-3xl font-bold leading-snug text-slate-950">
             Ambiente local para validar
             <br />
             casos, clientes e documentos
             <br />
             com segurança.
           </h2>
-          <p className="mt-4 text-sm leading-6 text-slate-400">
+          <p className="mt-4 text-sm leading-6 text-slate-600">
             Use JWT dev para testar rotas protegidas do backend. Não insira dados reais,
             segredos ou informações confidenciais nesta etapa.
           </p>
@@ -134,7 +134,7 @@ function LoginContent() {
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-teal/20">
                 <div className="h-1.5 w-1.5 rounded-full bg-brand-teal" />
               </div>
-              <span className="text-xs text-slate-300">{item}</span>
+              <span className="text-xs text-slate-700">{item}</span>
             </div>
           ))}
         </div>
@@ -143,14 +143,14 @@ function LoginContent() {
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
         <div className="w-full max-w-md">
           <Link className="mb-8 flex items-center gap-3 lg:hidden" href="/">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand">
               <Scale className="text-white" size={18} />
             </span>
-            <span className="text-sm font-bold text-white">Contrato Visto</span>
+            <span className="text-sm font-bold text-slate-950">Contrato Visto</span>
           </Link>
 
-          <h1 className="text-2xl font-bold text-white">Entrar na plataforma</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <h1 className="text-2xl font-bold text-slate-950">Entrar na plataforma</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
             Selecione um perfil dev e cole o JWT gerado pelo backend local. Sem token colado,
             a UI cria uma sessão visual local para fallback/mock.
           </p>
@@ -160,14 +160,14 @@ function LoginContent() {
           </Notification>
 
           {session && (
-            <div className="mb-5 rounded-xl border border-teal-500/20 bg-teal-500/10 p-4">
+            <div className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <div className="flex items-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-teal-400/20 bg-teal-500/10 text-teal-200">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700">
                   <KeyRound size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-teal-100">Sessão dev ativa</p>
-                  <p className="mt-1 break-words text-xs leading-5 text-teal-100/75">
+                  <p className="text-sm font-semibold text-emerald-900">Sessão dev ativa</p>
+                  <p className="mt-1 break-words text-xs leading-5 text-emerald-800">
                     {session.email} · {roleConfig[session.role].label} ·{" "}
                     {session.source === "pasted" ? "JWT colado" : "token visual local"}
                   </p>
@@ -180,7 +180,7 @@ function LoginContent() {
           )}
 
           <div className="mt-6">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
               Perfil de acesso dev
             </p>
             <div className="space-y-2">
@@ -190,10 +190,10 @@ function LoginContent() {
                 const active = role === candidateRole;
                 return (
                   <button
-                    className={`flex w-full items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all ${
+                    className={`flex w-full items-center gap-4 rounded-lg border px-4 py-3.5 text-left transition-all ${
                       active
                         ? `${cfg.border} ${cfg.bg}`
-                        : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]"
+                        : "border-slate-200 bg-slate-50 hover:bg-slate-50"
                     }`}
                     key={candidateRole}
                     onClick={() => {
@@ -204,18 +204,18 @@ function LoginContent() {
                   >
                     <div
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-                        active ? `${cfg.border} ${cfg.bg}` : "border-white/[0.08] bg-white/[0.04]"
+                        active ? `${cfg.border} ${cfg.bg}` : "border-slate-200 bg-slate-50"
                       }`}
                     >
                       <Icon className={active ? cfg.color : "text-slate-500"} size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-semibold ${active ? cfg.color : "text-slate-300"}`}>
+                      <p className={`text-sm font-semibold ${active ? cfg.color : "text-slate-700"}`}>
                         {cfg.label}
                       </p>
                       <p className="text-xs text-slate-500">{cfg.desc}</p>
                     </div>
-                    {active && <div className="h-2 w-2 rounded-full bg-current text-brand-blue-light" />}
+                    {active && <div className="h-2 w-2 rounded-full bg-current text-brand-teal" />}
                   </button>
                 );
               })}
@@ -270,7 +270,7 @@ function LoginContent() {
             </Button>
           </form>
 
-          <div className="mt-6 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <Lock className="mt-0.5 shrink-0 text-slate-500" size={14} />
             <p className="text-[11px] leading-5 text-slate-500">
               Use dados fictícios. O frontend nunca deve receber segredos, credenciais AWS,
@@ -288,7 +288,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center bg-surface-900">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-blue/30 border-t-brand-blue" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-300 border-t-brand-blue" />
         </main>
       }
     >

@@ -179,7 +179,7 @@ export default function CaseDetailPage({ params }: PageProps) {
 
         {/* Breadcrumb */}
         <Link
-          className="mb-4 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition"
+          className="mb-4 flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-800 transition"
           href="/cases"
         >
           <ArrowLeft size={14} />
@@ -187,43 +187,43 @@ export default function CaseDetailPage({ params }: PageProps) {
         </Link>
 
         {/* Case header */}
-        <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-6">
+        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-brand-blue-light">
+                <span className="text-xs font-semibold text-brand-teal">
                   {caseData.code}
                 </span>
                 <StatusBadge status={caseData.status} />
                 <PriorityBadge priority={caseData.priority} />
               </div>
-              <h1 className="text-xl font-bold text-white">
+              <h1 className="text-xl font-bold text-slate-950">
                 {caseDisplayTitle(caseData)}
               </h1>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-slate-600">
                 {caseData.clientName} · {caseTypeLabel[caseData.caseType] ?? caseData.caseType}
               </p>
               {caseData.notes && (
-                <p className="mt-2 text-xs leading-5 text-slate-400">{caseData.notes}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{caseData.notes}</p>
               )}
             </div>
             <div className="shrink-0 text-right">
               <div className="mb-3 text-right">
-                <span className="text-2xl font-bold text-white">
+                <span className="text-2xl font-bold text-slate-950">
                   {caseData.progressPercent}%
                 </span>
-                <p className="text-[11px] text-slate-400">Progresso geral</p>
+                <p className="text-[11px] text-slate-600">Progresso geral</p>
               </div>
-              <div className="w-32 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <div className="w-32 h-1.5 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-1.5 rounded-full bg-brand-blue"
+                  className="h-1.5 rounded-full bg-brand-teal"
                   style={{ width: `${caseData.progressPercent}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <dl className="mt-6 flex flex-wrap gap-6 border-t border-white/[0.06] pt-4 text-xs">
+          <dl className="mt-6 flex flex-wrap gap-6 border-t border-slate-200 pt-4 text-xs">
             {[
               {
                 label: "Responsável",
@@ -241,14 +241,14 @@ export default function CaseDetailPage({ params }: PageProps) {
             ].map((item) => (
               <div key={item.label}>
                 <dt className="text-slate-500">{item.label}</dt>
-                <dd className="mt-0.5 font-medium text-slate-200">{item.value}</dd>
+                <dd className="mt-0.5 font-medium text-slate-800">{item.value}</dd>
               </div>
             ))}
           </dl>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex overflow-x-auto border-b border-white/[0.06]">
+        <div className="mb-6 flex overflow-x-auto border-b border-slate-200">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -256,8 +256,8 @@ export default function CaseDetailPage({ params }: PageProps) {
               <button
                 className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium transition ${
                   active
-                    ? "border-brand-blue text-brand-blue-light"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
+                    ? "border-brand-blue text-brand-teal"
+                    : "border-transparent text-slate-600 hover:text-slate-800"
                 }`}
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -275,15 +275,15 @@ export default function CaseDetailPage({ params }: PageProps) {
           <div className="grid gap-6 lg:grid-cols-2 animate-in">
             <Card title="Status atual">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-brand-blue/30 bg-brand-blue/10">
-                  <span className="text-sm font-bold text-brand-blue-light">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-emerald-300 bg-emerald-50">
+                  <span className="text-sm font-bold text-brand-teal">
                     {caseData.progressPercent}%
                   </span>
                 </div>
                 <div>
                   <StatusBadge status={caseData.status} />
                   {caseData.assignedTo && (
-                    <p className="mt-1.5 text-xs text-slate-400">
+                    <p className="mt-1.5 text-xs text-slate-600">
                       Responsável: {caseData.assignedTo}
                     </p>
                   )}
@@ -307,21 +307,21 @@ export default function CaseDetailPage({ params }: PageProps) {
                 ].map((stat) => (
                   <div key={stat.label}>
                     <dt className="text-[11px] text-slate-500">{stat.label}</dt>
-                    <dd className="mt-0.5 text-lg font-bold text-white">{stat.value}</dd>
+                    <dd className="mt-0.5 text-lg font-bold text-slate-950">{stat.value}</dd>
                   </div>
                 ))}
               </dl>
             </Card>
 
             {caseData.status === "revisao_humana" && (
-              <div className="lg:col-span-2 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5">
+              <div className="lg:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-5">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="shrink-0 text-yellow-400" size={20} />
+                  <AlertTriangle className="shrink-0 text-amber-700" size={20} />
                   <div>
-                    <p className="text-sm font-semibold text-yellow-300">
+                      <p className="text-sm font-semibold text-amber-900">
                       Aguardando revisão humana
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-400">
+                    <p className="mt-0.5 text-xs text-slate-600">
                       Este caso está na etapa de revisão humana obrigatória. Um
                       analista jurídico precisa revisar e aprovar o relatório antes da
                       entrega ao cliente.
@@ -347,14 +347,14 @@ export default function CaseDetailPage({ params }: PageProps) {
                 {caseData.parties.map((party) => (
                   <Card key={party.id}>
                     <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-xs font-bold text-brand-blue-light border border-brand-blue/20">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-brand-teal border border-emerald-200">
                         {party.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-100">
+                        <p className="text-sm font-semibold text-slate-900">
                           {party.name}
                         </p>
-                        <span className="inline-flex rounded-md bg-white/[0.06] px-2 py-0.5 text-[11px] text-slate-300 capitalize">
+                        <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 capitalize">
                           {party.type}
                         </span>
                       </div>
@@ -362,19 +362,19 @@ export default function CaseDetailPage({ params }: PageProps) {
                     <dl className="mt-4 space-y-2 text-xs">
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-500">Documento</dt>
-                        <dd className="text-slate-300">{party.document}</dd>
+                        <dd className="text-slate-700">{party.document}</dd>
                       </div>
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-500">E-mail</dt>
-                        <dd className="text-slate-300">{party.email}</dd>
+                        <dd className="text-slate-700">{party.email}</dd>
                       </div>
                       <div className="flex items-center justify-between">
                         <dt className="text-slate-500">Telefone</dt>
-                        <dd className="text-slate-300">{party.phone}</dd>
+                        <dd className="text-slate-700">{party.phone}</dd>
                       </div>
                     </dl>
                     {party.notes && (
-                      <p className="mt-3 text-xs text-slate-400 border-t border-white/[0.06] pt-3">
+                      <p className="mt-3 text-xs text-slate-600 border-t border-slate-200 pt-3">
                         {party.notes}
                       </p>
                     )}
@@ -402,14 +402,14 @@ export default function CaseDetailPage({ params }: PageProps) {
             ) : (
               caseDocuments.map((doc) => (
                 <div
-                  className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 py-4"
+                  className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4"
                   key={doc.id}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06]">
-                    <FileText className="text-slate-400" size={18} />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                    <FileText className="text-slate-600" size={18} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-100">
+                    <p className="truncate text-sm font-medium text-slate-900">
                       {doc.filename}
                     </p>
                     <p className="text-xs text-slate-500">
@@ -436,8 +436,8 @@ export default function CaseDetailPage({ params }: PageProps) {
         {activeTab === "agents" && (
           <div className="animate-in">
             <div className="mb-4 flex items-center gap-2">
-              <Bot className="text-brand-blue" size={18} />
-              <h2 className="text-sm font-semibold text-slate-100">
+              <Bot className="text-brand-teal" size={18} />
+              <h2 className="text-sm font-semibold text-slate-900">
                 Execuções dos agentes de IA
               </h2>
             </div>
@@ -471,7 +471,7 @@ export default function CaseDetailPage({ params }: PageProps) {
                 <Card>
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div>
-                      <h2 className="text-sm font-bold text-slate-100">
+                      <h2 className="text-sm font-bold text-slate-900">
                         {caseReport.title}
                       </h2>
                       <p className="mt-1 text-[11px] text-slate-500">
@@ -483,16 +483,16 @@ export default function CaseDetailPage({ params }: PageProps) {
                   </div>
 
                   {caseReport.status === "in_review" && (
-                    <div className="mb-5 flex items-center gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 px-4 py-3">
-                      <AlertTriangle className="shrink-0 text-yellow-400" size={16} />
-                      <p className="text-xs text-yellow-200">
+                    <div className="mb-5 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                      <AlertTriangle className="shrink-0 text-amber-700" size={16} />
+                      <p className="text-xs text-amber-800">
                         Este relatório está em revisão humana obrigatória. Aguarde
                         a aprovação de um analista antes da entrega ao cliente.
                       </p>
                     </div>
                   )}
 
-                  <p className="text-sm leading-6 text-slate-300">
+                  <p className="text-sm leading-6 text-slate-700">
                     {caseReport.summary}
                   </p>
                 </Card>
@@ -513,11 +513,11 @@ export default function CaseDetailPage({ params }: PageProps) {
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <StatusBadge status={risk.level} />
-                            <p className="text-sm font-semibold text-slate-100">
+                            <p className="text-sm font-semibold text-slate-900">
                               {risk.title}
                             </p>
                           </div>
-                          <p className="text-xs leading-5 text-slate-400">
+                          <p className="text-xs leading-5 text-slate-600">
                             {risk.description}
                           </p>
                         </div>
@@ -532,24 +532,24 @@ export default function CaseDetailPage({ params }: PageProps) {
                       {caseReport.recommendations.map((rec, i) => (
                         <li className="flex items-start gap-3" key={i}>
                           <CheckCircle2
-                            className="mt-0.5 shrink-0 text-teal-400"
+                            className="mt-0.5 shrink-0 text-emerald-600"
                             size={14}
                           />
-                          <p className="text-xs leading-5 text-slate-300">{rec}</p>
+                          <p className="text-xs leading-5 text-slate-700">{rec}</p>
                         </li>
                       ))}
                     </ul>
                   </Card>
                 )}
 
-                <div className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
                   <FileText className="shrink-0 text-slate-500" size={16} />
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600">
                     Download do relatório em PDF disponível somente após aprovação
                     do analista.
                   </p>
                   <button
-                    className="ml-auto shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed opacity-50"
+                    className="ml-auto shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 cursor-not-allowed opacity-50"
                     disabled
                     type="button"
                   >

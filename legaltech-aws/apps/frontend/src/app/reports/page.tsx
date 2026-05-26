@@ -17,11 +17,11 @@ import { formatDate } from "@/lib/formatters";
 import { mockReports } from "@/lib/mockData";
 
 const statusIcon: Record<string, React.ReactNode> = {
-  draft: <Clock className="text-slate-400" size={16} />,
-  in_review: <AlertTriangle className="text-yellow-400" size={16} />,
+  draft: <Clock className="text-slate-600" size={16} />,
+  in_review: <AlertTriangle className="text-amber-700" size={16} />,
   approved: <CheckCircle2 className="text-teal-400" size={16} />,
   delivered: <CheckCircle2 className="text-emerald-400" size={16} />,
-  rejected: <AlertTriangle className="text-red-400" size={16} />
+  rejected: <AlertTriangle className="text-red-700" size={16} />
 };
 
 export default function ReportsPage() {
@@ -45,37 +45,37 @@ export default function ReportsPage() {
             {
               label: "Total de relatórios",
               value: mockReports.length,
-              color: "text-brand-blue-light",
-              bg: "bg-brand-blue/10 border-brand-blue/20"
+              color: "text-brand-teal-dark",
+              bg: "bg-brand-teal/10 border-brand-teal/20"
             },
             {
               label: "Em revisão humana",
               value: pending,
-              color: "text-yellow-400",
-              bg: "bg-yellow-500/10 border-yellow-500/20"
+              color: "text-amber-700",
+              bg: "bg-amber-50 border-amber-200"
             },
             {
               label: "Aprovados/entregues",
               value: approved,
               color: "text-teal-400",
-              bg: "bg-teal-500/10 border-teal-500/20"
+              bg: "bg-emerald-50 border-teal-500/20"
             }
           ].map((m) => (
             <div
-              className={`rounded-xl border ${m.bg} p-5`}
+              className={`rounded-lg border ${m.bg} p-5`}
               key={m.label}
             >
-              <p className="text-xs text-slate-400">{m.label}</p>
+              <p className="text-xs text-slate-600">{m.label}</p>
               <p className={`mt-2 text-3xl font-bold ${m.color}`}>{m.value}</p>
             </div>
           ))}
         </div>
 
         {/* Human review notice */}
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-5 py-4">
-          <Lock className="shrink-0 text-yellow-400" size={18} />
-          <p className="text-xs leading-5 text-slate-300">
-            <span className="font-semibold text-yellow-300">
+        <div className="mb-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
+          <Lock className="shrink-0 text-amber-700" size={18} />
+          <p className="text-xs leading-5 text-slate-700">
+            <span className="font-semibold text-amber-700">
               Revisão humana obrigatória:
             </span>{" "}
             Nenhum relatório é entregue ao cliente sem aprovação de um analista
@@ -88,17 +88,17 @@ export default function ReportsPage() {
         <div className="space-y-4">
           {mockReports.map((report) => (
             <div
-              className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6"
+              className="rounded-lg border border-slate-200 bg-white p-6"
               key={report.id}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
                     {statusIcon[report.status] ?? <FileText size={18} />}
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[11px] font-semibold text-brand-blue-light">
+                      <span className="text-[11px] font-semibold text-brand-teal-dark">
                         {report.caseCode}
                       </span>
                       <span className="text-[11px] text-slate-500">
@@ -106,10 +106,10 @@ export default function ReportsPage() {
                       </span>
                       <StatusBadge status={report.status} />
                     </div>
-                    <h2 className="text-sm font-semibold text-slate-100">
+                    <h2 className="text-sm font-semibold text-slate-900">
                       {report.title}
                     </h2>
-                    <p className="mt-1 text-xs leading-5 text-slate-400 line-clamp-2">
+                    <p className="mt-1 text-xs leading-5 text-slate-600 line-clamp-2">
                       {report.summary}
                     </p>
                   </div>
@@ -118,7 +118,7 @@ export default function ReportsPage() {
                 <div className="flex shrink-0 items-center gap-3">
                   <div className="text-right hidden sm:block">
                     <p className="text-[11px] text-slate-500">Gerado em</p>
-                    <p className="text-xs font-medium text-slate-300">
+                    <p className="text-xs font-medium text-slate-700">
                       {formatDate(report.generatedAt)}
                     </p>
                     {report.approvedBy && (
@@ -128,13 +128,13 @@ export default function ReportsPage() {
                     )}
                   </div>
                   <Link
-                    className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/[0.07] transition"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
                     href={`/cases/${report.caseId}`}
                   >
                     Ver caso
                   </Link>
                   <button
-                    className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-500 cursor-not-allowed opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-500 cursor-not-allowed opacity-50"
                     disabled={
                       report.status !== "approved" && report.status !== "delivered"
                     }
@@ -153,14 +153,14 @@ export default function ReportsPage() {
 
               {/* Risks summary */}
               {report.risks.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                   {report.risks.map((risk) => (
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
                         risk.level === "high"
-                          ? "bg-red-500/10 text-red-300"
+                          ? "bg-red-50 text-red-700"
                           : risk.level === "medium"
-                          ? "bg-amber-500/10 text-amber-300"
+                          ? "bg-amber-50 text-amber-700"
                           : "bg-green-500/10 text-green-300"
                       }`}
                       key={risk.id}

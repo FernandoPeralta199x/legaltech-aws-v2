@@ -25,34 +25,34 @@ const base =
 
 const sizes: Record<ButtonSize, string> = {
   sm: "h-8 rounded-lg px-3 text-xs gap-1.5",
-  md: "h-10 rounded-xl px-4 text-sm",
-  lg: "h-12 rounded-xl px-6 text-base gap-2.5"
+  md: "h-10 rounded-lg px-4 text-sm",
+  lg: "h-12 rounded-lg px-6 text-base gap-2.5"
 };
 
 const variants: Record<ButtonVariant, string> = {
   primary: [
-    "bg-brand-blue text-white",
-    "shadow-glow",
-    "hover:bg-brand-blue-dark hover:shadow-glow-lg",
-    "focus-visible:outline-brand-blue"
+    "bg-brand-teal text-white",
+    "shadow-glow-teal",
+    "hover:bg-brand-teal-dark hover:shadow-glow-teal-lg",
+    "focus-visible:outline-brand-teal"
   ].join(" "),
 
   secondary: [
-    "border border-white/[0.10] bg-white/[0.05] text-slate-200",
+    "border border-slate-200 bg-white text-slate-700",
     "shadow-inner-highlight",
-    "hover:bg-white/[0.09] hover:border-white/[0.16] hover:text-white",
-    "focus-visible:outline-brand-blue"
+    "hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800",
+    "focus-visible:outline-brand-teal"
   ].join(" "),
 
   ghost: [
-    "text-slate-400",
-    "hover:bg-white/[0.06] hover:text-slate-100",
-    "focus-visible:outline-brand-blue"
+    "text-slate-600",
+    "hover:bg-slate-100 hover:text-slate-950",
+    "focus-visible:outline-brand-teal"
   ].join(" "),
 
   danger: [
-    "border border-red-500/30 bg-red-500/10 text-red-300",
-    "hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-200",
+    "border border-red-200 bg-red-50 text-red-700",
+    "hover:bg-red-100 hover:border-red-300 hover:text-red-800",
     "focus-visible:outline-red-500"
   ].join(" ")
 };

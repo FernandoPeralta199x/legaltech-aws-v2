@@ -3,7 +3,7 @@ import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -189,7 +189,7 @@ class LocalDocumentStorage:
         self,
         file_obj: BinaryIO,
         target_path: Path,
-    ) -> tuple[hashlib._Hash, int]:
+    ) -> tuple[Any, int]:
         digest = hashlib.sha256()
         size_bytes = 0
         created_target = False
@@ -422,7 +422,7 @@ class S3DocumentStorage:
     def _copy_to_temporary_file(
         self,
         file_obj: BinaryIO,
-    ) -> tuple[hashlib._Hash, int, tempfile.SpooledTemporaryFile]:
+    ) -> tuple[Any, int, tempfile.SpooledTemporaryFile]:
         digest = hashlib.sha256()
         size_bytes = 0
         temporary_file = tempfile.SpooledTemporaryFile(max_size=self.max_size_bytes)

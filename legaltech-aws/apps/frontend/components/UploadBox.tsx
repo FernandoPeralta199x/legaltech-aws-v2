@@ -73,10 +73,10 @@ export function UploadBox() {
     <div className="space-y-4">
       <div
         className={cn(
-          "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center transition-all cursor-pointer",
+          "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-12 text-center transition-all cursor-pointer",
           dragging
-            ? "border-brand-blue bg-brand-blue/10 shadow-glow"
-            : "border-white/[0.12] bg-white/[0.02] hover:border-brand-blue/40 hover:bg-white/[0.04]"
+            ? "border-brand-teal bg-emerald-50 shadow-glow-teal"
+            : "border-slate-300 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50"
         )}
         onDragLeave={() => setDragging(false)}
         onDragOver={(e) => {
@@ -96,25 +96,25 @@ export function UploadBox() {
         />
         <div
           className={cn(
-            "mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.12] transition",
-            dragging ? "border-brand-blue/40 bg-brand-blue/20" : "bg-white/[0.06]"
+            "mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 transition",
+            dragging ? "border-emerald-300 bg-emerald-100" : "bg-white"
           )}
         >
           <Upload
-            className={dragging ? "text-brand-blue" : "text-slate-400"}
+            className={dragging ? "text-brand-teal" : "text-slate-500"}
             size={24}
           />
         </div>
-        <p className="text-sm font-semibold text-slate-200">
+        <p className="text-sm font-semibold text-slate-900">
           Arraste documentos aqui ou{" "}
-          <span className="text-brand-blue-light">clique para selecionar</span>
+          <span className="text-brand-teal">clique para selecionar</span>
         </p>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-slate-600">
           PDF, DOCX, TXT, JPG, PNG — até 50 MB por arquivo
         </p>
         <div className="mt-4 flex items-center gap-1.5 rounded-lg bg-brand-teal/10 border border-brand-teal/20 px-3 py-2">
           <Lock className="shrink-0 text-brand-teal" size={12} />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-600">
             Os documentos serão processados em ambiente seguro e criptografado
           </p>
         </div>
@@ -124,18 +124,18 @@ export function UploadBox() {
         <div className="space-y-2">
           {files.map((file) => (
             <div
-              className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-3"
+              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3"
               key={file.id}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06]">
-                <FileText size={16} className="text-slate-400" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                <FileText size={16} className="text-slate-500" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-200">
+                <p className="truncate text-xs font-medium text-slate-800">
                   {file.name}
                 </p>
                 <div className="mt-1.5 flex items-center gap-3">
-                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={cn(
                         "h-1 rounded-full transition-all duration-500",
@@ -143,7 +143,7 @@ export function UploadBox() {
                           ? "bg-brand-teal"
                           : file.status === "error"
                           ? "bg-red-500"
-                          : "bg-brand-blue"
+                          : "bg-brand-teal"
                       )}
                       style={{ width: `${file.progress}%` }}
                     />
@@ -152,12 +152,12 @@ export function UploadBox() {
                     className={cn(
                       "shrink-0 text-[10px] font-semibold",
                       file.status === "done"
-                        ? "text-teal-400"
+                        ? "text-emerald-700"
                         : file.status === "error"
                         ? "text-red-400"
                         : file.status === "uploading"
-                        ? "text-brand-blue-light"
-                        : "text-slate-400"
+                        ? "text-brand-teal"
+                        : "text-slate-600"
                     )}
                   >
                     {file.status === "waiting" && "Aguardando"}
@@ -171,7 +171,7 @@ export function UploadBox() {
                 </div>
               </div>
               <button
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-red-400 transition"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
                 onClick={() => handleRemove(file.id)}
               >
                 <X size={14} />
