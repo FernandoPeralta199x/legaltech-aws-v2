@@ -69,5 +69,6 @@ logs/
 tmp/
 temp/
 .cache/
+.local/
 apps/api/storage/local_uploads/
 apps/api/storage/local_queue/

@@ -46,6 +46,7 @@ def require_permission(permission: str) -> Callable:
                     ip_address=request.client.host if request.client else None,
                     user_agent=request.headers.get("user-agent"),
                 )
+                audit_log.commit_pending()
             except Exception:
                 pass
             raise HTTPException(

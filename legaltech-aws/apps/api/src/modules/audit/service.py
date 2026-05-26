@@ -155,6 +155,11 @@ class AuditLogService:
             metadata=sanitize_audit_metadata(metadata or {}),
         )
 
+    def commit_pending(self) -> None:
+        db = getattr(self.repository, "db", None)
+        if db is not None:
+            db.commit()
+
     def list_events(
         self,
         *,
