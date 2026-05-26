@@ -21,6 +21,7 @@ Esta entrega cria apenas a base da API:
 - upload local/mock de documents para desenvolvimento;
 - abstracao de storage de documents com modo `local` e modo `s3`;
 - geracao preparada de URL temporaria de download para documents;
+- normalizacao local de documents para Markdown antes do worker gerar chunks;
 - base local/mock de document_chunks e document_embeddings, sem IA externa;
 - fila local/mock para processamento de documents e worker inicial local;
 - README com comandos locais.
@@ -190,7 +191,7 @@ PATCH  /api/v1/documents/{document_id}
 ```
 
 O endpoint `/api/v1/documents/upload` continua funcionando em modo local/mock por padrao. Com `STORAGE_BACKEND=s3`, o backend fica preparado para usar S3 compativel via boto3.
-O processamento local cria chunks e embeddings fake/deterministicos para desenvolvimento. Ele nao chama OpenAI, Claude, AWS Bedrock ou qualquer IA externa, e nao implementa OCR nem RAG real.
+O processamento local cria chunks e embeddings fake/deterministicos para desenvolvimento a partir de Markdown normalizado quando o arquivo local estiver disponivel. Ele nao chama OpenAI, Claude, AWS Bedrock ou qualquer IA externa, e nao implementa OCR nem RAG real.
 A fila local/mock permite enfileirar processamento de documents sem AWS real. O worker local consome jobs com IDs e revalida tenant/case/document no banco antes de chamar o processamento local.
 
 Importante: `organization_id` e `user_id` nao fazem parte dos payloads. Eles sao derivados das claims do JWT validado.
@@ -350,6 +351,10 @@ documents.process_requested
 documents.process_started
 documents.process_completed
 documents.process_failed
+documents.conversion_started
+documents.conversion_completed
+documents.conversion_failed
+documents.conversion_requires_ocr
 agent_execution.created
 agent_execution.started
 agent_execution.completed
@@ -476,6 +481,7 @@ Extensoes permitidas no storage local/mock:
 .pdf
 .docx
 .txt
+.md
 ```
 
 O limite padrao e `10485760` bytes e pode ser ajustado por `MAX_UPLOAD_SIZE_BYTES` no `.env` local. `LOCAL_UPLOAD_ROOT` deve apontar para uma pasta local de desenvolvimento, por padrao `storage/local_uploads`.
@@ -503,9 +509,58 @@ Resposta esperada:
 
 A resposta publica nao inclui `storage_key`, bucket nem caminho local interno. O backend valida `document_id` pelo `organization_id` do JWT antes de gerar a URL e registra `audit_log` com a acao `documents.download_url`.
 
+## Normalizacao local para Markdown
+
+Antes de gerar chunks pelo worker local, o backend tenta converter o arquivo original para Markdown padronizado e salvar o resultado no storage local/mock. Esse Markdown e a entrada preferencial para chunks e embeddings fake.
+
+Formatos suportados nesta etapa:
+
+```text
+.txt   texto simples normalizado
+.md    Markdown existente normalizado
+.docx  paragrafos e tabelas simples extraidos para Markdown
+.pdf   apenas PDF com texto extraivel
+```
+
+PDF escaneado ou arquivo sem texto extraivel nao passa por OCR nesta etapa. Nesses casos, o backend marca `conversion_status=requires_ocr`, registra auditoria segura e o worker falha de forma controlada para evitar chunks vazios.
+
+Campos de normalizacao em `documents`:
+
+```text
+conversion_status
+normalized_markdown_storage_key
+normalized_markdown_sha256
+normalized_markdown_size_bytes
+conversion_error_summary
+converted_at
+```
+
+Status de conversao:
+
+```text
+pending
+converting
+converted
+failed
+requires_ocr
+```
+
+O caminho interno `normalized_markdown_storage_key` nao deve ser exposto em respostas publicas. As respostas de documents exibem apenas metadados seguros, como status, hash, tamanho e erro resumido.
+
+Eventos de auditoria da normalizacao:
+
+```text
+documents.conversion_started
+documents.conversion_completed
+documents.conversion_failed
+documents.conversion_requires_ocr
+```
+
+Os eventos registram apenas IDs, extensao, status, tamanho, hash e codigo de erro seguro. O conteudo integral do Markdown, contrato, CPF/CNPJ, token ou paths locais internos nao sao registrados em `audit_log`.
+
 ## Document processing local/mock
 
-O processamento local serve apenas para preparar a base de `document_chunks` e `document_embeddings`. Ele recebe texto simples enviado pela API ou texto mockado pelo worker local, divide em chunks e gera embeddings fake/deterministicos de 1536 dimensoes. Nao ha chamada para OpenAI, Claude, Bedrock, OCR, RAG real, AWS SQS real ou Lambda.
+O processamento local serve apenas para preparar a base de `document_chunks` e `document_embeddings`. Ele recebe texto simples enviado pela API ou Markdown normalizado pelo worker local, divide em chunks e gera embeddings fake/deterministicos de 1536 dimensoes. Nao ha chamada para OpenAI, Claude, Bedrock, OCR, RAG real, AWS SQS real ou Lambda.
 
 Configuracao:
 
@@ -872,6 +927,7 @@ Migrations existentes:
 
 - `0001_initial_models.py`: organizations, users, clients, cases, documents, audit_log e agent_executions.
 - `0002_remaining_mvp_models.py`: roles_permissions, case_parties, external_queries_cache, document_chunks, document_embeddings, human_reviews e reports.
+- `0003_doc_md_norm.py`: campos nullable/seguros de normalizacao Markdown em documents.
 
 Gerar uma nova revision a partir dos models:
 
@@ -955,6 +1011,12 @@ Testar document processing:
 python -m unittest tests.test_document_processing_layers tests.test_document_processing_routes -v
 ```
 
+Testar normalizacao Markdown:
+
+```bash
+python -m unittest tests.test_document_normalization -v
+```
+
 Testar fila local/mock e worker:
 
 ```bash
@@ -1033,6 +1095,11 @@ src/
 │   │   ├── fake_embeddings.py
 │   │   ├── repository.py
 │   │   ├── router.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   ├── document_normalization/
+│   │   ├── converter.py
+│   │   ├── repository.py
 │   │   ├── schemas.py
 │   │   └── service.py
 │   ├── queues/

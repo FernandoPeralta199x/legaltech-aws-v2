@@ -11,7 +11,7 @@ from fastapi import HTTPException, UploadFile, status
 from src.core.config import Settings, get_settings
 
 
-ALLOWED_UPLOAD_EXTENSIONS = frozenset({".pdf", ".docx", ".txt"})
+ALLOWED_UPLOAD_EXTENSIONS = frozenset({".pdf", ".docx", ".txt", ".md"})
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 LOCAL_STORAGE_BUCKET = "local-dev"
 READ_CHUNK_SIZE_BYTES = 1024 * 1024
@@ -148,6 +148,43 @@ class LocalDocumentStorage:
             expires_in_seconds=expires_in_seconds,
         )
 
+    def read_file_bytes(self, *, storage_bucket: str, storage_key: str) -> bytes:
+        if storage_bucket != LOCAL_STORAGE_BUCKET:
+            raise FileNotFoundError("Document is not stored in local storage.")
+
+        target_path = self._resolve_storage_key(storage_key)
+        if not target_path.is_file():
+            raise FileNotFoundError("Document file was not found in local storage.")
+
+        return target_path.read_bytes()
+
+    def save_markdown(
+        self,
+        *,
+        markdown: str,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+        document_id: UUID | str,
+    ) -> StoredDocument:
+        content = markdown.encode("utf-8")
+        digest = hashlib.sha256(content)
+        storage_key = (
+            f"{organization_id}/cases/{case_id}/normalized/"
+            f"{document_id}.md"
+        )
+        target_path = self._resolve_storage_key(storage_key)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(content)
+
+        return StoredDocument(
+            filename=f"{document_id}.md",
+            content_type="text/markdown",
+            size_bytes=len(content),
+            storage_bucket=LOCAL_STORAGE_BUCKET,
+            storage_key=storage_key.replace("\\", "/"),
+            file_hash=f"sha256:{digest.hexdigest()}",
+        )
+
     def _write_local_file(
         self,
         file_obj: BinaryIO,
@@ -218,6 +255,11 @@ class LocalDocumentStorage:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid upload path.",
             ) from exc
+
+    def _resolve_storage_key(self, storage_key: str) -> Path:
+        target_path = (self.root_path / storage_key).resolve()
+        self._ensure_path_inside_root(target_path)
+        return target_path
 
 
 class S3DocumentStorage:
@@ -321,6 +363,48 @@ class S3DocumentStorage:
         return PresignedUrlResult(
             url=url,
             expires_in_seconds=expires_in_seconds,
+        )
+
+    def read_file_bytes(self, *, storage_bucket: str, storage_key: str) -> bytes:
+        response = self.client.get_object(
+            Bucket=storage_bucket or self.bucket_name,
+            Key=storage_key,
+        )
+        return response["Body"].read()
+
+    def save_markdown(
+        self,
+        *,
+        markdown: str,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+        document_id: UUID | str,
+    ) -> StoredDocument:
+        content = markdown.encode("utf-8")
+        digest = hashlib.sha256(content)
+        storage_key = (
+            f"organizations/{organization_id}/cases/{case_id}/normalized/"
+            f"{document_id}.md"
+        )
+        self.client.put_object(
+            Bucket=self.bucket_name,
+            Key=storage_key,
+            Body=content,
+            ContentType="text/markdown",
+            Metadata={
+                "organization_id": str(organization_id),
+                "case_id": str(case_id),
+                "document_id": str(document_id),
+            },
+        )
+
+        return StoredDocument(
+            filename=f"{document_id}.md",
+            content_type="text/markdown",
+            size_bytes=len(content),
+            storage_bucket=self.bucket_name,
+            storage_key=storage_key,
+            file_hash=f"sha256:{digest.hexdigest()}",
         )
 
     def _build_client(self):

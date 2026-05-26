@@ -201,7 +201,8 @@ Outras APIs contratadas
 Responsabilidades:
 
 - baixar documento do S3;
-- extrair texto;
+- normalizar arquivo para Markdown antes de gerar chunks;
+- extrair texto apenas de formatos suportados localmente;
 - classificar documento;
 - separar em páginas;
 - gerar chunks;
@@ -213,8 +214,22 @@ Cuidados:
 
 - não logar conteúdo completo;
 - tratar PDF corrompido;
+- tratar PDF escaneado como `requires_ocr`, sem tentar OCR nesta etapa;
 - tratar arquivo ilegível;
 - registrar erro técnico.
+
+Normalização inicial local:
+
+```text
+.txt  -> Markdown simples
+.md   -> Markdown normalizado
+.docx -> parágrafos e tabelas simples em Markdown
+.pdf  -> páginas com texto extraível em Markdown
+```
+
+O Markdown convertido deve ser salvo em storage privado/local ignorado pelo Git.
+Jobs de fila continuam transportando apenas IDs e metadados mínimos, nunca o
+conteúdo integral do documento.
 
 ---
 

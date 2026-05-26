@@ -26,6 +26,7 @@ from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService
 from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.identifiers import parse_uuid
+from src.modules.document_normalization.service import DocumentNormalizationService
 from src.modules.document_processing.schemas import ProcessLocalDocumentRequest
 from src.modules.document_processing.service import DocumentProcessingService
 from src.modules.queues.publisher import create_queue_client
@@ -36,6 +37,16 @@ class QueueClientProtocol(Protocol):
     def receive(self, *, max_messages: int = 1) -> list[QueueMessage]: ...
 
     def ack(self, receipt_handle: str) -> None: ...
+
+
+class DocumentNormalizationServiceProtocol(Protocol):
+    def normalize_document(
+        self,
+        *,
+        organization_id: UUID | str,
+        document_id: UUID | str,
+        user_id: UUID | str | None = None,
+    ): ...
 
 
 class WorkerRepositoryProtocol(Protocol):
@@ -128,6 +139,7 @@ class DocumentProcessingWorker:
         repository: WorkerRepositoryProtocol | None = None,
         execution_service: AgentExecutionService | None = None,
         processing_service: DocumentProcessingService | None = None,
+        normalization_service: DocumentNormalizationServiceProtocol | None = None,
         audit_log: AuditLogService | None = None,
         text_provider: Callable[[DocumentProcessingJob], str] = default_mock_text_provider,
         max_attempts: int | None = None,
@@ -157,16 +169,22 @@ class DocumentProcessingWorker:
             if db is None:
                 raise ValueError(
                     "db is required when processing_service is not provided."
-                )
+            )
             processing_service = DocumentProcessingService(db=db)
         if audit_log is None:
             if db is None:
                 raise ValueError("db is required when audit_log is not provided.")
             audit_log = AuditLogService(db)
+        if normalization_service is None and db is not None:
+            normalization_service = DocumentNormalizationService(
+                db=db,
+                audit_log=audit_log,
+            )
 
         self.repository = repository
         self.execution_service = execution_service
         self.processing_service = processing_service
+        self.normalization_service = normalization_service
         self.audit_log = audit_log
         self.text_provider = text_provider
 
@@ -311,15 +329,13 @@ class DocumentProcessingWorker:
                 document,
                 status=DocumentProcessingDocumentStatus.PROCESSING.value,
             )
+            text, process_metadata = self._processing_text_and_metadata(job)
             result = self.processing_service.process_local_text(
                 organization_id=job.organization_id,
                 document_id=job.document_id,
                 payload=ProcessLocalDocumentRequest(
-                    text=self.text_provider(job),
-                    metadata={
-                        "source": "worker_local_queue",
-                        "job_id": str(job.job_id),
-                    },
+                    text=text,
+                    metadata=process_metadata,
                 ),
             )
             self.execution_service.mark_completed(execution, result=result)
@@ -397,6 +413,28 @@ class DocumentProcessingWorker:
             entity_id=job.document_id,
             metadata=safe_metadata,
         )
+
+    def _processing_text_and_metadata(
+        self,
+        job: DocumentProcessingJob,
+    ) -> tuple[str, dict[str, str]]:
+        if self.normalization_service is not None:
+            result = self.normalization_service.normalize_document(
+                organization_id=job.organization_id,
+                document_id=job.document_id,
+                user_id=job.requested_by,
+            )
+            return result.markdown_text, {
+                "source": "normalized_markdown",
+                "job_id": str(job.job_id),
+                "conversion_status": result.conversion_status,
+                "markdown_sha256": result.markdown_sha256 or "",
+            }
+
+        return self.text_provider(job), {
+            "source": "worker_local_queue",
+            "job_id": str(job.job_id),
+        }
 
     def _commit(self) -> None:
         if self.db is not None:

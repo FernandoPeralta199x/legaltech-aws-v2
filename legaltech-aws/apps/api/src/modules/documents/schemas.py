@@ -39,6 +39,11 @@ class DocumentRead(BaseModel):
     size_bytes: int
     file_hash: str | None = None
     status: str
+    conversion_status: str = "pending"
+    normalized_markdown_sha256: str | None = None
+    normalized_markdown_size_bytes: int | None = None
+    conversion_error_summary: str | None = None
+    converted_at: datetime | None = None
     uploaded_by: UUID | None = None
     uploaded_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict, alias="metadata_json")

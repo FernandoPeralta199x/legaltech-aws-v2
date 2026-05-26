@@ -202,6 +202,12 @@ CREATE TABLE documents (
     storage_key TEXT NOT NULL,
     file_hash VARCHAR(128),
     status VARCHAR(30) NOT NULL DEFAULT 'pending_upload',
+    conversion_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    normalized_markdown_storage_key TEXT,
+    normalized_markdown_sha256 VARCHAR(128),
+    normalized_markdown_size_bytes BIGINT,
+    conversion_error_summary TEXT,
+    converted_at TIMESTAMP NULL,
     uploaded_by UUID REFERENCES users(id),
     uploaded_at TIMESTAMP NULL,
     metadata JSONB DEFAULT '{}'::jsonb,
@@ -212,6 +218,7 @@ CREATE TABLE documents (
 
 CREATE INDEX idx_documents_org_case ON documents (organization_id, case_id);
 CREATE INDEX idx_documents_org_status ON documents (organization_id, status);
+CREATE INDEX idx_documents_org_conversion_status ON documents (organization_id, conversion_status);
 ```
 
 ---
@@ -433,6 +440,16 @@ processing
 processed
 failed
 deleted
+```
+
+### documents.conversion_status
+
+```text
+pending
+converting
+converted
+failed
+requires_ocr
 ```
 
 ---

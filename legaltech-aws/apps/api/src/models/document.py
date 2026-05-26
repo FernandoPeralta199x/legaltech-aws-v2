@@ -19,6 +19,11 @@ class Document(OrganizationScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Bas
         Index("idx_documents_organization_id", "organization_id"),
         Index("idx_documents_org_case", "organization_id", "case_id"),
         Index("idx_documents_org_status", "organization_id", "status"),
+        Index(
+            "idx_documents_org_conversion_status",
+            "organization_id",
+            "conversion_status",
+        ),
     )
 
     case_id: Mapped[PythonUUID] = mapped_column(
@@ -37,6 +42,32 @@ class Document(OrganizationScopedMixin, UUIDPrimaryKeyMixin, TimestampMixin, Bas
         nullable=False,
         default="pending_upload",
         server_default="pending_upload",
+    )
+    conversion_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+    )
+    normalized_markdown_storage_key: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    normalized_markdown_sha256: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+    normalized_markdown_size_bytes: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True,
+    )
+    conversion_error_summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    converted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
     uploaded_by: Mapped[PythonUUID | None] = mapped_column(
         UUID(as_uuid=True),

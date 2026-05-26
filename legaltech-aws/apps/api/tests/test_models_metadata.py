@@ -96,6 +96,7 @@ class ModelMetadataTest(unittest.TestCase):
             "idx_cases_org_type",
             "idx_documents_org_case",
             "idx_documents_org_status",
+            "idx_documents_org_conversion_status",
             "idx_external_queries_cache_unique",
             "idx_audit_log_org_created",
             "idx_agent_executions_job_id",
@@ -162,6 +163,29 @@ class AlembicConfigTest(unittest.TestCase):
         self.assertTrue(
             (api_root / "alembic" / "versions" / "0002_remaining_mvp_models.py").is_file()
         )
+        self.assertTrue(
+            (
+                api_root
+                / "alembic"
+                / "versions"
+                / "0003_doc_md_norm.py"
+            ).is_file()
+        )
+
+    def test_document_normalization_columns_exist(self) -> None:
+        import src.models  # noqa: F401
+
+        documents = Base.metadata.tables["documents"]
+        for column_name in {
+            "conversion_status",
+            "normalized_markdown_storage_key",
+            "normalized_markdown_sha256",
+            "normalized_markdown_size_bytes",
+            "conversion_error_summary",
+            "converted_at",
+        }:
+            with self.subTest(column=column_name):
+                self.assertIn(column_name, documents.c)
 
 
 if __name__ == "__main__":

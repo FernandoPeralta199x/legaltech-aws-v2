@@ -395,6 +395,23 @@ class FakeProcessingService:
         )
 
 
+class FakeNormalizationService:
+    def __init__(self, *, markdown_text="## Documento normalizado\n\nTexto markdown.") -> None:
+        self.calls = []
+        self.markdown_text = markdown_text
+
+    def normalize_document(self, **kwargs):
+        self.calls.append(kwargs)
+        return SimpleNamespace(
+            document_id=kwargs["document_id"],
+            conversion_status="converted",
+            markdown_text=self.markdown_text,
+            markdown_sha256="sha256:markdown",
+            markdown_size_bytes=len(self.markdown_text.encode("utf-8")),
+            file_extension=".txt",
+        )
+
+
 class AgentExecutionLayerTest(unittest.TestCase):
     def test_agent_execution_modules_are_available(self) -> None:
         from src.modules.agent_executions.repository import AgentExecutionRepository
@@ -490,6 +507,46 @@ class DocumentProcessingWorkerTest(unittest.TestCase):
             ],
             [event["action"] for event in audit_log.events],
         )
+
+    def test_worker_uses_normalized_markdown_before_generating_chunks(self) -> None:
+        from workers.document_processing.worker import DocumentProcessingWorker
+
+        message = self.make_message()
+        case = SimpleNamespace(
+            id=message.job.case_id,
+            organization_id=message.job.organization_id,
+        )
+        document = SimpleNamespace(
+            id=message.job.document_id,
+            organization_id=message.job.organization_id,
+            case_id=message.job.case_id,
+            status="uploaded",
+        )
+        repository = FakeWorkerRepository(document=document, case=case)
+        execution_service = FakeAgentExecutionService()
+        processing_service = FakeProcessingService()
+        normalization_service = FakeNormalizationService(
+            markdown_text="## Markdown convertido\n\nTexto preferencial para chunks."
+        )
+        audit_log = FakeAuditLogService()
+        worker = DocumentProcessingWorker(
+            queue_client=FakeWorkerQueue([message]),
+            repository=repository,
+            execution_service=execution_service,
+            processing_service=processing_service,
+            normalization_service=normalization_service,
+            audit_log=audit_log,
+        )
+
+        result = worker.process_one()
+
+        self.assertEqual("completed", result.status)
+        self.assertEqual(message.job.organization_id, normalization_service.calls[0]["organization_id"])
+        self.assertEqual(message.job.document_id, normalization_service.calls[0]["document_id"])
+        payload = processing_service.calls[0]["payload"]
+        self.assertIn("Markdown convertido", payload.text)
+        self.assertEqual("normalized_markdown", payload.metadata["source"])
+        self.assertNotIn("Markdown convertido", str(audit_log.events))
 
     def test_completed_duplicate_job_returns_success_without_reprocessing(self) -> None:
         from workers.document_processing.worker import DocumentProcessingWorker

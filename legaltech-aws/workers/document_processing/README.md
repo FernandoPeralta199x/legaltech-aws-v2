@@ -4,6 +4,11 @@ Worker inicial para consumir jobs de processamento de documentos em ambiente loc
 
 Ele nao usa AWS SQS real, Lambda, OCR, OpenAI, Claude, Bedrock, RAG real, frontend ou APIs externas. O job carrega apenas IDs e metadados tecnicos minimos. O worker revalida `organization_id`, `case_id` e `document_id` no banco antes de processar.
 
+Antes de gerar chunks, o worker tenta normalizar o arquivo original para Markdown
+local/mock. O Markdown convertido vira a entrada preferencial do processamento.
+Se o arquivo for PDF escaneado ou nao tiver texto extraivel, o worker nao tenta
+OCR; ele marca a conversao como `requires_ocr` e falha de forma controlada.
+
 ## Configuracao local
 
 Use valores ficticios no `.env` da API:
@@ -58,6 +63,10 @@ Actions de auditoria emitidas pelo fluxo:
 
 ```text
 agent_execution.created
+documents.conversion_started
+documents.conversion_completed
+documents.conversion_failed
+documents.conversion_requires_ocr
 documents.process_started
 agent_execution.started
 documents.process_completed
@@ -89,15 +98,35 @@ processed
 failed
 ```
 
+`documents.conversion_status`:
+
+```text
+pending
+converting
+converted
+failed
+requires_ocr
+```
+
 Fluxo resumido:
 
 1. Job novo cria `agent_executions` como `queued`.
 2. Worker revalida tenant, case e document no banco.
-3. Worker marca execução como `running` e documento como `processing`.
-4. Sucesso marca execução como `completed` e documento como `processed`.
-5. Erro marca execução como `failed` e documento como `failed`.
-6. Job com `job_id` já `completed` retorna sucesso sem reprocessar.
-7. Retry usa `attempt` do job e respeita `DOCUMENT_PROCESSING_MAX_ATTEMPTS`.
+3. Worker tenta converter o arquivo original para Markdown local.
+4. Worker marca execução como `running` e documento como `processing`.
+5. Sucesso marca execução como `completed` e documento como `processed`.
+6. Erro marca execução como `failed` e documento como `failed`.
+7. Job com `job_id` já `completed` retorna sucesso sem reprocessar.
+8. Retry usa `attempt` do job e respeita `DOCUMENT_PROCESSING_MAX_ATTEMPTS`.
+
+Formatos aceitos pela normalizacao local:
+
+```text
+.txt
+.md
+.docx
+.pdf com texto extraivel
+```
 
 Payload interno esperado:
 
