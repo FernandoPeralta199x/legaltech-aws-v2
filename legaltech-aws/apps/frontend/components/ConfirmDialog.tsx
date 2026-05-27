@@ -35,14 +35,14 @@ export function ConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-8 backdrop-blur-sm"
       role="dialog"
     >
-      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl">
+      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700">
             <AlertTriangle aria-hidden="true" size={18} />
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">{description}</p>
           </div>
         </div>
 

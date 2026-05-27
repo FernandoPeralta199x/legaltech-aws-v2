@@ -38,21 +38,21 @@ const variants: Record<ButtonVariant, string> = {
   ].join(" "),
 
   secondary: [
-    "border border-slate-200 bg-white text-slate-700",
+    "border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
     "shadow-inner-highlight",
-    "hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800",
+    "hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200",
     "focus-visible:outline-brand-teal"
   ].join(" "),
 
   ghost: [
-    "text-slate-600",
-    "hover:bg-slate-100 hover:text-slate-950",
+    "text-slate-600 dark:text-slate-300",
+    "hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white",
     "focus-visible:outline-brand-teal"
   ].join(" "),
 
   danger: [
-    "border border-red-200 bg-red-50 text-red-700",
-    "hover:bg-red-100 hover:border-red-300 hover:text-red-800",
+    "border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300",
+    "hover:bg-red-100 hover:border-red-300 hover:text-red-800 dark:hover:bg-red-950/50 dark:hover:border-red-800 dark:hover:text-red-200",
     "focus-visible:outline-red-500"
   ].join(" ")
 };

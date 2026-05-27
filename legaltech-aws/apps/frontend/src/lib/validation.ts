@@ -5,6 +5,17 @@ export type ValidationResult = {
   valid: boolean;
 };
 
+export type PasswordRequirementState = {
+  hasLowercase: boolean;
+  hasMinLength: boolean;
+  hasSpecial: boolean;
+  hasUppercase: boolean;
+};
+
+export type PasswordValidationResult = ValidationResult & {
+  requirements: PasswordRequirementState;
+};
+
 const allowedPriorities = new Set(["low", "normal", "high", "urgent"]);
 const allowedDocumentStatuses = new Set([
   "pending_upload",
@@ -131,4 +142,47 @@ export function validateDevJwtForm(token: string): ValidationResult {
   }
 
   return result({});
+}
+
+export function getPasswordRequirements(password: string): PasswordRequirementState {
+  return {
+    hasLowercase: /[a-z]/.test(password),
+    hasMinLength: password.length >= 8,
+    hasSpecial: /[^A-Za-z0-9]/.test(password),
+    hasUppercase: /[A-Z]/.test(password)
+  };
+}
+
+export function validatePasswordChange(input: {
+  confirmPassword?: string | null;
+  currentPassword?: string | null;
+  newPassword?: string | null;
+}): PasswordValidationResult {
+  const errors: ValidationErrors = {};
+  const currentPassword = input.currentPassword ?? "";
+  const newPassword = input.newPassword ?? "";
+  const confirmPassword = input.confirmPassword ?? "";
+  const requirements = getPasswordRequirements(newPassword);
+  const meetsAllRequirements = Object.values(requirements).every(Boolean);
+
+  if (!currentPassword) {
+    errors.currentPassword = "Informe a senha atual.";
+  }
+
+  if (!newPassword) {
+    errors.newPassword = "Informe a nova senha.";
+  } else if (!meetsAllRequirements) {
+    errors.newPassword = "A senha deve atender todos os requisitos.";
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword = "Confirme a nova senha.";
+  } else if (confirmPassword !== newPassword) {
+    errors.confirmPassword = "A confirmação deve ser igual à nova senha.";
+  }
+
+  return {
+    ...result(errors),
+    requirements
+  };
 }

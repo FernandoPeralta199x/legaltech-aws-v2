@@ -5,7 +5,8 @@ import {
   validateCaseForm,
   validateClientForm,
   validateDevJwtForm,
-  validateDocumentForm
+  validateDocumentForm,
+  validatePasswordChange
 } from "./validation";
 
 test("validateClientForm requires a client name", () => {
@@ -85,4 +86,40 @@ test("validateDevJwtForm accepts empty token for local placeholder and validates
     invalid.errors.token,
     "Cole um JWT dev válido com três partes ou deixe o campo vazio para usar apenas a sessão visual local."
   );
+});
+
+test("validatePasswordChange requires a strong new password and matching confirmation", () => {
+  const result = validatePasswordChange({
+    confirmPassword: "Senha-fraca-2",
+    currentPassword: "",
+    newPassword: "senha"
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.currentPassword, "Informe a senha atual.");
+  assert.equal(result.errors.newPassword, "A senha deve atender todos os requisitos.");
+  assert.equal(result.errors.confirmPassword, "A confirmação deve ser igual à nova senha.");
+  assert.deepEqual(result.requirements, {
+    hasLowercase: true,
+    hasMinLength: false,
+    hasSpecial: false,
+    hasUppercase: false
+  });
+});
+
+test("validatePasswordChange accepts valid local password change input", () => {
+  const result = validatePasswordChange({
+    confirmPassword: "Senha@123",
+    currentPassword: "Atual@123",
+    newPassword: "Senha@123"
+  });
+
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.errors, {});
+  assert.deepEqual(result.requirements, {
+    hasLowercase: true,
+    hasMinLength: true,
+    hasSpecial: true,
+    hasUppercase: true
+  });
 });

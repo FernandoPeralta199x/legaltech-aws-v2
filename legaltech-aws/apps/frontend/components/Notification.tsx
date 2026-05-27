@@ -22,19 +22,19 @@ type NotificationProps = {
 
 const toneConfig: Record<NotificationTone, { className: string; icon: typeof Info }> = {
   error: {
-    className: "border-red-200 bg-red-50 text-red-900",
+    className: "border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200",
     icon: AlertTriangle
   },
   info: {
-    className: "border-blue-200 bg-blue-50 text-blue-900",
+    className: "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200",
     icon: Info
   },
   success: {
-    className: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
     icon: CheckCircle2
   },
   warning: {
-    className: "border-amber-200 bg-amber-50 text-amber-900",
+    className: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200",
     icon: AlertTriangle
   }
 };
@@ -71,7 +71,7 @@ export function Notification({
         {onDismiss && (
           <button
             aria-label="Fechar aviso"
-            className="rounded-lg p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100"
+            className="rounded-lg p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
             onClick={onDismiss}
             type="button"
           >

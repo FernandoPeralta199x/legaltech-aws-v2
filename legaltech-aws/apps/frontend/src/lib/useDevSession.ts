@@ -28,6 +28,10 @@ function getServerSnapshot(): string {
 }
 
 export function useDevSession(): DevSession | null {
-  useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  if (!snapshot) {
+    return null;
+  }
+
   return getStoredSession();
 }

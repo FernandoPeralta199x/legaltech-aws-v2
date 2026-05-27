@@ -45,6 +45,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+html.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
 /* ── Form elements inherit body font ───────────────────────────────────────── */
 button,
 input,

@@ -16,11 +16,11 @@ export function PageTitle({ actions, description, eyebrow, title }: PageTitlePro
             {eyebrow}
           </p>
         )}
-        <h1 className="mt-1 text-[1.375rem] font-bold leading-tight text-slate-950 sm:text-[1.5rem]">
+        <h1 className="mt-1 text-[1.375rem] font-bold leading-tight text-slate-950 dark:text-slate-100 sm:text-[1.5rem]">
           {title}
         </h1>
         {description && (
-          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-600">
+          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
             {description}
           </p>
         )}
