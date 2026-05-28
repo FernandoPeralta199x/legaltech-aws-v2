@@ -178,8 +178,8 @@ Pontos verificados:
 Atencoes:
 
 - Login e sessao local usam `localStorage` apenas para desenvolvimento.
-- Token placeholder com `alg=none` existe somente para navegacao visual/mock e
-  nao deve ser usado contra backend protegido.
+- Login local exige JWT dev colado; sessoes placeholder antigas sao descartadas
+  pelo armazenamento local.
 - Cognito real no frontend, refresh token e Hosted UI ainda nao existem.
 - Upload real de arquivo pelo frontend ainda nao foi implementado.
 - `npm audit --omit=dev --audit-level=moderate` apontou 2 vulnerabilidades

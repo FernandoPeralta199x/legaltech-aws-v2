@@ -1,5 +1,6 @@
 export {
   apiBaseUrl,
   apiClient,
-  apiRequest
+  apiRequest,
+  resolveApiBaseUrl
 } from "../src/services/apiClient";

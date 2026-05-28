@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   FileText,
   LayoutDashboard,
+  LogOut,
   Scale,
   Settings,
   Shield,
@@ -13,9 +14,10 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/cn";
+import { clearStoredSession } from "@/src/lib/authStorage";
 
 const navGroups = [
   {
@@ -170,9 +172,16 @@ type MobileSidebarProps = { open: boolean; onClose: () => void };
 
 export function MobileSidebar({ open, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname.startsWith(href));
+
+  function handleLogout() {
+    clearStoredSession();
+    onClose();
+    router.replace("/login");
+  }
 
   return (
     <>
@@ -242,6 +251,23 @@ export function MobileSidebar({ open, onClose }: MobileSidebarProps) {
             </div>
           ))}
         </nav>
+
+        <div className="border-t border-slate-200 px-4 py-4 dark:border-slate-800">
+          <button
+            className={cn(
+              "flex h-10 w-full items-center justify-center gap-2 rounded-lg border",
+              "border-slate-200 bg-white text-xs font-semibold text-slate-700",
+              "transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800",
+              "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
+              "dark:hover:border-emerald-800 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200"
+            )}
+            onClick={handleLogout}
+            type="button"
+          >
+            <LogOut size={14} />
+            Sair da sessão
+          </button>
+        </div>
       </aside>
     </>
   );

@@ -1,10 +1,74 @@
 import { getStoredToken } from "../lib/authStorage";
 import type { ApiError, ApiResponse, ApiSuccessResponse } from "../../types/api";
 
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const DEFAULT_API_PORT = "8000";
+const LOCAL_API_FALLBACK_HOST = "127.0.0.1";
 
-export const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
+function normalizeBaseUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+function isLoopbackHost(hostname: string | undefined): boolean {
+  if (!hostname) {
+    return false;
+  }
+
+  return ["127.0.0.1", "localhost", "::1", "[::1]"].includes(hostname);
+}
+
+function getRuntimeLocation():
+  | { hostname?: string; protocol?: string }
+  | null {
+  if (typeof window !== "undefined" && window.location) {
+    return window.location;
+  }
+
+  if ("location" in globalThis) {
+    return globalThis.location as { hostname?: string; protocol?: string };
+  }
+
+  return null;
+}
+
+function rewriteLoopbackForLanAccess(
+  configuredBaseUrl: string,
+  runtimeLocation: { hostname?: string } | null
+): string {
+  const browserHost = runtimeLocation?.hostname?.trim();
+  if (!browserHost || browserHost === "0.0.0.0" || isLoopbackHost(browserHost)) {
+    return normalizeBaseUrl(configuredBaseUrl);
+  }
+
+  try {
+    const parsedUrl = new URL(configuredBaseUrl);
+    if (!isLoopbackHost(parsedUrl.hostname)) {
+      return normalizeBaseUrl(configuredBaseUrl);
+    }
+
+    parsedUrl.hostname = browserHost;
+    return normalizeBaseUrl(parsedUrl.toString());
+  } catch {
+    return normalizeBaseUrl(configuredBaseUrl);
+  }
+}
+
+export function resolveApiBaseUrl(): string {
+  const runtimeLocation = getRuntimeLocation();
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (configuredBaseUrl) {
+    return rewriteLoopbackForLanAccess(configuredBaseUrl, runtimeLocation);
+  }
+
+  const hostname = runtimeLocation?.hostname?.trim();
+  if (hostname && hostname !== "0.0.0.0") {
+    const protocol = runtimeLocation?.protocol === "https:" ? "https:" : "http:";
+    return `${protocol}//${hostname}:${DEFAULT_API_PORT}`;
+  }
+
+  return `http://${LOCAL_API_FALLBACK_HOST}:${DEFAULT_API_PORT}`;
+}
+
+export const apiBaseUrl = resolveApiBaseUrl();
 
 type ApiClientOptions = RequestInit & {
   token?: string;
@@ -37,7 +101,7 @@ function buildUrl(path: string): string {
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${apiBaseUrl}${normalizedPath}`;
+  return `${resolveApiBaseUrl()}${normalizedPath}`;
 }
 
 function shouldSetJsonContentType(body: BodyInit | null | undefined): boolean {

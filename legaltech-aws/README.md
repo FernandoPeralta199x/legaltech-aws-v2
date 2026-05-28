@@ -82,6 +82,10 @@ Health check:
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
+Para testar no celular na mesma rede, suba a API com `--host 0.0.0.0`,
+inclua `http://192.168.0.102:3000` em `CORS_ALLOWED_ORIGINS` e use
+`NEXT_PUBLIC_API_BASE_URL=http://192.168.0.102:8000` no frontend.
+
 Validacoes:
 
 ```powershell

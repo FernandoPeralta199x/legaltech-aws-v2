@@ -29,6 +29,13 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true
 ```
 
+Para teste em celular na mesma rede, suba a API em `0.0.0.0:8000`, o
+frontend em `0.0.0.0:3000` e use:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://192.168.0.102:8000
+```
+
 Nao coloque segredos em variaveis `NEXT_PUBLIC_*`. Qualquer valor com esse prefixo pode ser enviado ao navegador.
 
 `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true` permite que as telas integradas usem dados ficticios locais quando o backend nao estiver rodando. Para validar falhas reais de API/autorizacao sem fallback, use:
@@ -86,7 +93,8 @@ uvicorn src.main:app --reload
 ```
 
 O backend local deve permitir CORS para `http://localhost:3000` ou
-`http://127.0.0.1:3000` via `CORS_ALLOWED_ORIGINS`.
+`http://127.0.0.1:3000` via `CORS_ALLOWED_ORIGINS`. Para teste mobile local,
+inclua tambem `http://192.168.0.102:3000`.
 
 Health check esperado:
 
@@ -119,7 +127,7 @@ Validacoes atuais:
 - Clients: nome obrigatorio; documento opcional com validacao leve; e-mail opcional com formato basico.
 - Cases: titulo obrigatorio; cliente vinculado obrigatorio; tipo e prioridade controlados.
 - Documents: caso vinculado obrigatorio; nome obrigatorio; tipo, status e tamanho controlados; cria apenas metadata.
-- Login: JWT dev pode ficar vazio para sessao visual local; se preenchido, precisa ter tres partes no formato JWT.
+- Login: JWT dev e obrigatorio para acessar telas internas; e-mail e senha sao campos visual/dev e nao autenticam no backend local.
 
 Quando `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true`, falhas de rede/conexao exibem aviso de fallback local. Erros `401`, `403`, validacao e respostas de erro do backend continuam visiveis e nao sao mascarados por mock.
 
@@ -133,17 +141,20 @@ Quando `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true`, falhas de rede/conexao exibe
 /cases        Lista e cria casos via backend real
 /cases/[id]   Detalhe do caso com abas e fallback controlado
 /documents    Lista documentos, cria metadados, gera URL e enfileira processamento
+/settings     Configuracoes locais de organizacao, seguranca, notificacoes e tema
 ```
 
 As rotas `/dashboard`, `/clients`, `/cases` e `/documents` usam uma guarda visual local. Sem sessao salva, o app redireciona para `/login`.
 
 ## Login/JWT dev local
 
-O login atual existe apenas para desenvolvimento local. Ele permite:
+O login atual existe apenas para desenvolvimento local. Ele deixa claro que
+e-mail e senha sao auxiliares visuais/dev; o acesso real ao MVP local depende do
+JWT dev gerado pelo backend. Ele permite:
 
 - selecionar papel dev: `owner`, `admin`, `analyst`, `client` ou `support`;
 - colar um JWT dev gerado pelo backend;
-- salvar a sessao em `localStorage`;
+- salvar a sessao em `localStorage` somente quando um JWT dev for colado;
 - enviar `Authorization: Bearer <token>` automaticamente pelo `apiClient`;
 - limpar a sessao pelo botao `Sair` no Header.
 
@@ -158,8 +169,8 @@ $TOKEN = python -m src.modules.admin.dev_jwt `
 ```
 
 Depois, cole o valor de `$TOKEN` no campo `JWT dev do backend` em `/login`.
-
-Se o campo de token ficar vazio, o frontend cria uma sessao visual local com um token placeholder sem assinatura real. Esse placeholder serve apenas para navegar pela UI mockada e nao deve ser usado para chamar rotas protegidas do backend.
+Se o campo de token ficar vazio, o frontend mostra erro e nao redireciona para
+as telas internas.
 
 Importante:
 
@@ -293,7 +304,7 @@ Regras mantidas nesta base:
 
 - nenhum `organization_id` e enviado como fonte de autoridade;
 - nenhum segredo ou chave real fica no frontend;
-- token salvo em `localStorage` e permitido somente para desenvolvimento local;
+- token salvo em `localStorage` apenas quando veio do JWT dev colado e permitido somente para desenvolvimento local;
 - payloads de criacao enviam apenas campos aceitos pelo backend;
 - fallback local usa dados mockados e ficticios;
 - upload real, Cognito, S3 e IA/RAG ficam para etapas futuras.

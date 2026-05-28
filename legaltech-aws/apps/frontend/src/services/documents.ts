@@ -1,6 +1,6 @@
 import { mockDocuments } from "../../lib/mockData";
 import type { Document, DocumentCreate, DocumentUpdate } from "../../types";
-import { apiClient } from "./apiClient";
+import { apiClient, resolveApiBaseUrl } from "./apiClient";
 import { fallbackReason, shouldUseMockFallback, type ServiceResult } from "./fallback";
 
 type BackendDocument = {
@@ -231,7 +231,7 @@ export async function getDocumentDownloadUrl(
       data: {
         expires_in_seconds: 900,
         method: "GET",
-        url: "http://127.0.0.1:8000/mock-download-unavailable"
+        url: `${resolveApiBaseUrl()}/mock-download-unavailable`
       },
       fallbackReason: fallbackReason(error),
       source: "mock"

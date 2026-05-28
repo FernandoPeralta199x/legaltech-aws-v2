@@ -207,8 +207,8 @@ export default function CaseDetailPage({ params }: PageProps) {
                 <p className="mt-2 text-xs leading-5 text-slate-600">{caseData.notes}</p>
               )}
             </div>
-            <div className="shrink-0 text-right">
-              <div className="mb-3 text-right">
+            <div className="shrink-0 text-left sm:text-right">
+              <div className="mb-3 text-left sm:text-right">
                 <span className="text-2xl font-bold text-slate-950">
                   {caseData.progressPercent}%
                 </span>
@@ -402,7 +402,7 @@ export default function CaseDetailPage({ params }: PageProps) {
             ) : (
               caseDocuments.map((doc) => (
                 <div
-                  className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4"
+                  className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:gap-4"
                   key={doc.id}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
@@ -416,7 +416,9 @@ export default function CaseDetailPage({ params }: PageProps) {
                       {doc.sizeLabel} · {formatDate(doc.uploadedAt)}
                     </p>
                   </div>
-                  <StatusBadge status={doc.status} />
+                  <div className="self-start sm:self-center">
+                    <StatusBadge status={doc.status} />
+                  </div>
                 </div>
               ))
             )}

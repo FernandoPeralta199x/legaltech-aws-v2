@@ -27,7 +27,7 @@ function isDevSession(value: unknown): value is DevSession {
     typeof value.organizationId === "string" &&
     typeof value.role === "string" &&
     DEV_ROLES.includes(value.role as DevSession["role"]) &&
-    (value.source === "pasted" || value.source === "local-placeholder") &&
+    value.source === "pasted" &&
     typeof value.token === "string" &&
     value.token.length > 0 &&
     typeof value.userId === "string"

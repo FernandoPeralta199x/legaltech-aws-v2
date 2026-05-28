@@ -60,3 +60,71 @@ test("apiClient sends Authorization from the stored dev session", async () => {
 
   clearStoredSession();
 });
+
+test("apiClient derives the API host from the browser host when no env URL is configured", async () => {
+  storage.clear();
+  const previousLocation = Object.getOwnPropertyDescriptor(globalThis, "location");
+
+  Object.defineProperty(globalThis, "location", {
+    configurable: true,
+    value: new URL("http://192.168.0.102:3000/dashboard")
+  });
+
+  let capturedUrl = "";
+
+  globalThis.fetch = (async (url) => {
+    capturedUrl = String(url);
+
+    return Response.json({ success: true, data: [] });
+  }) as typeof fetch;
+
+  try {
+    await apiClient.get<unknown[]>("/api/v1/cases");
+
+    assert.equal(capturedUrl, "http://192.168.0.102:8000/api/v1/cases");
+  } finally {
+    if (previousLocation) {
+      Object.defineProperty(globalThis, "location", previousLocation);
+    } else {
+      Reflect.deleteProperty(globalThis, "location");
+    }
+  }
+});
+
+test("apiClient rewrites a loopback env URL when the frontend is opened from a LAN host", async () => {
+  storage.clear();
+  const previousBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const previousLocation = Object.getOwnPropertyDescriptor(globalThis, "location");
+  process.env.NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8000";
+
+  Object.defineProperty(globalThis, "location", {
+    configurable: true,
+    value: new URL("http://192.168.0.102:3000/cases")
+  });
+
+  let capturedUrl = "";
+
+  globalThis.fetch = (async (url) => {
+    capturedUrl = String(url);
+
+    return Response.json({ success: true, data: [] });
+  }) as typeof fetch;
+
+  try {
+    await apiClient.get<unknown[]>("/api/v1/documents");
+
+    assert.equal(capturedUrl, "http://192.168.0.102:8000/api/v1/documents");
+  } finally {
+    if (previousBaseUrl === undefined) {
+      Reflect.deleteProperty(process.env, "NEXT_PUBLIC_API_BASE_URL");
+    } else {
+      process.env.NEXT_PUBLIC_API_BASE_URL = previousBaseUrl;
+    }
+
+    if (previousLocation) {
+      Object.defineProperty(globalThis, "location", previousLocation);
+    } else {
+      Reflect.deleteProperty(globalThis, "location");
+    }
+  }
+});

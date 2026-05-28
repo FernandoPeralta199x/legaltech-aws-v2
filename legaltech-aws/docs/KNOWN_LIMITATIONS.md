@@ -10,7 +10,8 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
   usa um User Pool real.
 - JWT dev e permitido apenas localmente.
 - A UI usa `localStorage` para sessao dev; isso nao e modelo de producao.
-- A UI pode criar um token placeholder `alg=none` apenas para navegacao mockada.
+- A UI exige JWT dev colado para acessar telas internas; sessoes placeholder
+  antigas sao descartadas.
 - Nao ha refresh token real.
 - Nao ha convite/cadastro real de usuarios.
 - Nao ha administracao completa de usuarios/perfis.

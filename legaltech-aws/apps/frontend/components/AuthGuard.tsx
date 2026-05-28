@@ -37,7 +37,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           Acesso restrito
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Faça login para acessar esta página.
+          Cole um JWT dev válido no login local para acessar esta página.
         </p>
         <Button className="mt-6" href="/login">
           Ir para login

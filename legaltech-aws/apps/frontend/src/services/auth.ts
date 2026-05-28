@@ -71,7 +71,11 @@ export function createLocalPlaceholderDevToken(role: DevRole): string {
 
 export function buildDevSession(input: DevLoginInput): DevSession {
   const providedToken = input.token?.trim();
-  const token = providedToken || createLocalPlaceholderDevToken(input.role);
+  if (!providedToken) {
+    throw new Error("JWT dev é obrigatório para criar sessão local.");
+  }
+
+  const token = providedToken;
   const decodedToken = decodeDevJwt(token);
   const decodedRole = decodedToken?.["custom:role"] ?? decodedToken?.role;
   const role = decodedRole && isDevRole(decodedRole) ? decodedRole : input.role;
@@ -91,7 +95,7 @@ export function buildDevSession(input: DevLoginInput): DevSession {
       decodedToken?.organization_id ??
       DEV_ORGANIZATION_ID,
     role,
-    source: providedToken ? "pasted" : "local-placeholder",
+    source: "pasted",
     token,
     userId: decodedToken?.sub ?? DEV_USER_ID
   };

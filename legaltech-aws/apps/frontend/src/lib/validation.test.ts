@@ -9,6 +9,13 @@ import {
   validatePasswordChange
 } from "./validation";
 
+function makeJwt(payload: Record<string, unknown>): string {
+  const encode = (value: Record<string, unknown>) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+
+  return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}.signature`;
+}
+
 test("validateClientForm requires a client name", () => {
   const result = validateClientForm({ name: "   " });
 
@@ -76,16 +83,47 @@ test("validateDocumentForm rejects uncontrolled status values", () => {
   assert.equal(result.errors.status, "Selecione um status válido.");
 });
 
-test("validateDevJwtForm accepts empty token for local placeholder and validates pasted shape", () => {
-  assert.equal(validateDevJwtForm("").valid, true);
-  assert.equal(validateDevJwtForm("header.payload.signature").valid, true);
+test("validateDevJwtForm requires a pasted dev JWT", () => {
+  const result = validateDevJwtForm("");
+
+  assert.equal(result.valid, false);
+  assert.equal(
+    result.errors.token,
+    "Cole o JWT dev gerado pelo backend para acessar o ambiente local."
+  );
+});
+
+test("validateDevJwtForm rejects malformed or expired JWTs", () => {
+  const validToken = makeJwt({
+    email: "dev.local@example.test",
+    exp: Math.floor(Date.now() / 1000) + 60,
+    iat: Math.floor(Date.now() / 1000),
+    sub: "22222222-2222-4222-8222-222222222222"
+  });
+
+  assert.equal(validateDevJwtForm(validToken).valid, true);
 
   const invalid = validateDevJwtForm("token-invalido");
   assert.equal(invalid.valid, false);
   assert.equal(
     invalid.errors.token,
-    "Cole um JWT dev válido com três partes ou deixe o campo vazio para usar apenas a sessão visual local."
+    "Cole um JWT dev válido com três partes no formato header.payload.signature."
   );
+
+  const invalidPayload = validateDevJwtForm("header.payload.signature");
+  assert.equal(invalidPayload.valid, false);
+  assert.equal(invalidPayload.errors.token, "O payload do JWT dev não pôde ser lido.");
+
+  const expired = validateDevJwtForm(
+    makeJwt({
+      email: "dev.local@example.test",
+      exp: Math.floor(Date.now() / 1000) - 60,
+      iat: Math.floor(Date.now() / 1000) - 120,
+      sub: "22222222-2222-4222-8222-222222222222"
+    })
+  );
+  assert.equal(expired.valid, false);
+  assert.equal(expired.errors.token, "JWT dev expirado. Gere um novo token no backend.");
 });
 
 test("validatePasswordChange requires a strong new password and matching confirmation", () => {

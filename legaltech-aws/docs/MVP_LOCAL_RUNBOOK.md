@@ -109,7 +109,7 @@ $env:APP_ENV="local"
 $env:AUTH_PROVIDER="dev_jwt"
 $env:DEV_JWT_ENABLED="true"
 $env:DEV_JWT_SECRET="fictitious-local-dev-secret-32-bytes-minimum"
-$env:CORS_ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
+$env:CORS_ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,http://192.168.0.102:3000"
 .\.venv\Scripts\python.exe -m uvicorn src.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -118,6 +118,9 @@ Health check:
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
+
+Para teste no celular na mesma rede, use `--host 0.0.0.0 --port 8000` e
+valide `http://192.168.0.102:8000/health`.
 
 ## 8. Subir frontend local
 
@@ -130,6 +133,15 @@ $env:NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK="true"
 npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
+Para teste mobile:
+
+```powershell
+cd legaltech-aws\apps\frontend
+$env:NEXT_PUBLIC_API_BASE_URL="http://192.168.0.102:8000"
+$env:NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK="true"
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
+
 Acesse:
 
 ```text
@@ -137,7 +149,7 @@ http://127.0.0.1:3000/login
 ```
 
 Cole o JWT dev no campo `JWT dev do backend` para testar chamadas protegidas.
-Sem token, as telas internas devem mostrar guarda visual ou fallback/mock conforme configuracao.
+Sem token, o login mostra erro e nao redireciona para telas internas.
 
 ## 9. Rodar E2E automatizado
 

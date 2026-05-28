@@ -40,6 +40,27 @@ function hasOnlySafeIdentifierCharacters(value: string): boolean {
   return /^[A-Za-z0-9./-]+$/.test(value);
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const payload = token.split(".")[1];
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+
+    const decoded = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+    return typeof decoded === "object" && decoded !== null
+      ? (decoded as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function validateClientForm(input: {
   document?: string | null;
   email?: string | null;
@@ -131,13 +152,31 @@ export function validateDevJwtForm(token: string): ValidationResult {
   const trimmedToken = token.trim();
 
   if (!trimmedToken) {
-    return result({});
+    return result({
+      token: "Cole o JWT dev gerado pelo backend para acessar o ambiente local."
+    });
   }
 
-  if (trimmedToken.split(".").length !== 3) {
+  if (
+    trimmedToken.split(".").length !== 3 ||
+    trimmedToken.split(".").some((part) => part.length === 0)
+  ) {
     return result({
       token:
-        "Cole um JWT dev válido com três partes ou deixe o campo vazio para usar apenas a sessão visual local."
+        "Cole um JWT dev válido com três partes no formato header.payload.signature."
+    });
+  }
+
+  const payload = decodeJwtPayload(trimmedToken);
+  if (!payload) {
+    return result({
+      token: "O payload do JWT dev não pôde ser lido."
+    });
+  }
+
+  if (typeof payload.exp === "number" && payload.exp <= Math.floor(Date.now() / 1000)) {
+    return result({
+      token: "JWT dev expirado. Gere um novo token no backend."
     });
   }
 

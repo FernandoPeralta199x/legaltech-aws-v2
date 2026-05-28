@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useMemo, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 
 import { Button } from "@/components/Button";
 import { cn } from "@/lib/cn";
@@ -82,10 +82,6 @@ function LoginContent() {
   const [toast, setToast] = useState<ToastState>(null);
 
   const selectedRole = roleConfig[role];
-  const emailIsInvalid = useMemo(() => {
-    const trimmedEmail = email.trim();
-    return trimmedEmail.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
-  }, [email]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,30 +89,22 @@ function LoginContent() {
       return;
     }
 
-    if (emailIsInvalid) {
-      setToast({
-        message: "Informe um e-mail válido ou deixe o campo vazio nesta etapa dev.",
-        tone: "error"
-      });
-      return;
-    }
-
     const validation = validateDevJwtForm(token);
     if (!validation.valid) {
       setToast({
-        message: validation.errors.token ?? "Token dev inválido.",
+        message:
+          validation.errors.token ??
+          "Cole um JWT dev válido gerado pelo backend para acessar.",
         tone: "error"
       });
       return;
     }
 
     setLoading(true);
-    saveDevSession({ role, token: token.trim() || undefined });
+    saveDevSession({ role, token: token.trim() });
     setToast({
-      message: token.trim()
-        ? "JWT dev aceito. Redirecionando para a plataforma..."
-        : "Sem JWT colado. Entrando com sessão visual local para fallback/mock...",
-      tone: token.trim() ? "success" : "warning"
+      message: "JWT dev aceito. Redirecionando para a plataforma...",
+      tone: "success"
     });
     await new Promise((resolve) => setTimeout(resolve, 450));
     router.replace(nextPath.startsWith("/") ? nextPath : "/dashboard");
@@ -236,7 +224,7 @@ function LoginContent() {
                 <p className="text-xs font-semibold text-emerald-100">Sessão dev ativa</p>
                 <p className="mt-1 break-words text-[11px] leading-5 text-emerald-100/75">
                   {session.email} · {roleConfig[session.role].label} ·{" "}
-                  {session.source === "pasted" ? "JWT colado" : "token visual local"}
+                  JWT dev salvo localmente
                 </p>
               </div>
               <Button icon={<LogOut size={14} />} onClick={handleLogout} size="sm" variant="secondary">
@@ -246,8 +234,48 @@ function LoginContent() {
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <LoginField icon={<Mail size={17} />} label="E-mail">
+        <div className="mb-5 rounded-md border border-amber-300/25 bg-amber-400/10 px-3 py-3">
+          <p className="text-xs font-semibold text-amber-100">
+            Acesso local por JWT dev
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-amber-100/75">
+            E-mail e senha ainda não autenticam neste MVP local. Gere um JWT dev no
+            backend e cole no campo principal para acessar dashboard, casos e
+            configurações.
+          </p>
+        </div>
+
+        <form className="space-y-4" noValidate onSubmit={handleSubmit}>
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase text-emerald-200/85">
+              JWT dev do backend
+            </label>
+            <textarea
+              autoCapitalize="off"
+              autoComplete="off"
+              autoCorrect="off"
+              className="min-h-28 w-full resize-y rounded-md border border-emerald-300/30 bg-white/[0.075] px-3 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-white/25 focus:border-emerald-300/65 focus:bg-white/[0.1] focus:shadow-[0_0_0_3px_rgba(95,200,152,0.14)]"
+              onChange={(event) => {
+                setToken(event.target.value);
+                if (toast?.tone === "error") {
+                  setToast(null);
+                }
+              }}
+              placeholder={"Cole o JWT dev gerado pelo backend.\nObrigatório para entrar no ambiente local."}
+              spellCheck={false}
+              value={token}
+            />
+            <p className="mt-1.5 text-[11px] leading-5 text-white/50">
+              O token fica salvo apenas no navegador local e será enviado como
+              Authorization: Bearer nas chamadas para a API.
+            </p>
+          </div>
+
+          <LoginField
+            hint="Auxiliar visual/dev. Este campo não autentica no backend local."
+            icon={<Mail size={17} />}
+            label="E-mail visual/dev"
+          >
             <input
               autoComplete="email"
               className={loginInputClass}
@@ -260,18 +288,18 @@ function LoginContent() {
               }}
               placeholder="seu@email.com"
               spellCheck={false}
-              type="email"
+              type="text"
               value={email}
             />
           </LoginField>
 
           <LoginField
-            hint="Campo visual para desenvolvimento. Não use senha real."
+            hint="Campo visual/dev. Não use senha real; Cognito ainda não está ativo."
             icon={<Lock size={17} />}
-            label="Senha"
+            label="Senha visual/dev"
           >
             <input
-              autoComplete="current-password"
+              autoComplete="off"
               className={cn(loginInputClass, "pr-12")}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
@@ -288,31 +316,6 @@ function LoginContent() {
             </button>
           </LoginField>
 
-          <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase text-emerald-200/85">
-              JWT dev do backend
-            </label>
-            <textarea
-              autoCapitalize="off"
-              autoComplete="off"
-              autoCorrect="off"
-              className="min-h-24 w-full resize-y rounded-md border border-white/15 bg-white/[0.065] px-3 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-white/25 focus:border-emerald-300/55 focus:bg-white/[0.09] focus:shadow-[0_0_0_3px_rgba(95,200,152,0.12)]"
-              onChange={(event) => {
-                setToken(event.target.value);
-                if (toast?.tone === "error") {
-                  setToast(null);
-                }
-              }}
-              placeholder={"Cole o token gerado pelo backend.\nEx: python -m src.modules.admin.dev_jwt --role admin"}
-              spellCheck={false}
-              value={token}
-            />
-            <p className="mt-1.5 text-[11px] leading-5 text-white/45">
-              Gere no backend local e cole aqui. Deixe vazio para usar a sessão visual
-              local/fallback já existente.
-            </p>
-          </div>
-
           <button
             className="group relative mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-[linear-gradient(135deg,#2e8b65,#1a5e45)] px-4 text-xs font-bold uppercase text-white shadow-[0_4px_22px_rgba(28,110,74,0.42),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:shadow-[0_6px_28px_rgba(28,110,74,0.55),inset_0_1px_0_rgba(255,255,255,0.1)] active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
@@ -320,7 +323,7 @@ function LoginContent() {
           >
             <span className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" />
             <span className="relative">
-              {loading ? "Entrando..." : `Entrar como ${selectedRole.label}`}
+              {loading ? "Validando JWT..." : `Entrar com JWT dev · ${selectedRole.label}`}
             </span>
             <ArrowRight className="relative transition group-hover:translate-x-1" size={18} />
           </button>
@@ -350,6 +353,16 @@ function LoginContent() {
             O perfil selecionado é apenas visual/dev; a autorização real continua vindo
             do JWT/backend e do RBAC da API.
           </p>
+        </div>
+
+        <div className="mt-3 rounded-md border border-white/10 bg-black/10 px-3 py-3">
+          <p className="text-[11px] font-semibold text-white/60">
+            Gerar JWT dev no backend
+          </p>
+          <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-md bg-black/20 p-2 text-[10px] leading-5 text-white/55">
+{`cd legaltech-aws\\apps\\api
+.\\.venv\\Scripts\\python.exe -m src.modules.admin.dev_jwt --organization-id 11111111-1111-4111-8111-111111111111 --user-id 22222222-2222-4222-8222-222222222222 --email dev.local@example.test --role admin`}
+          </pre>
         </div>
       </section>
     </main>
