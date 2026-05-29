@@ -21,6 +21,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 
 import { Button } from "@/components/Button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { logoutDevSession, saveDevSession } from "@/src/services/auth";
 import { useDevSession } from "@/src/lib/useDevSession";
@@ -121,35 +122,36 @@ function LoginContent() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-start justify-center overflow-hidden bg-[linear-gradient(148deg,#2f656f_0%,#04363d_48%,#02272b_100%)] px-3 pb-10 pt-20 text-slate-100 sm:px-6 sm:pt-24">
+    <main className="cv-login-shell relative flex items-start justify-center overflow-hidden">
       <div className="pointer-events-none absolute inset-0 opacity-45 noise" />
       <Link
-        className="absolute left-5 top-5 z-10 flex items-center gap-2 text-xs font-semibold text-white/80 transition hover:text-white"
+        className="absolute left-5 top-5 z-10 flex items-center gap-2 text-xs font-semibold text-[var(--text2)] transition hover:text-[var(--teal)]"
         href="/"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--bd)] bg-[var(--surf2)]">
           <Scale size={16} />
         </span>
         Contrato Visto
       </Link>
+      <ThemeToggle className="absolute right-5 top-5 z-10" />
 
       <section
         aria-label="Login de desenvolvimento"
-        className="relative z-10 w-full max-w-md animate-slide-up rounded-[14px] border border-white/15 bg-white/[0.055] px-4 pb-8 pt-14 shadow-[0_24px_64px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:px-10 sm:pb-12 sm:pt-16"
+        className="cv-login-card relative z-10 w-full max-w-md px-4 pb-8 pt-14 sm:px-10 sm:pb-12 sm:pt-16"
       >
         <div aria-hidden="true" className="absolute -top-11 left-1/2 h-[88px] w-[88px] -translate-x-1/2">
           <div className="absolute -inset-3 animate-pulse rounded-full bg-[radial-gradient(circle,rgba(95,200,152,0.24)_0%,transparent_68%)]" />
           <div className="absolute -inset-[3px] animate-spin-slow rounded-full bg-[conic-gradient(from_0deg,transparent_0%,transparent_28%,rgba(95,200,152,.12)_40%,rgba(95,200,152,.88)_53%,rgba(190,255,225,1)_57%,rgba(95,200,152,.88)_61%,rgba(95,200,152,.12)_72%,transparent_84%,transparent_100%)]" />
-          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[linear-gradient(148deg,#2a6068,#021f23)] text-emerald-100 shadow-[0_0_20px_rgba(95,200,152,.15),0_8px_28px_rgba(0,0,0,.52)]">
+          <div className="cv-login-avatar absolute inset-0 flex items-center justify-center rounded-full bg-[linear-gradient(148deg,#2a6068,#021f23)] text-emerald-100">
             <ShieldCheck size={34} />
           </div>
         </div>
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase text-white/45">
+          <p className="text-[10px] font-bold uppercase text-[var(--text3)]">
             Perfil de acesso dev
           </p>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">
+          <span className="cv-badge cv-badge-teal">
             <Sparkles size={12} />
             Ambiente local
           </span>
@@ -167,8 +169,8 @@ function LoginContent() {
                 className={cn(
                   "flex min-h-12 w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition active:scale-[0.983]",
                   active
-                    ? "border-emerald-300/50 bg-emerald-500/15"
-                    : "border-white/15 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.07]"
+                    ? "border-[rgba(32,201,151,0.36)] bg-[var(--teal-dim)]"
+                    : "border-[var(--bd)] bg-[var(--surf2)] hover:border-[var(--bd2)] hover:bg-[var(--surf3)]"
                 )}
                 key={candidateRole}
                 onClick={() => {
@@ -183,7 +185,7 @@ function LoginContent() {
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition",
                     active
                       ? "border-emerald-300/40 bg-emerald-500/20 text-emerald-200"
-                      : "border-white/10 bg-white/[0.06] text-white/45"
+                      : "border-[var(--bd)] bg-[var(--surf3)] text-[var(--text3)]"
                   )}
                 >
                   <Icon size={16} />
@@ -192,18 +194,18 @@ function LoginContent() {
                   <span
                     className={cn(
                       "block truncate text-[13.5px] font-semibold",
-                      active ? "text-emerald-200" : "text-slate-100"
+                      active ? "text-[var(--teal)]" : "text-[var(--text)]"
                     )}
                   >
                     {cfg.label}
                   </span>
-                  <span className="block truncate text-[11px] text-white/45">
+                  <span className="block truncate text-[11px] text-[var(--text2)]">
                     {cfg.desc}
                   </span>
                 </span>
                 <span
                   className={cn(
-                    "h-2 w-2 shrink-0 rounded-full bg-emerald-300 transition",
+                    "h-2 w-2 shrink-0 rounded-full bg-[var(--teal)] transition",
                     active ? "scale-100 opacity-100" : "scale-0 opacity-0"
                   )}
                 />
@@ -212,17 +214,17 @@ function LoginContent() {
           })}
         </div>
 
-        <div className="my-5 border-t border-white/10" />
+        <div className="my-5 border-t border-[var(--bd)]" />
 
         {session && (
-          <div className="mb-5 rounded-md border border-emerald-300/25 bg-emerald-400/10 px-3 py-3">
+          <div className="mb-5 rounded-md border border-[rgba(32,201,151,0.24)] bg-[var(--teal-dim)] px-3 py-3">
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-emerald-300/25 bg-white/10 text-emerald-200">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[rgba(32,201,151,0.24)] bg-[var(--surf2)] text-[var(--teal)]">
                 <KeyRound size={17} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-emerald-100">Sessão dev ativa</p>
-                <p className="mt-1 break-words text-[11px] leading-5 text-emerald-100/75">
+                <p className="text-xs font-semibold text-[var(--text)]">Sessão dev ativa</p>
+                <p className="mt-1 break-words text-[11px] leading-5 text-[var(--text2)]">
                   {session.email} · {roleConfig[session.role].label} ·{" "}
                   JWT dev salvo localmente
                 </p>
@@ -234,11 +236,11 @@ function LoginContent() {
           </div>
         )}
 
-        <div className="mb-5 rounded-md border border-amber-300/25 bg-amber-400/10 px-3 py-3">
-          <p className="text-xs font-semibold text-amber-100">
+        <div className="mb-5 rounded-md border border-[rgba(249,115,22,0.24)] bg-[var(--orange-dim)] px-3 py-3">
+          <p className="text-xs font-semibold text-[var(--orange)]">
             Acesso local por JWT dev
           </p>
-          <p className="mt-1 text-[11px] leading-5 text-amber-100/75">
+          <p className="mt-1 text-[11px] leading-5 text-[var(--text2)]">
             E-mail e senha ainda não autenticam neste MVP local. Gere um JWT dev no
             backend e cole no campo principal para acessar dashboard, casos e
             configurações.
@@ -247,14 +249,14 @@ function LoginContent() {
 
         <form className="space-y-4" noValidate onSubmit={handleSubmit}>
           <div>
-            <label className="mb-2 block text-[10px] font-bold uppercase text-emerald-200/85">
+            <label className="mb-2 block text-[10px] font-bold uppercase text-[var(--teal)]">
               JWT dev do backend
             </label>
             <textarea
               autoCapitalize="off"
               autoComplete="off"
               autoCorrect="off"
-              className="min-h-28 w-full resize-y rounded-md border border-emerald-300/30 bg-white/[0.075] px-3 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-white/25 focus:border-emerald-300/65 focus:bg-white/[0.1] focus:shadow-[0_0_0_3px_rgba(95,200,152,0.14)]"
+              className="cv-input min-h-28 w-full resize-y px-3 py-3 text-sm leading-6"
               onChange={(event) => {
                 setToken(event.target.value);
                 if (toast?.tone === "error") {
@@ -265,7 +267,7 @@ function LoginContent() {
               spellCheck={false}
               value={token}
             />
-            <p className="mt-1.5 text-[11px] leading-5 text-white/50">
+            <p className="mt-1.5 text-[11px] leading-5 text-[var(--text2)]">
               O token fica salvo apenas no navegador local e será enviado como
               Authorization: Bearer nas chamadas para a API.
             </p>
@@ -308,7 +310,7 @@ function LoginContent() {
             />
             <button
               aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-              className="absolute right-2.5 flex h-9 w-9 items-center justify-center rounded-md text-white/35 transition hover:bg-white/10 hover:text-white"
+              className="absolute right-2.5 flex h-9 min-h-9 w-9 min-w-9 items-center justify-center rounded-md text-[var(--text3)] transition hover:bg-[var(--surf3)] hover:text-[var(--text)]"
               onClick={() => setShowPassword((current) => !current)}
               type="button"
             >
@@ -317,7 +319,7 @@ function LoginContent() {
           </LoginField>
 
           <button
-            className="group relative mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-[linear-gradient(135deg,#2e8b65,#1a5e45)] px-4 text-xs font-bold uppercase text-white shadow-[0_4px_22px_rgba(28,110,74,0.42),inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:shadow-[0_6px_28px_rgba(28,110,74,0.55),inset_0_1px_0_rgba(255,255,255,0.1)] active:scale-[0.975] disabled:cursor-not-allowed disabled:opacity-60"
+            className="cv-btn cv-btn-primary group relative mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 px-4 text-xs font-bold uppercase disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
             type="submit"
           >
@@ -339,27 +341,28 @@ function LoginContent() {
                 "border-amber-300/30 bg-amber-400/15 text-amber-100",
               toast.tone === "error" && "border-red-300/30 bg-red-400/15 text-red-200"
             )}
+            aria-live="polite"
             role="alert"
           >
             {toast.message}
           </div>
         )}
 
-        <div className="mt-5 space-y-2 rounded-md border border-white/10 bg-white/[0.035] px-3 py-3">
-          <p className="text-[11px] leading-5 text-white/50">
+        <div className="mt-5 space-y-2 rounded-md border border-[var(--bd)] bg-[var(--surf2)] px-3 py-3">
+          <p className="text-[11px] leading-5 text-[var(--text2)]">
             Ambiente local de desenvolvimento. Cognito real ainda não está ativo.
           </p>
-          <p className="text-[11px] leading-5 text-white/50">
+          <p className="text-[11px] leading-5 text-[var(--text2)]">
             O perfil selecionado é apenas visual/dev; a autorização real continua vindo
             do JWT/backend e do RBAC da API.
           </p>
         </div>
 
-        <div className="mt-3 rounded-md border border-white/10 bg-black/10 px-3 py-3">
-          <p className="text-[11px] font-semibold text-white/60">
+        <div className="mt-3 rounded-md border border-[var(--bd)] bg-[var(--surf2)] px-3 py-3">
+          <p className="text-[11px] font-semibold text-[var(--text2)]">
             Gerar JWT dev no backend
           </p>
-          <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-md bg-black/20 p-2 text-[10px] leading-5 text-white/55">
+          <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-md border border-[var(--bd)] bg-[var(--surf3)] p-2 text-[10px] leading-5 text-[var(--text2)]">
 {`cd legaltech-aws\\apps\\api
 .\\.venv\\Scripts\\python.exe -m src.modules.admin.dev_jwt --organization-id 11111111-1111-4111-8111-111111111111 --user-id 22222222-2222-4222-8222-222222222222 --email dev.local@example.test --role admin`}
           </pre>
@@ -382,22 +385,22 @@ function LoginField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-[10px] font-bold uppercase text-white/45">
+      <span className="mb-2 block text-[10px] font-bold uppercase text-[var(--text3)]">
         {label}
       </span>
       <span className="relative flex items-center">
-        <span className="pointer-events-none absolute left-3 z-10 text-white/35">
+        <span className="pointer-events-none absolute left-3 z-10 text-[var(--text3)]">
           {icon}
         </span>
         {children}
       </span>
-      {hint && <span className="mt-1.5 block text-[11px] leading-5 text-white/45">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-[11px] leading-5 text-[var(--text2)]">{hint}</span>}
     </label>
   );
 }
 
 const loginInputClass =
-  "h-12 w-full rounded-md border border-white/15 bg-white/[0.065] pl-10 pr-3 text-base text-slate-100 outline-none transition placeholder:text-white/25 focus:border-emerald-300/55 focus:bg-white/[0.09] focus:shadow-[0_0_0_3px_rgba(95,200,152,0.12)]";
+  "cv-input h-12 w-full pl-10 pr-3 text-base";
 
 export default function LoginPage() {
   return (

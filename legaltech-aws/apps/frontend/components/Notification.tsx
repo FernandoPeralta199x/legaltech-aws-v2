@@ -22,19 +22,19 @@ type NotificationProps = {
 
 const toneConfig: Record<NotificationTone, { className: string; icon: typeof Info }> = {
   error: {
-    className: "border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200",
+    className: "border-red-500/25 bg-red-50 text-red-900 dark:bg-red-500/10 dark:text-red-200",
     icon: AlertTriangle
   },
   info: {
-    className: "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200",
+    className: "border-blue-500/25 bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-200",
     icon: Info
   },
   success: {
-    className: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
+    className: "border-emerald-500/25 bg-emerald-50 text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200",
     icon: CheckCircle2
   },
   warning: {
-    className: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200",
+    className: "border-amber-500/25 bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200",
     icon: AlertTriangle
   }
 };
@@ -54,7 +54,7 @@ export function Notification({
   return (
     <div
       className={cn(
-        "mb-4 rounded-lg border",
+        "mb-4 rounded-lg border shadow-sm",
         compact ? "px-3 py-2" : "px-4 py-3",
         config.className,
         className

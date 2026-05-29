@@ -17,17 +17,14 @@ type FormFieldProps = {
 };
 
 const controlBase =
-  "w-full rounded-lg border bg-white text-sm text-slate-900 outline-none transition " +
-  "placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-55 " +
-  "dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 " +
-  "focus:bg-white focus:shadow-[0_0_0_4px_rgba(5,150,105,0.12)] dark:focus:bg-slate-950";
+  "cv-input w-full disabled:cursor-not-allowed disabled:opacity-55";
 
 function controlClass(invalid?: boolean, className?: string): string {
   return cn(
     controlBase,
     invalid
-      ? "border-red-300 focus:border-red-500 dark:border-red-900/70"
-      : "border-slate-200 focus:border-brand-teal dark:border-slate-700",
+      ? "cv-input-invalid"
+      : "",
     className
   );
 }
@@ -42,15 +39,15 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <label className="block" htmlFor={htmlFor}>
-      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-[var(--text2)]">
         {label}
-        {required && <span className="text-red-700">*</span>}
+        {required && <span className="text-red-500">*</span>}
       </span>
       {children}
       {error ? (
         <p className="mt-1.5 text-xs leading-5 text-red-700 dark:text-red-300">{error}</p>
       ) : hint ? (
-        <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{hint}</p>
+        <p className="mt-1.5 text-xs leading-5 text-[var(--text2)]">{hint}</p>
       ) : null}
     </label>
   );
@@ -64,7 +61,7 @@ export function TextInput({ className, invalid, ...props }: TextInputProps) {
   return (
     <input
       aria-invalid={invalid || undefined}
-      className={controlClass(invalid, cn("h-10 px-3", className))}
+      className={controlClass(invalid, cn("px-3", className))}
       {...props}
     />
   );
@@ -92,7 +89,7 @@ export function SelectInput({ className, invalid, ...props }: SelectInputProps) 
   return (
     <select
       aria-invalid={invalid || undefined}
-      className={controlClass(invalid, cn("h-10 px-3 [&_option]:bg-white dark:[&_option]:bg-slate-950", className))}
+      className={controlClass(invalid, cn("px-3 [&_option]:bg-[var(--surf)]", className))}
       {...props}
     />
   );

@@ -36,14 +36,15 @@ Object.defineProperty(globalThis, "localStorage", {
   value: storage
 });
 
-test("theme preference defaults to light and persists valid choices", () => {
+test("theme preference defaults to dark-first and persists valid choices", () => {
   storage.clear();
 
-  assert.equal(getStoredThemePreference(), DEFAULT_THEME);
-
-  saveThemePreference("dark");
-
+  assert.equal(DEFAULT_THEME, "dark");
   assert.equal(getStoredThemePreference(), "dark");
+
+  saveThemePreference("light");
+
+  assert.equal(getStoredThemePreference(), "light");
 });
 
 test("notification preferences persist channels and ignore malformed storage", () => {

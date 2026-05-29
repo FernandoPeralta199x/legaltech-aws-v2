@@ -12,15 +12,15 @@ export function PageTitle({ actions, description, eyebrow, title }: PageTitlePro
     <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {eyebrow && (
-          <p className="text-[10px] font-bold uppercase text-brand-teal">
+          <p className="cv-section-tag px-3 py-1">
             {eyebrow}
           </p>
         )}
-        <h1 className="mt-1 text-[1.375rem] font-bold leading-tight text-slate-950 dark:text-slate-100 sm:text-[1.5rem]">
+        <h1 className="mt-3 text-[1.375rem] font-bold leading-tight text-[var(--text)] sm:text-[1.5rem]">
           {title}
         </h1>
         {description && (
-          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
+          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-[var(--text2)]">
             {description}
           </p>
         )}

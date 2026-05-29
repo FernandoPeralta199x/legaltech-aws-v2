@@ -266,12 +266,12 @@ export default function CasesPage() {
 
         {showForm && (
           <form
-            className="mb-6 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
+            className="cv-form-card mb-6 p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-slate-900">Novo caso</h2>
-              <p className="text-xs leading-5 text-slate-500">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Novo caso</h2>
+              <p className="text-xs leading-5 text-[var(--text2)]">
                 O tenant vem do JWT dev. Selecione apenas cliente e metadados do fluxo jurídico.
               </p>
             </div>
@@ -366,11 +366,11 @@ export default function CasesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative w-full max-w-sm sm:w-80">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]"
                 size={14}
               />
               <input
-                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-emerald-300 focus:bg-slate-100"
+                className="cv-input w-full pl-9 pr-3 text-sm"
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar casos..."
                 type="search"
@@ -379,11 +379,11 @@ export default function CasesPage() {
             </div>
             <div className="relative w-full sm:w-auto">
               <Filter
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]"
                 size={13}
               />
               <select
-                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-300 [&_option]:bg-white"
+                className="cv-input w-full pl-9 pr-3 text-xs font-medium [&_option]:bg-[var(--surf)]"
                 onChange={(event) => setFilter(event.target.value)}
                 value={filter}
               >
@@ -399,7 +399,7 @@ export default function CasesPage() {
             </div>
           </div>
           {!loading && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--text2)]">
               {filteredCases.length} caso{filteredCases.length !== 1 ? "s" : ""} exibido{filteredCases.length !== 1 ? "s" : ""}
             </p>
           )}
@@ -435,14 +435,14 @@ export default function CasesPage() {
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {filteredCases.map((c) => (
               <Link
-                className="group block rounded-lg border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-slate-100 hover:shadow-card-hover"
+                className="cv-card cv-card-hover group block p-5"
                 href={`/cases/${c.id}`}
                 key={c.id}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 transition group-hover:border-emerald-200 group-hover:bg-emerald-50">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--bd)] bg-[var(--surf2)] transition group-hover:border-[rgba(32,201,151,0.25)] group-hover:bg-[var(--teal-dim)]">
                     <BriefcaseBusiness
-                      className="text-slate-600 transition group-hover:text-brand-teal"
+                      className="text-[var(--text2)] transition group-hover:text-[var(--teal)]"
                       size={18}
                     />
                   </div>
@@ -452,22 +452,22 @@ export default function CasesPage() {
                 <p className="mt-4 text-[11px] font-semibold text-brand-teal">
                   {c.code}
                 </p>
-                <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-900">
+                <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[var(--text)]">
                   {caseDisplayTitle(c)}
                 </h2>
-                <p className="mt-1 truncate text-xs text-slate-600">{c.clientName}</p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 truncate text-xs text-[var(--text2)]">{c.clientName}</p>
+                <p className="mt-1 text-[11px] text-[var(--text3)]">
                   {caseTypeLabel[c.caseType] ?? c.caseType}
                 </p>
 
                 <div className="mt-4">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-[10px] text-slate-500">Progresso</span>
-                    <span className="text-[10px] font-semibold text-slate-700">
+                    <span className="text-[10px] text-[var(--text3)]">Progresso</span>
+                    <span className="text-[10px] font-semibold text-[var(--text2)]">
                       {c.progressPercent}%
                     </span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-1 overflow-hidden rounded-full bg-[var(--surf3)]">
                     <div
                       className={`h-1 rounded-full transition-all ${
                         c.progressPercent === 100
@@ -482,14 +482,14 @@ export default function CasesPage() {
                 </div>
 
                 <dl className="mt-4 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-slate-600">
+                  <div className="flex items-center gap-1.5 text-[var(--text2)]">
                     <FileText size={11} />
                     {c.documentsCount} documentos
                   </div>
                   <PriorityBadge priority={c.priority} />
                 </dl>
 
-                <div className="mt-3 flex items-center gap-1.5 border-t border-slate-200 pt-3 text-[11px] text-slate-500">
+                <div className="mt-3 flex items-center gap-1.5 border-t border-[var(--bd)] pt-3 text-[11px] text-[var(--text3)]">
                   <Calendar size={11} />
                   Atualizado em {formatDate(c.updatedAt)}
                 </div>

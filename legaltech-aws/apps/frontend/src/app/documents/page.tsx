@@ -264,12 +264,12 @@ export default function DocumentsPage() {
 
         {showForm && (
           <form
-            className="mb-6 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
+            className="cv-form-card mb-6 p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-slate-900">Novo metadado de documento</h2>
-              <p className="text-xs leading-5 text-slate-500">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Novo metadado de documento</h2>
+              <p className="text-xs leading-5 text-[var(--text2)]">
                 Esta tela cria apenas metadata. Nenhum upload real, S3, OCR ou IA é executado aqui.
               </p>
             </div>
@@ -403,38 +403,38 @@ export default function DocumentsPage() {
             <div className="space-y-3">
               {visibleDocuments.map((doc) => (
                 <div
-                  className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 md:flex-row md:items-center"
+                  className="cv-list-row flex flex-col gap-4 px-4 py-3 md:flex-row md:items-center"
                   key={doc.id}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                      <FileText className="text-slate-600" size={16} />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surf3)]">
+                      <FileText className="text-[var(--text2)]" size={16} />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-slate-900">
+                      <p className="truncate text-xs font-semibold text-[var(--text)]">
                         {doc.filename}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-[var(--text3)]">
                         {doc.sizeLabel} · {doc.contentType.split("/")[1]?.toUpperCase()}
                       </p>
-                      <span className="mt-1 inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                      <span className="cv-badge cv-badge-muted mt-1">
                         Metadata apenas
                       </span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3 md:flex md:items-center md:gap-5">
                     <div>
-                      <p className="text-[11px] text-slate-500">Caso</p>
+                      <p className="text-[11px] text-[var(--text3)]">Caso</p>
                       <Link
-                        className="font-medium text-brand-teal hover:underline"
+                        className="font-medium text-[var(--teal)] hover:underline"
                         href={`/cases/${doc.caseId}`}
                       >
                         {doc.caseCode}
                       </Link>
                     </div>
                     <div>
-                      <p className="text-[11px] text-slate-500">Upload</p>
-                      <p className="text-slate-700">{formatDate(doc.uploadedAt)}</p>
+                      <p className="text-[11px] text-[var(--text3)]">Upload</p>
+                      <p className="text-[var(--text2)]">{formatDate(doc.uploadedAt)}</p>
                     </div>
                     <div className="self-center">
                       <StatusBadge status={doc.status} />
@@ -494,7 +494,7 @@ function IconButton({
   return (
     <button
       aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-45"
+      className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--bd)] bg-[var(--surf2)] text-[var(--text2)] transition hover:bg-[var(--surf3)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-45"
       disabled={disabled || loading}
       onClick={onClick}
       title={label}

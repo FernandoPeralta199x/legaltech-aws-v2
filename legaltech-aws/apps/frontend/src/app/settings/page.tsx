@@ -508,13 +508,13 @@ export default function SettingsPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     {
-                      desc: "Interface clara, padrão inicial do MVP.",
+                      desc: "Interface clara refinada para leitura em ambientes iluminados.",
                       icon: Sun,
                       id: "light" as const,
                       label: "Claro"
                     },
                     {
-                      desc: "Contraste alto para ambientes de baixa luz.",
+                      desc: "Tema premium principal, com camadas escuras e acento teal.",
                       icon: Moon,
                       id: "dark" as const,
                       label: "Escuro"
@@ -607,15 +607,15 @@ function ChannelToggle({
 }
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-brand-teal/50 focus:bg-white focus:shadow-[0_0_0_4px_rgba(5,150,105,0.12)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-950";
+  "cv-input w-full px-3 text-sm";
 
 const selectClass =
-  "h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200";
+  "cv-input min-h-11 rounded-lg px-2 text-[11px]";
 
 function Field({ label, children }: { children: React.ReactNode; label: string }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+      <label className="mb-1.5 block text-xs font-semibold text-[var(--text2)]">
         {label}
       </label>
       {children}

@@ -28,15 +28,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-900 px-4 py-10">
-      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-card-rest">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 text-brand-teal">
+    <main className="cv-app-shell flex min-h-screen items-center justify-center px-4 py-10">
+      <section className="cv-card w-full max-w-md p-8 text-center">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg border border-[rgba(32,201,151,0.22)] bg-[var(--teal-dim)] text-[var(--teal)]">
           <LockKeyhole aria-hidden="true" size={22} />
         </span>
-        <h1 className="mt-5 text-xl font-semibold text-slate-950">
+        <h1 className="mt-5 text-xl font-semibold text-[var(--text)]">
           Acesso restrito
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <p className="mt-2 text-sm leading-6 text-[var(--text2)]">
           Cole um JWT dev válido no login local para acessar esta página.
         </p>
         <Button className="mt-6" href="/login">

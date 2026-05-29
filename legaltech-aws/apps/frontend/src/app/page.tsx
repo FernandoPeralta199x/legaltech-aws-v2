@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 const features = [
   {
     icon: FileSearch,
@@ -94,45 +96,46 @@ const trustItems = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-surface-900 text-slate-900">
+    <div className="cv-public-shell">
       {/* ── Navbar ─────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-surface-900/95 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link className="flex items-center gap-3" href="/">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand shadow-glow-teal">
               <Scale className="text-white" size={18} />
             </span>
-            <span className="text-sm font-bold text-slate-950">Contrato Visto</span>
+            <span className="text-sm font-bold text-[var(--text)]">Contrato Visto</span>
           </Link>
           <div className="hidden items-center gap-6 md:flex">
             <Link
-              className="text-sm text-slate-600 transition hover:text-slate-900"
+              className="text-sm text-[var(--text2)] transition hover:text-[var(--teal)]"
               href="#como-funciona"
             >
               Como funciona
             </Link>
             <Link
-              className="text-sm text-slate-600 transition hover:text-slate-900"
+              className="text-sm text-[var(--text2)] transition hover:text-[var(--teal)]"
               href="#produtos"
             >
               Produtos
             </Link>
             <Link
-              className="text-sm text-slate-600 transition hover:text-slate-900"
+              className="text-sm text-[var(--text2)] transition hover:text-[var(--teal)]"
               href="#seguranca"
             >
               Segurança
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle className="hidden sm:flex" />
             <Link
-              className="hidden text-sm text-slate-700 hover:text-slate-950 transition sm:block"
+              className="hidden text-sm text-[var(--text2)] transition hover:text-[var(--teal)] sm:block"
               href="/login"
             >
               Entrar
             </Link>
             <Link
-              className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white shadow-glow-teal hover:bg-brand-teal-dark transition"
+              className="cv-btn cv-btn-primary inline-flex items-center px-4 py-2 text-sm font-semibold"
               href="/login"
             >
               Solicitar demo

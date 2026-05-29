@@ -26,18 +26,9 @@ export function Card({
   return (
     <section
       className={cn(
-        /* Base */
-        "rounded-lg border border-slate-200 p-5 dark:border-slate-800",
-        /* Background: subtle gradient + inner highlight via box-shadow */
-        "bg-white dark:bg-slate-900",
-        "shadow-card-rest",
-        /* Transition */
-        "transition-all duration-base ease-smooth",
-        /* Glow */
+        "cv-card p-5",
         glow && "shadow-glow",
-        /* Interactive hover lift */
-        interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-card-hover dark:hover:border-emerald-700/60",
+        interactive && "cv-card-hover cursor-pointer",
         className
       )}
     >
@@ -45,12 +36,12 @@ export function Card({
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             {title && (
-              <h2 className="text-sm font-semibold leading-snug text-slate-900 dark:text-slate-100">
+              <h2 className="text-sm font-semibold leading-snug text-[var(--text)]">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">{description}</p>
+              <p className="mt-0.5 text-xs leading-5 text-[var(--text2)]">{description}</p>
             )}
           </div>
           {actions && (

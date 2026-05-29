@@ -179,7 +179,7 @@ export default function CaseDetailPage({ params }: PageProps) {
 
         {/* Breadcrumb */}
         <Link
-          className="mb-4 flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-800 transition"
+          className="mb-4 flex items-center gap-1.5 text-xs text-[var(--text2)] transition hover:text-[var(--teal)]"
           href="/cases"
         >
           <ArrowLeft size={14} />
@@ -187,7 +187,7 @@ export default function CaseDetailPage({ params }: PageProps) {
         </Link>
 
         {/* Case header */}
-        <div className="mb-6 rounded-lg border border-slate-200 bg-white p-6">
+        <div className="cv-card mb-6 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -197,33 +197,33 @@ export default function CaseDetailPage({ params }: PageProps) {
                 <StatusBadge status={caseData.status} />
                 <PriorityBadge priority={caseData.priority} />
               </div>
-              <h1 className="text-xl font-bold text-slate-950">
+              <h1 className="text-xl font-bold text-[var(--text)]">
                 {caseDisplayTitle(caseData)}
               </h1>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[var(--text2)]">
                 {caseData.clientName} · {caseTypeLabel[caseData.caseType] ?? caseData.caseType}
               </p>
               {caseData.notes && (
-                <p className="mt-2 text-xs leading-5 text-slate-600">{caseData.notes}</p>
+                <p className="mt-2 text-xs leading-5 text-[var(--text2)]">{caseData.notes}</p>
               )}
             </div>
             <div className="shrink-0 text-left sm:text-right">
               <div className="mb-3 text-left sm:text-right">
-                <span className="text-2xl font-bold text-slate-950">
+                <span className="text-2xl font-bold text-[var(--text)]">
                   {caseData.progressPercent}%
                 </span>
-                <p className="text-[11px] text-slate-600">Progresso geral</p>
+                <p className="text-[11px] text-[var(--text2)]">Progresso geral</p>
               </div>
-              <div className="w-32 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-1.5 w-32 overflow-hidden rounded-full bg-[var(--surf3)]">
                 <div
-                  className="h-1.5 rounded-full bg-brand-teal"
+                  className="h-1.5 rounded-full bg-[var(--teal)]"
                   style={{ width: `${caseData.progressPercent}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <dl className="mt-6 flex flex-wrap gap-6 border-t border-slate-200 pt-4 text-xs">
+          <dl className="mt-6 flex flex-wrap gap-6 border-t border-[var(--bd)] pt-4 text-xs">
             {[
               {
                 label: "Responsável",
@@ -240,15 +240,15 @@ export default function CaseDetailPage({ params }: PageProps) {
               }
             ].map((item) => (
               <div key={item.label}>
-                <dt className="text-slate-500">{item.label}</dt>
-                <dd className="mt-0.5 font-medium text-slate-800">{item.value}</dd>
+                <dt className="text-[var(--text3)]">{item.label}</dt>
+                <dd className="mt-0.5 font-medium text-[var(--text2)]">{item.value}</dd>
               </div>
             ))}
           </dl>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex overflow-x-auto border-b border-slate-200">
+        <div className="mb-6 flex overflow-x-auto border-b border-[var(--bd)]">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -256,8 +256,8 @@ export default function CaseDetailPage({ params }: PageProps) {
               <button
                 className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-xs font-medium transition ${
                   active
-                    ? "border-brand-blue text-brand-teal"
-                    : "border-transparent text-slate-600 hover:text-slate-800"
+                    ? "border-[var(--teal)] text-[var(--teal)]"
+                    : "border-transparent text-[var(--text2)] hover:text-[var(--text)]"
                 }`}
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}

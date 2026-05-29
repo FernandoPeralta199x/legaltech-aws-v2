@@ -14,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-surface-900 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="cv-app-shell min-h-screen overflow-x-hidden">
       <div className="flex">
         <Sidebar />
         <MobileSidebar onClose={() => setMobileOpen(false)} open={mobileOpen} />

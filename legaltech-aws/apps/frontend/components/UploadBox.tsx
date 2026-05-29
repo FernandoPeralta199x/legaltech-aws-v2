@@ -1,7 +1,7 @@
 "use client";
 
-import { FileText, Lock, Paperclip, Trash2, Upload, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { FileText, Lock, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -22,6 +22,7 @@ function formatFileSize(bytes: number): string {
 export function UploadBox() {
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((newFiles: FileList | null) => {
     if (!newFiles) return;
@@ -75,8 +76,8 @@ export function UploadBox() {
         className={cn(
           "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-12 text-center transition-all cursor-pointer",
           dragging
-            ? "border-brand-teal bg-emerald-50 shadow-glow-teal"
-            : "border-slate-300 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50"
+            ? "border-[var(--teal)] bg-[var(--teal-dim)] shadow-glow-teal"
+            : "border-[var(--bd2)] bg-[var(--surf2)] hover:border-[rgba(32,201,151,0.34)] hover:bg-[var(--surf3)]"
         )}
         onDragLeave={() => setDragging(false)}
         onDragOver={(e) => {
@@ -84,7 +85,7 @@ export function UploadBox() {
           setDragging(true);
         }}
         onDrop={handleDrop}
-        onClick={() => document.getElementById("file-input")?.click()}
+        onClick={() => fileInputRef.current?.click()}
       >
         <input
           accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
@@ -92,29 +93,32 @@ export function UploadBox() {
           id="file-input"
           multiple
           onChange={(e) => addFiles(e.target.files)}
+          ref={fileInputRef}
           type="file"
         />
         <div
           className={cn(
-            "mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 transition",
-            dragging ? "border-emerald-300 bg-emerald-100" : "bg-white"
+            "mb-4 flex h-14 w-14 items-center justify-center rounded-full border transition",
+            dragging
+              ? "border-[rgba(32,201,151,0.34)] bg-[var(--teal-dim)]"
+              : "border-[var(--bd)] bg-[var(--surf)]"
           )}
         >
           <Upload
-            className={dragging ? "text-brand-teal" : "text-slate-500"}
+            className={dragging ? "text-[var(--teal)]" : "text-[var(--text2)]"}
             size={24}
           />
         </div>
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-sm font-semibold text-[var(--text)]">
           Arraste documentos aqui ou{" "}
-          <span className="text-brand-teal">clique para selecionar</span>
+          <span className="text-[var(--teal)]">clique para selecionar</span>
         </p>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-[var(--text2)]">
           PDF, DOCX, TXT, JPG, PNG — até 50 MB por arquivo
         </p>
-        <div className="mt-4 flex items-center gap-1.5 rounded-lg bg-brand-teal/10 border border-brand-teal/20 px-3 py-2">
-          <Lock className="shrink-0 text-brand-teal" size={12} />
-          <p className="text-[11px] text-slate-600">
+        <div className="mt-4 flex items-center gap-1.5 rounded-lg border border-[rgba(32,201,151,0.2)] bg-[var(--teal-dim)] px-3 py-2">
+          <Lock className="shrink-0 text-[var(--teal)]" size={12} />
+          <p className="text-[11px] text-[var(--text2)]">
             Os documentos serão processados em ambiente seguro e criptografado
           </p>
         </div>
@@ -124,18 +128,18 @@ export function UploadBox() {
         <div className="space-y-2">
           {files.map((file) => (
             <div
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3"
+              className="cv-list-row flex items-center gap-3 px-4 py-3"
               key={file.id}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                <FileText size={16} className="text-slate-500" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surf3)]">
+                <FileText size={16} className="text-[var(--text2)]" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-800">
+                <p className="truncate text-xs font-medium text-[var(--text)]">
                   {file.name}
                 </p>
                 <div className="mt-1.5 flex items-center gap-3">
-                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--surf3)]">
                     <div
                       className={cn(
                         "h-1 rounded-full transition-all duration-500",
@@ -152,12 +156,12 @@ export function UploadBox() {
                     className={cn(
                       "shrink-0 text-[10px] font-semibold",
                       file.status === "done"
-                        ? "text-emerald-700"
+                        ? "text-[var(--teal)]"
                         : file.status === "error"
                         ? "text-red-400"
                         : file.status === "uploading"
                         ? "text-brand-teal"
-                        : "text-slate-600"
+                        : "text-[var(--text2)]"
                     )}
                   >
                     {file.status === "waiting" && "Aguardando"}
@@ -165,13 +169,14 @@ export function UploadBox() {
                     {file.status === "done" && "Enviado"}
                     {file.status === "error" && "Erro"}
                   </span>
-                  <span className="shrink-0 text-[10px] text-slate-500">
+                  <span className="shrink-0 text-[10px] text-[var(--text3)]">
                     {file.size}
                   </span>
                 </div>
               </div>
               <button
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                aria-label={`Remover ${file.name}`}
+                className="flex h-9 min-h-9 w-9 min-w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text2)] transition hover:bg-red-500/10 hover:text-red-500"
                 onClick={() => handleRemove(file.id)}
               >
                 <X size={14} />

@@ -17,44 +17,23 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const base =
-  "relative inline-flex items-center justify-center gap-2 font-semibold tracking-tight " +
+  "cv-btn relative inline-flex items-center justify-center gap-2 font-semibold " +
   "transition-all duration-[150ms] ease-smooth select-none " +
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 " +
   "disabled:cursor-not-allowed disabled:opacity-50 " +
   "active:scale-[0.97] active:duration-[80ms]";
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 rounded-lg px-3 text-xs gap-1.5",
-  md: "h-10 rounded-lg px-4 text-sm",
-  lg: "h-12 rounded-lg px-6 text-base gap-2.5"
+  sm: "min-h-11 px-3 text-xs gap-1.5",
+  md: "min-h-11 px-4 text-sm",
+  lg: "min-h-12 px-6 text-base gap-2.5"
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: [
-    "bg-brand-teal text-white",
-    "shadow-glow-teal",
-    "hover:bg-brand-teal-dark hover:shadow-glow-teal-lg",
-    "focus-visible:outline-brand-teal"
-  ].join(" "),
-
-  secondary: [
-    "border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
-    "shadow-inner-highlight",
-    "hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200",
-    "focus-visible:outline-brand-teal"
-  ].join(" "),
-
-  ghost: [
-    "text-slate-600 dark:text-slate-300",
-    "hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-800 dark:hover:text-white",
-    "focus-visible:outline-brand-teal"
-  ].join(" "),
-
-  danger: [
-    "border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300",
-    "hover:bg-red-100 hover:border-red-300 hover:text-red-800 dark:hover:bg-red-950/50 dark:hover:border-red-800 dark:hover:text-red-200",
-    "focus-visible:outline-red-500"
-  ].join(" ")
+  primary: "cv-btn-primary focus-visible:outline-[var(--teal)]",
+  secondary: "cv-btn-secondary focus-visible:outline-[var(--teal)]",
+  ghost: "cv-btn-ghost focus-visible:outline-[var(--teal)]",
+  danger: "cv-btn-danger focus-visible:outline-red-500"
 };
 
 const Spinner = () => (

@@ -199,12 +199,12 @@ export default function ClientsPage() {
 
         {showForm && (
           <form
-            className="mb-6 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
+            className="cv-form-card mb-6 p-4 sm:p-5"
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-slate-900">Novo cliente</h2>
-              <p className="text-xs leading-5 text-slate-500">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Novo cliente</h2>
+              <p className="text-xs leading-5 text-[var(--text2)]">
                 Use apenas dados fictícios. A organização continua vindo do JWT/contexto do backend.
               </p>
             </div>
@@ -259,9 +259,9 @@ export default function ClientsPage() {
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="relative w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text3)]" size={14} />
             <input
-              className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-emerald-300 focus:bg-slate-100"
+              className="cv-input w-full pl-9 pr-3 text-sm"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar clientes..."
               type="search"
@@ -269,7 +269,7 @@ export default function ClientsPage() {
             />
           </div>
           {!loading && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--text2)]">
               {filteredClients.length} cliente{filteredClients.length !== 1 ? "s" : ""} exibido{filteredClients.length !== 1 ? "s" : ""}
             </p>
           )}
@@ -307,7 +307,7 @@ export default function ClientsPage() {
               const risk = riskConfig[client.riskLevel] ?? riskConfig.low;
               return (
                 <div
-                  className="rounded-lg border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-slate-100 hover:shadow-card-hover"
+                  className="cv-card cv-card-hover p-5"
                   key={client.id}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -316,33 +316,33 @@ export default function ClientsPage() {
                         {client.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{client.name}</p>
-                        <p className="truncate text-[11px] text-slate-500">{client.documentLabel}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--text)]">{client.name}</p>
+                        <p className="truncate text-[11px] text-[var(--text3)]">{client.documentLabel}</p>
                       </div>
                     </div>
                     <StatusBadge status={client.status} />
                   </div>
 
                   <dl className="mt-4 space-y-2 text-xs">
-                    <div className="flex min-w-0 items-center gap-2 text-slate-600">
-                      <Mail size={12} className="shrink-0 text-slate-500" />
+                    <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                      <Mail size={12} className="shrink-0 text-[var(--text3)]" />
                       <span className="truncate">{client.email || "E-mail não informado"}</span>
                     </div>
-                    <div className="flex min-w-0 items-center gap-2 text-slate-600">
-                      <Phone size={12} className="shrink-0 text-slate-500" />
+                    <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                      <Phone size={12} className="shrink-0 text-[var(--text3)]" />
                       <span className="truncate">{client.phone || "Telefone não informado"}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <BriefcaseBusiness size={12} className="shrink-0 text-slate-500" />
+                    <div className="flex items-center gap-2 text-[var(--text2)]">
+                      <BriefcaseBusiness size={12} className="shrink-0 text-[var(--text3)]" />
                       {client.casesCount} caso{client.casesCount !== 1 ? "s" : ""}
                     </div>
                   </dl>
 
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bd)] pt-4">
                     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${risk.className}`}>
                       {risk.label}
                     </span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-[var(--text3)]">
                       Desde {formatDate(client.createdAt)}
                     </span>
                   </div>

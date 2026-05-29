@@ -17,7 +17,7 @@ export type NotificationPreferences = Record<
   NotificationChannelPreference
 >;
 
-export const DEFAULT_THEME: ThemePreference = "light";
+export const DEFAULT_THEME: ThemePreference = "dark";
 export const THEME_STORAGE_KEY = "legaltech.theme.preference.v1";
 export const NOTIFICATION_STORAGE_KEY = "legaltech.notification.preferences.v1";
 
