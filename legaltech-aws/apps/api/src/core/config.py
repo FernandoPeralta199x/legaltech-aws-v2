@@ -22,7 +22,11 @@ class Settings(BaseSettings):
     enable_docs: bool = Field(default=True, alias="ENABLE_DOCS")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     cors_allowed_origins: str = Field(
-        default="http://localhost:3000,http://127.0.0.1:3000",
+        default=(
+            "http://localhost:3000,"
+            "http://127.0.0.1:3000,"
+            "http://192.168.0.102:3000"
+        ),
         alias="CORS_ALLOWED_ORIGINS",
     )
     auth_provider: Literal["dev_jwt", "cognito"] = Field(
@@ -160,6 +164,15 @@ class Settings(BaseSettings):
     def normalize_database_url(cls, value: str) -> str:
         if value.startswith("postgresql://"):
             return value.replace("postgresql://", "postgresql+psycopg://", 1)
+
+        return value
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def reject_wildcard_cors(cls, value: str) -> str:
+        origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+        if "*" in origins:
+            raise ValueError("CORS_ALLOWED_ORIGINS must not include wildcard '*'.")
 
         return value
 

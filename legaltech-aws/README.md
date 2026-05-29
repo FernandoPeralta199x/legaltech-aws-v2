@@ -132,10 +132,16 @@ python scripts\validate_env.py --env-file infra\aws\env.example --environment st
 python scripts\check_project_security.py .
 ```
 
+Relatorio de hardening local:
+
+- `docs/SECURITY_READY.md`
+
 ## Regras De Seguranca
 
 - `AUTH_PROVIDER=dev_jwt` somente em `APP_ENV=local`.
 - `DEV_JWT_ENABLED=false` em `dev`, `staging` e `prod`.
+- O login local valida JWT dev no backend por `GET /api/v1/me` antes de salvar
+  sessao no navegador.
 - `AUTH_PROVIDER=cognito` e o caminho esperado para AWS.
 - S3 deve ser privado por padrao.
 - Upload/download de documentos deve usar presigned URL.

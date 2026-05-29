@@ -95,10 +95,15 @@ test("validateDevJwtForm requires a pasted dev JWT", () => {
 
 test("validateDevJwtForm rejects malformed or expired JWTs", () => {
   const validToken = makeJwt({
+    aud: "legaltech-local-api",
     email: "dev.local@example.test",
     exp: Math.floor(Date.now() / 1000) + 60,
     iat: Math.floor(Date.now() / 1000),
-    sub: "22222222-2222-4222-8222-222222222222"
+    iss: "legaltech-local-dev",
+    sub: "22222222-2222-4222-8222-222222222222",
+    token_use: "dev",
+    "custom:organization_id": "11111111-1111-4111-8111-111111111111",
+    "custom:role": "admin"
   });
 
   assert.equal(validateDevJwtForm(validToken).valid, true);
@@ -116,10 +121,15 @@ test("validateDevJwtForm rejects malformed or expired JWTs", () => {
 
   const expired = validateDevJwtForm(
     makeJwt({
+      aud: "legaltech-local-api",
       email: "dev.local@example.test",
       exp: Math.floor(Date.now() / 1000) - 60,
       iat: Math.floor(Date.now() / 1000) - 120,
-      sub: "22222222-2222-4222-8222-222222222222"
+      iss: "legaltech-local-dev",
+      sub: "22222222-2222-4222-8222-222222222222",
+      token_use: "dev",
+      "custom:organization_id": "11111111-1111-4111-8111-111111111111",
+      "custom:role": "admin"
     })
   );
   assert.equal(expired.valid, false);

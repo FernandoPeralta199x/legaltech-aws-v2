@@ -73,6 +73,28 @@ def validate_backend(
             f"backend: APP_ENV={app_env} difere do ambiente informado {environment}"
         )
 
+    cors_origins = [
+        origin.strip()
+        for origin in values.get("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+    if "*" in cors_origins:
+        errors.append("backend/cors: wildcard '*' nao e permitido")
+    if environment == "local":
+        allowed_local_origins = {
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://192.168.0.102:3000",
+        }
+        invalid_local_origins = sorted(
+            origin for origin in cors_origins if origin not in allowed_local_origins
+        )
+        if invalid_local_origins:
+            errors.append(
+                "backend/cors: MVP local permite apenas origens explicitas: "
+                + ", ".join(sorted(allowed_local_origins))
+            )
+
     auth_provider = values.get("AUTH_PROVIDER", "")
     if auth_provider and auth_provider not in BACKEND_AUTH_PROVIDERS:
         errors.append(f"backend: AUTH_PROVIDER invalido: {auth_provider}")

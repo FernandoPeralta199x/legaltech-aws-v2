@@ -2,7 +2,7 @@ export const DEV_ROLES = ["owner", "admin", "analyst", "client", "support"] as c
 
 export type DevRole = (typeof DEV_ROLES)[number];
 
-export type DevSessionSource = "pasted" | "local-placeholder";
+export type DevSessionSource = "pasted";
 
 export type DevSession = {
   email: string;

@@ -36,7 +36,7 @@ frontend em `0.0.0.0:3000` e use:
 NEXT_PUBLIC_API_BASE_URL=http://192.168.0.102:8000
 ```
 
-Nao coloque segredos em variaveis `NEXT_PUBLIC_*`. Qualquer valor com esse prefixo pode ser enviado ao navegador.
+Atenção: variáveis NEXT_PUBLIC_* são expostas no navegador. Nunca coloque secrets, tokens, senhas ou dados sensíveis nelas.
 
 `NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK=true` permite que as telas integradas usem dados ficticios locais quando o backend nao estiver rodando. Para validar falhas reais de API/autorizacao sem fallback, use:
 
@@ -154,7 +154,8 @@ JWT dev gerado pelo backend. Ele permite:
 
 - selecionar papel dev: `owner`, `admin`, `analyst`, `client` ou `support`;
 - colar um JWT dev gerado pelo backend;
-- salvar a sessao em `localStorage` somente quando um JWT dev for colado;
+- validar o JWT dev no backend via `GET /api/v1/me` antes de salvar a sessao;
+- salvar a sessao em `localStorage` somente quando a API local aceitar o JWT dev;
 - enviar `Authorization: Bearer <token>` automaticamente pelo `apiClient`;
 - limpar a sessao pelo botao `Sair` no Header.
 

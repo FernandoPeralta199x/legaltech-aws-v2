@@ -71,7 +71,10 @@ test("authStorage ignores legacy visual placeholder sessions", () => {
   storage.clear();
   storage.setItem(
     "legaltech.dev.session.v1",
-    JSON.stringify(makeSession({ source: "local-placeholder" }))
+    JSON.stringify({
+      ...makeSession(),
+      source: "local-placeholder"
+    })
   );
 
   assert.equal(getStoredSession(), null);

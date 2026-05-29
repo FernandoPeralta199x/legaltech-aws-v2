@@ -12,6 +12,8 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
 - A UI usa `localStorage` para sessao dev; isso nao e modelo de producao.
 - A UI exige JWT dev colado para acessar telas internas; sessoes placeholder
   antigas sao descartadas.
+- O login local valida o JWT no backend antes de salvar a sessao, mas a guarda
+  visual do frontend nao substitui autorizacao real no backend.
 - Nao ha refresh token real.
 - Nao ha convite/cadastro real de usuarios.
 - Nao ha administracao completa de usuarios/perfis.
@@ -37,10 +39,10 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
 - O fallback mockado deve ficar desabilitado em staging/prod.
 - A responsividade foi preparada, mas ainda precisa de validacao visual E2E em
   navegadores reais.
-- `npm audit --omit=dev --audit-level=moderate` aponta vulnerabilidade
-  transitiva moderada em `next -> postcss`. O npm recomenda `audit fix --force`,
-  que traz mudanca quebravel; por isso a correcao deve ser planejada em tarefa
-  propria de upgrade de dependencias.
+- `npm audit --audit-level=high` conclui sem vulnerabilidade alta bloqueante,
+  mas reporta vulnerabilidade transitiva moderada em `next -> postcss`. O npm
+  recomenda `audit fix --force`, que traz mudanca quebravel; por isso a
+  correcao deve ser planejada em tarefa propria de upgrade de dependencias.
 
 ## Documentos e normalizacao
 

@@ -69,8 +69,7 @@ Preferir `PRESIGNED_URL_EXPIRES_SECONDS` em novos ambientes.
 | `NEXT_PUBLIC_APP_ENV` | Sim | todos | Ambiente exibido/consumido pela UI. |
 | `NEXT_PUBLIC_APP_NAME` | Sim | todos | Nome publico da aplicacao. |
 
-Qualquer `NEXT_PUBLIC_*` pode ser enviado ao navegador. Nunca coloque secrets
-ou client secrets Cognito no frontend.
+Atenção: variáveis NEXT_PUBLIC_* são expostas no navegador. Nunca coloque secrets, tokens, senhas ou dados sensíveis nelas.
 
 ## AWS Futura
 
@@ -91,6 +90,7 @@ ou client secrets Cognito no frontend.
 
 - `AUTH_PROVIDER=dev_jwt`
 - `DEV_JWT_ENABLED=true`
+- `CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://192.168.0.102:3000`
 - `STORAGE_BACKEND=local`
 - `QUEUE_BACKEND=local`
 - PostgreSQL via Docker

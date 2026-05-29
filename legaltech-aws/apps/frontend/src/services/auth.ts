@@ -5,22 +5,14 @@ import {
 } from "../lib/authStorage";
 import type { DecodedDevJwt, DevLoginInput, DevRole, DevSession } from "../types/auth";
 import { DEV_ROLES } from "../types/auth";
+import { apiClient } from "./apiClient";
 
-const DEV_ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
-const DEV_USER_ID = "22222222-2222-4222-8222-222222222222";
-const DEV_AUDIENCE = "legaltech-local-api";
-const DEV_ISSUER = "legaltech-local-dev";
-
-function base64UrlEncode(input: string): string {
-  const bytes = new TextEncoder().encode(input);
-  let binary = "";
-
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+type BackendCurrentUser = {
+  email: string;
+  id: string;
+  organization_id: string;
+  role: string;
+};
 
 function base64UrlDecode(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
@@ -48,37 +40,58 @@ export function decodeDevJwt(token: string): DecodedDevJwt | null {
   }
 }
 
-export function createLocalPlaceholderDevToken(role: DevRole): string {
-  const nowInSeconds = Math.floor(Date.now() / 1000);
-  const payload: DecodedDevJwt = {
-    aud: DEV_AUDIENCE,
-    email: `dev.${role}@example.test`,
-    exp: nowInSeconds + 60 * 60 * 8,
-    iat: nowInSeconds,
-    iss: DEV_ISSUER,
-    sub: DEV_USER_ID,
-    token_use: "id",
-    "custom:organization_id": DEV_ORGANIZATION_ID,
-    "custom:role": role
-  };
+function requireDevJwtClaims(token: string): DecodedDevJwt {
+  const decodedToken = decodeDevJwt(token);
+  const role = decodedToken?.["custom:role"] ?? decodedToken?.role;
+  const organizationId =
+    decodedToken?.["custom:organization_id"] ?? decodedToken?.organization_id;
 
-  return [
-    base64UrlEncode(JSON.stringify({ alg: "none", typ: "JWT" })),
-    base64UrlEncode(JSON.stringify(payload)),
-    "dev-ui-placeholder"
-  ].join(".");
+  if (
+    !decodedToken ||
+    decodedToken.token_use !== "dev" ||
+    !decodedToken.sub ||
+    !organizationId ||
+    !role ||
+    !isDevRole(role)
+  ) {
+    throw new Error("JWT dev invalido. Gere um token dev valido no backend.");
+  }
+
+  if (
+    typeof decodedToken.exp === "number" &&
+    decodedToken.exp <= Math.floor(Date.now() / 1000)
+  ) {
+    throw new Error("JWT dev expirado. Gere um novo token no backend.");
+  }
+
+  return decodedToken;
 }
 
-export function buildDevSession(input: DevLoginInput): DevSession {
+function requireDevRole(value: string): DevRole {
+  if (!isDevRole(value)) {
+    throw new Error("JWT dev invalido. Papel retornado pelo backend nao e permitido.");
+  }
+
+  return value;
+}
+
+export function buildDevSession(
+  input: DevLoginInput,
+  verifiedUser?: BackendCurrentUser
+): DevSession {
   const providedToken = input.token?.trim();
   if (!providedToken) {
     throw new Error("JWT dev é obrigatório para criar sessão local.");
   }
 
   const token = providedToken;
-  const decodedToken = decodeDevJwt(token);
+  const decodedToken = requireDevJwtClaims(token);
   const decodedRole = decodedToken?.["custom:role"] ?? decodedToken?.role;
-  const role = decodedRole && isDevRole(decodedRole) ? decodedRole : input.role;
+  const role = verifiedUser
+    ? requireDevRole(verifiedUser.role)
+    : decodedRole && isDevRole(decodedRole)
+      ? decodedRole
+      : input.role;
   const issuedAt = decodedToken?.iat
     ? new Date(decodedToken.iat * 1000).toISOString()
     : new Date().toISOString();
@@ -87,22 +100,38 @@ export function buildDevSession(input: DevLoginInput): DevSession {
     : undefined;
 
   return {
-    email: decodedToken?.email ?? `dev.${role}@example.test`,
+    email: verifiedUser?.email ?? decodedToken.email ?? `dev.${role}@example.test`,
     expiresAt,
     issuedAt,
     organizationId:
-      decodedToken?.["custom:organization_id"] ??
-      decodedToken?.organization_id ??
-      DEV_ORGANIZATION_ID,
+      verifiedUser?.organization_id ??
+      decodedToken["custom:organization_id"] ??
+      decodedToken.organization_id ??
+      "",
     role,
     source: "pasted",
     token,
-    userId: decodedToken?.sub ?? DEV_USER_ID
+    userId: verifiedUser?.id ?? decodedToken.sub ?? ""
   };
 }
 
-export function saveDevSession(input: DevLoginInput): DevSession {
-  const session = buildDevSession(input);
+export async function validateDevTokenWithBackend(token: string): Promise<DevSession> {
+  const decodedToken = requireDevJwtClaims(token);
+  const response = await apiClient.get<BackendCurrentUser>("/api/v1/me", { token });
+  return buildDevSession(
+    {
+      role:
+        decodedToken["custom:role"] && isDevRole(decodedToken["custom:role"])
+          ? decodedToken["custom:role"]
+          : "client",
+      token
+    },
+    response.data
+  );
+}
+
+export async function saveDevSession(input: DevLoginInput): Promise<DevSession> {
+  const session = await validateDevTokenWithBackend(input.token ?? "");
   saveStoredSession(session);
   return session;
 }

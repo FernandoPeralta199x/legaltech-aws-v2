@@ -13,6 +13,7 @@ Esta entrega cria apenas a base da API:
 - camada inicial de schemas, repositories e services para clients e cases;
 - rotas CRUD iniciais para clients e cases em `/api/v1`;
 - rotas iniciais de metadados de documents em `/api/v1`;
+- rota `GET /api/v1/me` para validar JWT e retornar a sessao autenticada sem expor claims completas;
 - estrutura JWT dev local e Cognito/JWKS para `Authorization: Bearer <jwt>`;
 - RBAC consultando `roles_permissions`;
 - matriz base de permissoes por papel e seed interno de `roles_permissions`;
@@ -146,6 +147,16 @@ Health check:
 ```bash
 curl http://127.0.0.1:8000/health
 ```
+
+Validar token/sessao local:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Essa rota valida o JWT no backend e retorna apenas `id`, `email`, `organization_id` e `role`.
+Ela nao retorna claims completas, token, segredo nem payload sensivel.
 
 Resposta esperada:
 

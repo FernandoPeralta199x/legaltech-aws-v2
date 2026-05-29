@@ -149,7 +149,9 @@ http://127.0.0.1:3000/login
 ```
 
 Cole o JWT dev no campo `JWT dev do backend` para testar chamadas protegidas.
-Sem token, o login mostra erro e nao redireciona para telas internas.
+O frontend valida o token no backend via `GET /api/v1/me` antes de salvar a
+sessao local. Sem token, token malformado, expirado ou recusado pela API, o
+login mostra erro e nao redireciona para telas internas.
 
 ## 9. Rodar E2E automatizado
 

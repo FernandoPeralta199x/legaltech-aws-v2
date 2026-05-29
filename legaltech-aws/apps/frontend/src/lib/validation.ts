@@ -180,6 +180,20 @@ export function validateDevJwtForm(token: string): ValidationResult {
     });
   }
 
+  const role = payload["custom:role"] ?? payload.role;
+  const organizationId = payload["custom:organization_id"] ?? payload.organization_id;
+  if (
+    payload.token_use !== "dev" ||
+    typeof payload.sub !== "string" ||
+    typeof organizationId !== "string" ||
+    typeof role !== "string"
+  ) {
+    return result({
+      token:
+        "JWT dev sem claims obrigatórias. Gere um token dev válido no backend."
+    });
+  }
+
   return result({});
 }
 

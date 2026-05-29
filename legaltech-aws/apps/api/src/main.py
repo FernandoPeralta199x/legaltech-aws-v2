@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
 from src.core.logging import configure_logging
+from src.modules.auth.router import router as auth_router
 from src.modules.audit.router import router as audit_router
 from src.modules.cases.router import router as cases_router
 from src.modules.clients.router import router as clients_router
@@ -21,6 +22,13 @@ HTTP_ERROR_CODES = {
     400: "VALIDATION_ERROR",
     413: "VALIDATION_ERROR",
     422: "VALIDATION_ERROR",
+}
+
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
 }
 
 
@@ -43,6 +51,17 @@ def create_app() -> FastAPI:
             allow_headers=["Authorization", "Content-Type"],
         )
 
+    @app.middleware("http")
+    async def add_security_headers(request, call_next):
+        response = await call_next(request)
+        for header, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(header, value)
+
+        if request.url.path.startswith("/api/v1"):
+            response.headers.setdefault("Cache-Control", "no-store")
+
+        return response
+
     @app.exception_handler(ResourceNotFoundError)
     async def resource_not_found_handler(_, exc: ResourceNotFoundError) -> JSONResponse:
         return JSONResponse(
@@ -62,6 +81,7 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(health_router)
+    app.include_router(auth_router)
     app.include_router(clients_router)
     app.include_router(cases_router)
     app.include_router(documents_router)

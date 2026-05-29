@@ -102,13 +102,22 @@ function LoginContent() {
     }
 
     setLoading(true);
-    saveDevSession({ role, token: token.trim() });
-    setToast({
-      message: "JWT dev aceito. Redirecionando para a plataforma...",
-      tone: "success"
-    });
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    router.replace(nextPath.startsWith("/") ? nextPath : "/dashboard");
+    try {
+      await saveDevSession({ role, token: token.trim() });
+      setToast({
+        message: "JWT dev aceito. Redirecionando para a plataforma...",
+        tone: "success"
+      });
+      await new Promise((resolve) => setTimeout(resolve, 450));
+      router.replace(nextPath.startsWith("/") ? nextPath : "/dashboard");
+    } catch {
+      setToast({
+        message:
+          "JWT dev recusado pela API local. Gere um novo token no backend e tente novamente.",
+        tone: "error"
+      });
+      setLoading(false);
+    }
   }
 
   function handleLogout() {
