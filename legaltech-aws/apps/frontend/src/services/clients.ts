@@ -58,6 +58,30 @@ function makeMockClient(payload: ClientCreate): Client {
   };
 }
 
+function sanitizeClientPayload<T extends ClientCreate | ClientUpdate>(
+  payload: T
+): T {
+  const sanitized: Partial<ClientCreate> = {};
+
+  if ("name" in payload) {
+    sanitized.name = payload.name;
+  }
+  if ("document" in payload) {
+    sanitized.document = payload.document;
+  }
+  if ("email" in payload) {
+    sanitized.email = payload.email;
+  }
+  if ("phone" in payload) {
+    sanitized.phone = payload.phone;
+  }
+  if ("metadata" in payload) {
+    sanitized.metadata = payload.metadata;
+  }
+
+  return sanitized as T;
+}
+
 export async function listClients(): Promise<ServiceResult<Client[]>> {
   try {
     const response = await apiClient.get<BackendClient[]>("/api/v1/clients");
@@ -81,8 +105,12 @@ export async function listClients(): Promise<ServiceResult<Client[]>> {
 export async function createClient(
   payload: ClientCreate
 ): Promise<ServiceResult<Client>> {
+  const safePayload = sanitizeClientPayload(payload);
   try {
-    const response = await apiClient.post<BackendClient>("/api/v1/clients", payload);
+    const response = await apiClient.post<BackendClient>(
+      "/api/v1/clients",
+      safePayload
+    );
     return {
       data: mapBackendClient(response.data),
       source: "api"
@@ -93,7 +121,7 @@ export async function createClient(
     }
 
     return {
-      data: makeMockClient(payload),
+      data: makeMockClient(safePayload),
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -125,10 +153,11 @@ export async function updateClient(
   clientId: string,
   payload: ClientUpdate
 ): Promise<ServiceResult<Client>> {
+  const safePayload = sanitizeClientPayload(payload);
   try {
     const response = await apiClient.patch<BackendClient>(
       `/api/v1/clients/${clientId}`,
-      payload
+      safePayload
     );
     return {
       data: mapBackendClient(response.data),
@@ -143,12 +172,12 @@ export async function updateClient(
     return {
       data: {
         ...current,
-        name: payload.name ?? current.name,
-        document: payload.document ?? current.document,
-        email: payload.email ?? current.email,
-        phone: payload.phone ?? current.phone,
-        metadata: payload.metadata ?? current.metadata,
-        documentLabel: protectedDocumentLabel(payload.document ?? current.document),
+        name: safePayload.name ?? current.name,
+        document: safePayload.document ?? current.document,
+        email: safePayload.email ?? current.email,
+        phone: safePayload.phone ?? current.phone,
+        metadata: safePayload.metadata ?? current.metadata,
+        documentLabel: protectedDocumentLabel(safePayload.document ?? current.document),
         updatedAt: new Date().toISOString()
       },
       fallbackReason: fallbackReason(error),

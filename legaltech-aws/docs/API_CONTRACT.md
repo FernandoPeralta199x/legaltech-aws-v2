@@ -278,9 +278,12 @@ Body:
 
 ```json
 {
-  "party_type": "buyer",
+  "party_type": "cliente",
   "name": "Nome da Parte",
   "document": "00000000000",
+  "email": "parte@example.test",
+  "phone": "+5500000000000",
+  "notes": "Observacao ficticia",
   "metadata": {}
 }
 ```
@@ -291,7 +294,7 @@ Atualiza parte.
 
 ### DELETE `/cases/{case_id}/parties/{party_id}`
 
-Remove parte.
+Futuro. Remocao logica ainda nao foi exposta no MVP local.
 
 ---
 

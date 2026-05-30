@@ -34,8 +34,9 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
   - relatorios;
   - revisoes humanas;
   - timeline completa;
-  - partes detalhadas do caso;
   - upload real de arquivo.
+- A aba Partes do detalhe do caso tem CRUD MVP local via API, mas o wizard de
+  criacao de caso ainda nao persiste partes automaticamente apos criar o caso.
 - O fallback mockado deve ficar desabilitado em staging/prod.
 - A responsividade foi preparada, mas ainda precisa de validacao visual E2E em
   navegadores reais.
@@ -85,6 +86,8 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
 - Rollback operacional real ainda precisa ser documentado por ambiente.
 - Backups/snapshots reais ainda nao existem.
 - RLS e politicas nativas de banco ficam para fase futura.
+- A arquitetura do MVP usa PostgreSQL unico com pgvector no mesmo banco; nao ha
+  banco vetorial separado.
 
 ## Seguranca, LGPD e operacao
 

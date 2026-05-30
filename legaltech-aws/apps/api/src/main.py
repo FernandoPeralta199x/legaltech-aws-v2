@@ -6,6 +6,7 @@ from src.core.config import get_settings
 from src.core.logging import configure_logging
 from src.modules.auth.router import router as auth_router
 from src.modules.audit.router import router as audit_router
+from src.modules.case_parties.router import router as case_parties_router
 from src.modules.cases.router import router as cases_router
 from src.modules.clients.router import router as clients_router
 from src.modules.common.exceptions import ResourceNotFoundError
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(clients_router)
     app.include_router(cases_router)
+    app.include_router(case_parties_router)
     app.include_router(documents_router)
     app.include_router(document_processing_router)
     app.include_router(audit_router)

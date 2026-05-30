@@ -46,7 +46,16 @@ export type ReviewStatus = "pending" | "approved" | "rejected" | "adjustment_req
 
 export type AgentExecutionStatus = "queued" | "running" | "completed" | "failed" | "skipped";
 
-export type PartyType = "contratante" | "contratada" | "avalista" | "fiador" | "testemunha" | "outro";
+export type PartyType =
+  | "cliente"
+  | "contraparte"
+  | "responsavel"
+  | "testemunha"
+  | "outro"
+  | "contratante"
+  | "contratada"
+  | "avalista"
+  | "fiador";
 
 export type ContractType =
   | "compra_venda"
@@ -125,10 +134,13 @@ export type CaseParty = {
   caseId: string;
   name: string;
   document: string;
-  type: PartyType;
+  type: PartyType | string;
   email: string;
   phone: string;
   notes: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Case = {
@@ -188,6 +200,18 @@ export type CaseCreate = {
 export type CaseUpdate = Partial<CaseCreate> & {
   status?: CaseStatus;
 };
+
+export type CasePartyCreate = {
+  party_type: PartyType | string;
+  name: string;
+  document?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type CasePartyUpdate = Partial<CasePartyCreate>;
 
 export type DocumentCreate = {
   case_id: string;

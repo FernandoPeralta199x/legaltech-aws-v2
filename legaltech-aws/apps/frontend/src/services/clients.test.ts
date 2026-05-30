@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { ApiClientError } from "./apiClient";
-import { createClient, listClients } from "./clients";
+import { createClient, listClients, updateClient } from "./clients";
 
 test("listClients maps backend clients and reports api source", async () => {
   globalThis.fetch = (async () =>
@@ -89,4 +89,47 @@ test("createClient never sends organization_id from the frontend payload", async
   });
 
   assert.equal(JSON.parse(requestBody).organization_id, undefined);
+});
+
+test("updateClient sends PATCH and omits organization_id from the frontend payload", async () => {
+  let requestBody = "";
+  let requestMethod = "";
+  let requestUrl = "";
+
+  globalThis.fetch = (async (url, init) => {
+    requestUrl = String(url);
+    requestMethod = String(init?.method);
+    requestBody = String(init?.body ?? "");
+
+    return Response.json({
+      success: true,
+      data: {
+        id: "client-updated",
+        name: "Cliente Atualizado",
+        document: null,
+        email: "atualizado@example.test",
+        phone: "+5500000000000",
+        metadata: {},
+        created_at: "2026-05-25T10:00:00.000Z",
+        updated_at: "2026-05-25T11:00:00.000Z"
+      }
+    });
+  }) as typeof fetch;
+
+  const result = await updateClient(
+    "client-updated",
+    {
+      email: "atualizado@example.test",
+      name: "Cliente Atualizado",
+      organization_id: "nao-deve-sair-do-frontend"
+    } as Parameters<typeof updateClient>[1] & { organization_id: string }
+  );
+
+  const payload = JSON.parse(requestBody);
+  assert.equal(requestMethod, "PATCH");
+  assert.equal(requestUrl.endsWith("/api/v1/clients/client-updated"), true);
+  assert.equal(payload.name, "Cliente Atualizado");
+  assert.equal(payload.organization_id, undefined);
+  assert.equal(result.source, "api");
+  assert.equal(result.data.name, "Cliente Atualizado");
 });

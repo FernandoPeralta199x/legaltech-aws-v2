@@ -9,9 +9,14 @@ import {
   ClipboardList,
   Clock,
   FileText,
+  Mail,
+  Pencil,
+  Phone,
+  Plus,
   Shield,
   Users
 } from "lucide-react";
+import type { FormEvent } from "react";
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 
@@ -22,6 +27,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { FormField, SelectInput, TextArea, TextInput } from "@/components/FormField";
 import { LoadingState } from "@/components/LoadingState";
 import { Notification } from "@/components/Notification";
 import { PriorityBadge } from "@/components/PriorityBadge";
@@ -29,10 +35,15 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
 import { formatDate } from "@/lib/formatters";
 import { ApiClientError } from "@/src/services/apiClient";
+import {
+  createCaseParty,
+  listCaseParties,
+  updateCaseParty
+} from "@/src/services/caseParties";
 import { getCase } from "@/src/services/cases";
 import { listClients } from "@/src/services/clients";
 import { listDocuments } from "@/src/services/documents";
-import type { Case, Document } from "@/types";
+import type { Case, CaseParty, CasePartyCreate, CasePartyUpdate, Document } from "@/types";
 import {
   mockAgentExecutions,
   mockReports,
@@ -59,7 +70,37 @@ const caseTypeLabel: Record<string, string> = {
   outro: "Outro"
 };
 
+const partyTypeOptions = [
+  { label: "Cliente", value: "cliente" },
+  { label: "Contraparte", value: "contraparte" },
+  { label: "Testemunha", value: "testemunha" },
+  { label: "Responsável", value: "responsavel" },
+  { label: "Outro", value: "outro" }
+];
+
+const partyTypeLabel: Record<string, string> = {
+  avalista: "Avalista",
+  cliente: "Cliente",
+  contraparte: "Contraparte",
+  contratada: "Contratada",
+  contratante: "Contratante",
+  fiador: "Fiador",
+  outro: "Outro",
+  responsavel: "Responsável",
+  testemunha: "Testemunha"
+};
+
+const emptyPartyForm: CasePartyCreate = {
+  document: "",
+  email: "",
+  name: "",
+  notes: "",
+  party_type: "cliente",
+  phone: ""
+};
+
 type PageProps = { params: Promise<{ id: string }> };
+type PartyFormErrors = Partial<Record<keyof CasePartyCreate, string>>;
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
@@ -76,14 +117,68 @@ function caseDisplayTitle(legalCase: Case): string {
     : caseTypeLabel[legalCase.caseType] ?? legalCase.caseType;
 }
 
+function validatePartyForm(form: CasePartyCreate): PartyFormErrors {
+  const errors: PartyFormErrors = {};
+  const document = form.document?.trim() ?? "";
+  const email = form.email?.trim() ?? "";
+
+  if (!form.name.trim()) {
+    errors.name = "Informe o nome da parte.";
+  }
+
+  if (!form.party_type.trim()) {
+    errors.party_type = "Selecione o papel da parte.";
+  }
+
+  if (document && !/^[A-Za-z0-9./-]+$/.test(document)) {
+    errors.document = "Use apenas números, letras, pontos, barras ou hífens.";
+  }
+
+  if (email && !email.includes("@")) {
+    errors.email = "Informe um e-mail válido ou deixe o campo vazio.";
+  }
+
+  return errors;
+}
+
+function buildPartyPayload(form: CasePartyCreate): CasePartyCreate {
+  return {
+    document: form.document?.trim() || null,
+    email: form.email?.trim() || null,
+    name: form.name.trim(),
+    notes: form.notes?.trim() || null,
+    party_type: form.party_type,
+    phone: form.phone?.trim() || null
+  };
+}
+
+function partyFormFromParty(party: CaseParty): CasePartyCreate {
+  return {
+    document: party.document ?? "",
+    email: party.email ?? "",
+    name: party.name,
+    notes: party.notes ?? "",
+    party_type: party.type,
+    phone: party.phone ?? ""
+  };
+}
+
 export default function CaseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState("overview");
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [caseDocuments, setCaseDocuments] = useState<Document[]>([]);
+  const [caseParties, setCaseParties] = useState<CaseParty[]>([]);
+  const [editingParty, setEditingParty] = useState<CaseParty | null>(null);
   const [error, setError] = useState("");
   const [fallbackReason, setFallbackReason] = useState("");
   const [loading, setLoading] = useState(true);
+  const [partyError, setPartyError] = useState("");
+  const [partyForm, setPartyForm] = useState<CasePartyCreate>(emptyPartyForm);
+  const [partyFormErrors, setPartyFormErrors] = useState<PartyFormErrors>({});
+  const [partySubmitting, setPartySubmitting] = useState(false);
+  const [partySuccessMessage, setPartySuccessMessage] = useState("");
+  const [showPartyForm, setShowPartyForm] = useState(false);
 
   const refreshCase = useCallback(async () => {
     setLoading(true);
@@ -91,22 +186,27 @@ export default function CaseDetailPage({ params }: PageProps) {
 
     try {
       const clientsResult = await listClients();
-      const [caseResult, documentsResult] = await Promise.all([
+      const [caseResult, documentsResult, partiesResult] = await Promise.all([
         getCase(id, clientsResult.data),
-        listDocuments({ caseId: id })
+        listDocuments({ caseId: id }),
+        listCaseParties(id)
       ]);
       setCaseData({
         ...caseResult.data,
-        documentsCount: documentsResult.data.length
+        documentsCount: documentsResult.data.length,
+        parties: partiesResult.data
       });
       setCaseDocuments(documentsResult.data);
+      setCaseParties(partiesResult.data);
       setFallbackReason(
         clientsResult.source === "mock" ||
           caseResult.source === "mock" ||
-          documentsResult.source === "mock"
+          documentsResult.source === "mock" ||
+          partiesResult.source === "mock"
           ? clientsResult.fallbackReason ??
               caseResult.fallbackReason ??
               documentsResult.fallbackReason ??
+              partiesResult.fallbackReason ??
               ""
           : ""
       );
@@ -117,6 +217,100 @@ export default function CaseDetailPage({ params }: PageProps) {
       setLoading(false);
     }
   }, [id]);
+
+  function syncCaseParties(updater: (current: CaseParty[]) => CaseParty[]) {
+    setCaseParties((current) => {
+      const next = updater(current);
+      setCaseData((currentCase) =>
+        currentCase ? { ...currentCase, parties: next } : currentCase
+      );
+      return next;
+    });
+  }
+
+  function resetPartyForm() {
+    setEditingParty(null);
+    setPartyForm(emptyPartyForm);
+    setPartyFormErrors({});
+    setPartyError("");
+    setShowPartyForm(false);
+  }
+
+  function startCreateParty() {
+    setEditingParty(null);
+    setPartyForm(emptyPartyForm);
+    setPartyFormErrors({});
+    setPartyError("");
+    setPartySuccessMessage("");
+    setShowPartyForm(true);
+  }
+
+  function startEditParty(party: CaseParty) {
+    setEditingParty(party);
+    setPartyForm(partyFormFromParty(party));
+    setPartyFormErrors({});
+    setPartyError("");
+    setPartySuccessMessage("");
+    setShowPartyForm(true);
+  }
+
+  function updatePartyForm<K extends keyof CasePartyCreate>(
+    field: K,
+    value: CasePartyCreate[K]
+  ) {
+    setPartyForm((current) => ({ ...current, [field]: value }));
+    setPartyFormErrors((current) => ({ ...current, [field]: "" }));
+    setPartyError("");
+    setPartySuccessMessage("");
+  }
+
+  async function handlePartySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (partySubmitting) {
+      return;
+    }
+
+    const validationErrors = validatePartyForm(partyForm);
+    setPartyFormErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      setPartyError("Revise os campos destacados antes de salvar a parte.");
+      return;
+    }
+
+    setPartySubmitting(true);
+    setPartyError("");
+    setPartySuccessMessage("");
+
+    try {
+      const payload = buildPartyPayload(partyForm);
+      const result = editingParty
+        ? await updateCaseParty(id, editingParty.id, payload as CasePartyUpdate)
+        : await createCaseParty(id, payload);
+
+      syncCaseParties((current) =>
+        editingParty
+          ? current.map((party) =>
+              party.id === result.data.id ? result.data : party
+            )
+          : [result.data, ...current]
+      );
+      setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
+      setPartySuccessMessage(
+        result.source === "mock"
+          ? editingParty
+            ? "Parte atualizada no fallback local de desenvolvimento."
+            : "Parte criada no fallback local de desenvolvimento."
+          : editingParty
+            ? "Parte atualizada com sucesso no backend."
+            : "Parte criada com sucesso no backend."
+      );
+      resetPartyForm();
+    } catch (err) {
+      setPartyError(errorMessage(err));
+    } finally {
+      setPartySubmitting(false);
+    }
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -174,6 +368,20 @@ export default function CaseDetailPage({ params }: PageProps) {
         {error && (
           <Notification title="Atenção" tone="error">
             {error}
+          </Notification>
+        )}
+        {partySuccessMessage && (
+          <Notification
+            onDismiss={() => setPartySuccessMessage("")}
+            title="Partes atualizadas"
+            tone="success"
+          >
+            {partySuccessMessage}
+          </Notification>
+        )}
+        {partyError && (
+          <Notification onDismiss={() => setPartyError("")} title="Atenção" tone="error">
+            {partyError}
           </Notification>
         )}
 
@@ -295,7 +503,7 @@ export default function CaseDetailPage({ params }: PageProps) {
               <dl className="grid grid-cols-2 gap-4">
                 {[
                   { label: "Documentos", value: caseData.documentsCount },
-                  { label: "Partes", value: caseData.parties.length },
+                  { label: "Partes", value: caseParties.length },
                   {
                     label: "Agentes",
                     value: caseAgents.filter((e) => e.status === "completed").length
@@ -336,50 +544,158 @@ export default function CaseDetailPage({ params }: PageProps) {
         {/* Tab: Parties */}
         {activeTab === "parties" && (
           <div className="animate-in">
-            {caseData.parties.length === 0 ? (
+            <div className="mb-4 flex justify-end">
+              <Button icon={<Plus aria-hidden="true" size={15} />} onClick={startCreateParty}>
+                Adicionar parte
+              </Button>
+            </div>
+            {caseParties.length === 0 ? (
               <EmptyState
-                description="A aba de partes será preenchida quando o backend expuser cadastro detalhado de partes."
+                action={
+                  <Button icon={<Plus size={15} />} onClick={startCreateParty}>
+                    Adicionar parte
+                  </Button>
+                }
+                description="Cadastre partes fictícias vinculadas a este caso para validar o fluxo local."
                 icon={<Users size={20} />}
                 title="Nenhuma parte cadastrada"
               />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {caseData.parties.map((party) => (
+                {caseParties.map((party) => (
                   <Card key={party.id}>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-brand-teal border border-emerald-200">
-                        {party.name.slice(0, 2).toUpperCase()}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--bd)] bg-[var(--surf2)] text-xs font-bold text-[var(--teal)]">
+                          {party.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--text)]">
+                            {party.name}
+                          </p>
+                          <span className="inline-flex rounded-md bg-[var(--surf3)] px-2 py-0.5 text-[11px] text-[var(--text2)]">
+                            {partyTypeLabel[party.type] ?? party.type}
+                          </span>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {party.name}
-                        </p>
-                        <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 capitalize">
-                          {party.type}
-                        </span>
-                      </div>
+                      <Button
+                        aria-label={`Editar parte ${party.name}`}
+                        icon={<Pencil aria-hidden="true" size={14} />}
+                        onClick={() => startEditParty(party)}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        Editar
+                      </Button>
                     </div>
                     <dl className="mt-4 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">Documento</dt>
-                        <dd className="text-slate-700">{party.document}</dd>
+                      <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                        <FileText size={12} className="shrink-0 text-[var(--text3)]" />
+                        <span className="truncate">{party.document || "Documento não informado"}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">E-mail</dt>
-                        <dd className="text-slate-700">{party.email}</dd>
+                      <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                        <Mail size={12} className="shrink-0 text-[var(--text3)]" />
+                        <span className="truncate">{party.email || "E-mail não informado"}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">Telefone</dt>
-                        <dd className="text-slate-700">{party.phone}</dd>
+                      <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                        <Phone size={12} className="shrink-0 text-[var(--text3)]" />
+                        <span className="truncate">{party.phone || "Telefone não informado"}</span>
                       </div>
                     </dl>
                     {party.notes && (
-                      <p className="mt-3 text-xs text-slate-600 border-t border-slate-200 pt-3">
+                      <p className="mt-3 border-t border-[var(--bd)] pt-3 text-xs leading-5 text-[var(--text2)]">
                         {party.notes}
                       </p>
                     )}
                   </Card>
                 ))}
+              </div>
+            )}
+            {showPartyForm && (
+              <div
+                aria-modal="true"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-8 backdrop-blur-sm"
+                role="dialog"
+              >
+                <form
+                  className="cv-card max-h-[calc(100vh-4rem)] w-full max-w-2xl overflow-y-auto p-5 shadow-2xl"
+                  onSubmit={handlePartySubmit}
+                >
+                  <div className="mb-5">
+                    <h2 className="text-sm font-semibold text-[var(--text)]">
+                      {editingParty ? "Editar parte" : "Adicionar parte"}
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text2)]">
+                      Use apenas dados fictícios. O vínculo com organização e caso é validado pelo backend.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField error={partyFormErrors.name} label="Nome da parte" required>
+                      <TextInput
+                        invalid={Boolean(partyFormErrors.name)}
+                        onChange={(event) => updatePartyForm("name", event.target.value)}
+                        placeholder="Parte fictícia"
+                        value={partyForm.name}
+                      />
+                    </FormField>
+                    <FormField error={partyFormErrors.party_type} label="Papel" required>
+                      <SelectInput
+                        invalid={Boolean(partyFormErrors.party_type)}
+                        onChange={(event) => updatePartyForm("party_type", event.target.value)}
+                        value={partyForm.party_type}
+                      >
+                        {partyTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </SelectInput>
+                    </FormField>
+                    <FormField
+                      error={partyFormErrors.document}
+                      hint="Opcional. Use identificadores fictícios em ambiente local."
+                      label="Documento"
+                    >
+                      <TextInput
+                        invalid={Boolean(partyFormErrors.document)}
+                        onChange={(event) => updatePartyForm("document", event.target.value)}
+                        placeholder="00000000000"
+                        value={partyForm.document ?? ""}
+                      />
+                    </FormField>
+                    <FormField error={partyFormErrors.email} label="E-mail">
+                      <TextInput
+                        invalid={Boolean(partyFormErrors.email)}
+                        onChange={(event) => updatePartyForm("email", event.target.value)}
+                        placeholder="parte@example.test"
+                        type="email"
+                        value={partyForm.email ?? ""}
+                      />
+                    </FormField>
+                    <FormField label="Telefone">
+                      <TextInput
+                        onChange={(event) => updatePartyForm("phone", event.target.value)}
+                        placeholder="+5500000000000"
+                        value={partyForm.phone ?? ""}
+                      />
+                    </FormField>
+                    <FormField label="Observações">
+                      <TextArea
+                        onChange={(event) => updatePartyForm("notes", event.target.value)}
+                        placeholder="Observações fictícias sobre a parte"
+                        value={partyForm.notes ?? ""}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button disabled={partySubmitting} onClick={resetPartyForm} variant="secondary">
+                      Cancelar
+                    </Button>
+                    <Button loading={partySubmitting} type="submit">
+                      {editingParty ? "Salvar alterações" : "Adicionar parte"}
+                    </Button>
+                  </div>
+                </form>
               </div>
             )}
           </div>

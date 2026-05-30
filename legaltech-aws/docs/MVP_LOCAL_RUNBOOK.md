@@ -170,6 +170,7 @@ O script valida:
 - rejeicao de `organization_id` no payload
 - CRUD de clients
 - CRUD de cases
+- CRUD MVP de partes do caso via API
 - metadata de document
 - upload `.txt`, `.md` e `.docx` ficticios
 - download URL local/mock
@@ -239,6 +240,12 @@ Consultar agent executions:
 
 ```powershell
 docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT job_id, agent_type, status, attempt, started_at, completed_at FROM agent_executions ORDER BY created_at DESC LIMIT 10;"
+```
+
+Consultar partes do caso:
+
+```powershell
+docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT case_id, party_type, name, created_at FROM case_parties ORDER BY created_at DESC LIMIT 10;"
 ```
 
 ## 12. Encerrar servidores locais

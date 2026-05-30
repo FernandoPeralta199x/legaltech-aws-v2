@@ -8,6 +8,11 @@ CASES_UPDATE = "cases.update"
 CASES_READ = "cases.read"
 CASES_LIST = "cases.list"
 
+CASE_PARTIES_CREATE = "case_parties.create"
+CASE_PARTIES_UPDATE = "case_parties.update"
+CASE_PARTIES_READ = "case_parties.read"
+CASE_PARTIES_LIST = "case_parties.list"
+
 DOCUMENTS_CREATE = "documents.create"
 DOCUMENTS_UPDATE = "documents.update"
 DOCUMENTS_READ = "documents.read"

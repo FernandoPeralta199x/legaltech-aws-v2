@@ -25,6 +25,11 @@ workers locais, storage local/mock, adaptadores futuros de S3/SQS e
 documentacao de AWS. O foco de seguranca multi-tenant, RBAC, auditoria e LGPD
 esta presente desde a base.
 
+Atualizacao Tarefa 29.0: a edicao de clientes foi conectada no frontend usando
+o endpoint `PATCH /api/v1/clients/{client_id}` ja existente, e a aba Partes do
+caso passou a usar API MVP local com `GET`, `POST` e `PATCH` em
+`/api/v1/cases/{case_id}/parties`.
+
 Status geral: **aprovado com atencoes para E2E local e producao futura**.
 
 ## Resumo por area
@@ -93,6 +98,8 @@ Pontos verificados:
   - `converted_at`
 - Existe indice `idx_documents_org_conversion_status`.
 - O PostgreSQL local usa imagem `pgvector/pgvector:pg16` e init de extensoes.
+- O modelo recomendado para o MVP e PostgreSQL unico com pgvector no mesmo
+  banco; nao ha necessidade atual de banco vetorial separado.
 
 Atencoes:
 
@@ -174,6 +181,8 @@ Pontos verificados:
 - Payloads de criacao nao enviam `organization_id` como fonte de autoridade.
 - Componentes de loading, erro, vazio, formulario, notificacao e confirmacao
   estao presentes.
+- `/clients` permite editar clientes ja cadastrados.
+- `/cases/[id]` lista, cria e edita partes do caso via backend local.
 
 Atencoes:
 
@@ -330,3 +339,5 @@ Principais limitacoes:
 4. Adicionar correlation/request id para cruzar API, fila local, worker e
    audit_log.
 5. Planejar IaC minimo para ambiente `dev` sem dados reais.
+6. Integrar a etapa de Partes do wizard `/cases/new` ao novo modulo
+   `/api/v1/cases/{case_id}/parties`.

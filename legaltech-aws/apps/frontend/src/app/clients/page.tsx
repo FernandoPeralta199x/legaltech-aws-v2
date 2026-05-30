@@ -2,6 +2,7 @@
 
 import {
   BriefcaseBusiness,
+  Pencil,
   Mail,
   Phone,
   Plus,
@@ -24,9 +25,9 @@ import { PageTitle } from "@/components/PageTitle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
 import { ApiClientError } from "@/src/services/apiClient";
-import { createClient, listClients } from "@/src/services/clients";
+import { createClient, listClients, updateClient } from "@/src/services/clients";
 import { validateClientForm, type ValidationErrors } from "@/src/lib/validation";
-import type { Client, ClientCreate } from "@/types";
+import type { Client, ClientCreate, ClientUpdate } from "@/types";
 
 const riskConfig: Record<string, { label: string; className: string }> = {
   high: { label: "Risco alto", className: "text-red-700 bg-red-50 border-red-200" },
@@ -53,6 +54,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [error, setError] = useState("");
   const [fallbackReason, setFallbackReason] = useState("");
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [form, setForm] = useState<ClientCreate>(emptyForm);
   const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(true);
@@ -107,6 +109,36 @@ export default function ClientsPage() {
     setSuccessMessage("");
   }
 
+  function resetFormState() {
+    setEditingClient(null);
+    setForm(emptyForm);
+    setFormErrors({});
+    setShowForm(false);
+  }
+
+  function startCreateClient() {
+    setEditingClient(null);
+    setForm(emptyForm);
+    setFormErrors({});
+    setShowForm(true);
+    setError("");
+    setSuccessMessage("");
+  }
+
+  function startEditClient(client: Client) {
+    setEditingClient(client);
+    setForm({
+      document: client.document ?? "",
+      email: client.email ?? "",
+      name: client.name,
+      phone: client.phone ?? ""
+    });
+    setFormErrors({});
+    setShowForm(true);
+    setError("");
+    setSuccessMessage("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) {
@@ -125,24 +157,37 @@ export default function ClientsPage() {
     setSuccessMessage("");
 
     try {
-      const payload: ClientCreate = {
+      const payload: ClientUpdate = {
         document: form.document?.trim() || null,
         email: form.email?.trim() || null,
-        metadata: { source: "frontend" },
         name: form.name.trim(),
         phone: form.phone?.trim() || null
       };
-      const result = await createClient(payload);
-      setClients((current) => [result.data, ...current]);
+      const result = editingClient
+        ? await updateClient(editingClient.id, payload)
+        : await createClient({
+            ...payload,
+            metadata: { source: "frontend" },
+            name: payload.name ?? ""
+          });
+      setClients((current) =>
+        editingClient
+          ? current.map((client) =>
+              client.id === result.data.id ? result.data : client
+            )
+          : [result.data, ...current]
+      );
       setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
       setSuccessMessage(
         result.source === "mock"
-          ? "Cliente criado no fallback local de desenvolvimento."
-          : "Cliente criado com sucesso no backend."
+          ? editingClient
+            ? "Cliente atualizado no fallback local de desenvolvimento."
+            : "Cliente criado no fallback local de desenvolvimento."
+          : editingClient
+            ? "Cliente atualizado com sucesso no backend."
+            : "Cliente criado com sucesso no backend."
       );
-      setForm(emptyForm);
-      setFormErrors({});
-      setShowForm(false);
+      resetFormState();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -166,11 +211,7 @@ export default function ClientsPage() {
               </Button>
               <Button
                 icon={<Plus aria-hidden="true" size={15} />}
-                onClick={() => {
-                  setShowForm((current) => !current);
-                  setError("");
-                  setSuccessMessage("");
-                }}
+                onClick={startCreateClient}
               >
                 Novo cliente
               </Button>
@@ -203,9 +244,13 @@ export default function ClientsPage() {
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-[var(--text)]">Novo cliente</h2>
+              <h2 className="text-sm font-semibold text-[var(--text)]">
+                {editingClient ? "Editar cliente" : "Novo cliente"}
+              </h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
-                Use apenas dados fictícios. A organização continua vindo do JWT/contexto do backend.
+                {editingClient
+                  ? "Edite apenas dados cadastrais. A organização continua vindo do JWT/contexto do backend."
+                  : "Use apenas dados fictícios. A organização continua vindo do JWT/contexto do backend."}
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -247,11 +292,11 @@ export default function ClientsPage() {
               </FormField>
             </div>
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button disabled={submitting} onClick={() => setShowForm(false)} variant="secondary">
+              <Button disabled={submitting} onClick={resetFormState} variant="secondary">
                 Cancelar
               </Button>
               <Button loading={submitting} type="submit">
-                Criar cliente
+                {editingClient ? "Salvar alterações" : "Criar cliente"}
               </Button>
             </div>
           </form>
@@ -320,7 +365,18 @@ export default function ClientsPage() {
                         <p className="truncate text-[11px] text-[var(--text3)]">{client.documentLabel}</p>
                       </div>
                     </div>
-                    <StatusBadge status={client.status} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        aria-label={`Editar cliente ${client.name}`}
+                        icon={<Pencil aria-hidden="true" size={14} />}
+                        onClick={() => startEditClient(client)}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        Editar
+                      </Button>
+                      <StatusBadge status={client.status} />
+                    </div>
                   </div>
 
                   <dl className="mt-4 space-y-2 text-xs">
