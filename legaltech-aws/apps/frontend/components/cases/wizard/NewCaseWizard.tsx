@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { WizardActions, WizardShell } from "@/components/wizard";
+import { Notification } from "@/components/Notification";
 import {
   MATRIZ,
   type Modulo,
@@ -29,7 +30,7 @@ const STEP_TITLES: Record<number, string> = {
   2: "Envie o contrato",
   3: "Escolha o produto",
   4: "Personalize sua análise",
-  5: "Revisão e envio"
+  5: "Revisão e simulação"
 };
 
 function defaultModulesFor(produto: Produto): Record<Modulo, boolean> {
@@ -45,6 +46,10 @@ export function NewCaseWizard() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [submitNotice, setSubmitNotice] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
 
   const [parties, setParties] = useState<Party[]>(() => [newParty()]);
   const [arquivo, setArquivo] = useState<WizardFile | null>(null);
@@ -82,7 +87,11 @@ export function NewCaseWizard() {
   async function handleSubmit() {
     if (!canAdvance || !produto) return;
     setSubmitting(true);
-    // MOCK: aqui plugaremos POST /api/v1/cases/drafts/{id}/submit
+    setSubmitNotice({
+      title: "Simulação concluída",
+      description:
+        "Nenhum pedido foi enviado para um backend real. Você será redirecionado para a lista de casos locais."
+    });
     await new Promise((resolve) => setTimeout(resolve, 900));
     setSubmitting(false);
     router.push("/cases");
@@ -95,6 +104,12 @@ export function NewCaseWizard() {
       title={STEP_TITLES[step]}
       totalSteps={TOTAL_STEPS}
     >
+      {submitNotice && (
+        <Notification compact tone="success" title={submitNotice.title}>
+          {submitNotice.description}
+        </Notification>
+      )}
+
       {step === 1 && <PartiesStep onChange={setParties} parties={parties} />}
       {step === 2 && <ContractStep arquivo={arquivo} onChange={setArquivo} />}
       {step === 3 && <ProductStep onChange={handleProductChange} produto={produto} />}
@@ -115,6 +130,7 @@ export function NewCaseWizard() {
         onBack={() => setStep((s) => Math.max(1, s - 1))}
         onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
         onSubmit={handleSubmit}
+        submitLabel="Concluir simulação"
         step={step}
         submitting={submitting}
         totalSteps={TOTAL_STEPS}

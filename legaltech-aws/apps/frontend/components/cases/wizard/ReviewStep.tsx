@@ -50,10 +50,10 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-semibold text-[var(--text)]">Revisão do pedido</h2>
+        <h2 className="text-lg font-semibold text-[var(--text)]">Revisão da simulação</h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Confira tudo antes de enviar. Você poderá acompanhar o andamento na próxima
-          tela.
+          Confira tudo antes de concluir a simulação local. Nada será enviado para um
+          backend real nesta etapa.
         </p>
       </div>
 
@@ -138,8 +138,9 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
       <div className="flex items-start gap-2 rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-3 py-2.5">
         <Info className="mt-0.5 shrink-0 text-[var(--text2)]" size={14} />
         <p className="text-xs leading-5 text-[var(--text2)]">
-          Ao enviar, o caso será criado e os agentes de análise serão acionados. O
-          relatório final só é liberado após eventual revisão humana, quando aplicável.
+          Esta etapa apenas confirma a simulação local do wizard. Ao concluir, o
+          sistema mostra um retorno de sucesso e volta para /cases; nenhum pedido real
+          é criado.
         </p>
       </div>
     </div>
