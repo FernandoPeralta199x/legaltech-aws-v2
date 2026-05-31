@@ -6,6 +6,7 @@ import {
   validateClientForm,
   validateDevJwtForm,
   validateDocumentForm,
+  validateDocumentUploadForm,
   validatePasswordChange
 } from "./validation";
 
@@ -81,6 +82,51 @@ test("validateDocumentForm rejects uncontrolled status values", () => {
 
   assert.equal(result.valid, false);
   assert.equal(result.errors.status, "Selecione um status válido.");
+});
+
+test("validateDocumentUploadForm requires linked case and file", () => {
+  const result = validateDocumentUploadForm({
+    caseId: "",
+    file: null
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.caseId, "Selecione um caso vinculado.");
+  assert.equal(result.errors.file, "Selecione um arquivo para upload.");
+});
+
+test("validateDocumentUploadForm blocks unsupported type and oversized file", () => {
+  const result = validateDocumentUploadForm({
+    caseId: "case-1",
+    file: {
+      name: "payload.exe",
+      size: 11 * 1024 * 1024,
+      type: "application/octet-stream"
+    }
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(
+    result.errors.file,
+    "Use PDF, PNG, JPG, JPEG, DOCX, TXT ou MD com no máximo 10 MB."
+  );
+});
+
+test("validateDocumentUploadForm accepts local MVP image and pdf uploads", () => {
+  assert.equal(
+    validateDocumentUploadForm({
+      caseId: "case-1",
+      file: { name: "contrato.pdf", size: 1024, type: "application/pdf" }
+    }).valid,
+    true
+  );
+  assert.equal(
+    validateDocumentUploadForm({
+      caseId: "case-1",
+      file: { name: "evidencia.png", size: 2048, type: "image/png" }
+    }).valid,
+    true
+  );
 });
 
 test("validateDevJwtForm requires a pasted dev JWT", () => {

@@ -279,7 +279,7 @@ class DocumentServiceTest(unittest.TestCase):
             user_id=user_id,
             case_id=case_id,
             upload_file=upload_file,
-            metadata={"source": "unit-test"},
+            metadata={"organization_id": str(uuid4()), "source": "unit-test"},
         )
 
         self.assertEqual(organization_id, document.organization_id)

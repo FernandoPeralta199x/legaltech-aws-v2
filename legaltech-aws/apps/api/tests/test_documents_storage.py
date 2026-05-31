@@ -54,6 +54,42 @@ class LocalDocumentStorageTest(unittest.TestCase):
 
             self.assertEqual(400, context.exception.status_code)
 
+    def test_save_file_accepts_local_mvp_image_extensions(self) -> None:
+        from src.modules.documents.storage import LocalDocumentStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = LocalDocumentStorage(root_path=temp_dir, max_size_bytes=1024)
+
+            result = storage.save_file(
+                file_obj=io.BytesIO(b"fake png bytes"),
+                filename="evidencia.png",
+                content_type="image/png",
+                organization_id=uuid4(),
+                case_id=uuid4(),
+            )
+
+            self.assertEqual("evidencia.png", result.filename)
+            self.assertEqual("image/png", result.content_type)
+            self.assertTrue((Path(temp_dir) / result.storage_key).is_file())
+
+    def test_save_file_rejects_mismatched_basic_mime_type(self) -> None:
+        from src.modules.documents.storage import LocalDocumentStorage
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = LocalDocumentStorage(root_path=temp_dir, max_size_bytes=1024)
+
+            with self.assertRaises(HTTPException) as context:
+                storage.save_file(
+                    file_obj=io.BytesIO(b"fake image bytes"),
+                    filename="contrato.pdf",
+                    content_type="image/png",
+                    organization_id=uuid4(),
+                    case_id=uuid4(),
+                )
+
+            self.assertEqual(400, context.exception.status_code)
+            self.assertFalse(any(path.is_file() for path in Path(temp_dir).rglob("*")))
+
     def test_save_file_rejects_files_above_max_size_and_removes_partial_file(self) -> None:
         from src.modules.documents.storage import LocalDocumentStorage
 

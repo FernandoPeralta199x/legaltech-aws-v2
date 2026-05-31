@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from fastapi import UploadFile
@@ -15,6 +15,22 @@ from src.modules.documents.repository import DocumentRepository
 from src.modules.documents.schemas import DocumentCreate, DocumentUpdate
 from src.modules.documents.storage import PresignedUrlResult, StoredDocument
 from src.modules.documents.storage import create_document_storage
+
+
+AUTHORITATIVE_METADATA_FIELDS = frozenset(
+    {"organization_id", "tenant_id", "storage_bucket", "storage_key", "uploaded_by"}
+)
+
+
+def sanitize_document_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if not metadata:
+        return {}
+
+    return {
+        key: value
+        for key, value in metadata.items()
+        if key not in AUTHORITATIVE_METADATA_FIELDS
+    }
 
 
 class DocumentRepositoryProtocol(Protocol):
@@ -159,7 +175,7 @@ class DocumentService:
             file_hash=payload.file_hash,
             status=payload.status,
             uploaded_by=parse_uuid(user_id),
-            metadata_json=payload.metadata,
+            metadata_json=sanitize_document_metadata(payload.metadata),
         )
 
         return self.repository.create_document(document)
@@ -200,7 +216,7 @@ class DocumentService:
             status="uploaded",
             uploaded_by=parse_uuid(user_id),
             uploaded_at=datetime.now(UTC),
-            metadata_json=metadata or {},
+            metadata_json=sanitize_document_metadata(metadata),
         )
 
         return self.repository.create_document(document)
@@ -247,7 +263,7 @@ class DocumentService:
                 raise ResourceNotFoundError("Case not found.")
 
         if "metadata" in values:
-            values["metadata_json"] = values.pop("metadata")
+            values["metadata_json"] = sanitize_document_metadata(values.pop("metadata"))
 
         if "filename" in values:
             case_id = values.get("case_id", document.case_id)

@@ -153,7 +153,49 @@ O frontend valida o token no backend via `GET /api/v1/me` antes de salvar a
 sessao local. Sem token, token malformado, expirado ou recusado pela API, o
 login mostra erro e nao redireciona para telas internas.
 
-## 9. Rodar E2E automatizado
+## 9. Upload local de documentos pelo frontend
+
+A tela `/documents` permite upload funcional apenas no MVP local/dev.
+O fluxo usa `POST /api/v1/documents/upload` com `multipart/form-data`, JWT dev
+em `Authorization: Bearer` via `apiClient` e `case_id` selecionado na UI.
+O `organization_id` vem do JWT/backend e nunca deve ser enviado pelo frontend.
+
+Arquivos enviados localmente ficam em:
+
+```text
+apps/api/storage/local_uploads/
+```
+
+Essa pasta ja esta ignorada pelo Git em `.gitignore`. Nao use dados reais nos
+uploads locais. Para limpeza manual, apague somente arquivos de desenvolvimento
+nessa pasta com os servidores parados ou sem jobs em execucao.
+
+Tipos aceitos no MVP local:
+
+- PDF;
+- PNG;
+- JPG/JPEG;
+- DOCX;
+- TXT;
+- MD.
+
+Limite padrao: 10 MB por arquivo (`MAX_UPLOAD_SIZE_BYTES=10485760`).
+S3 real, presigned upload completo, OCR e IA/RAG continuam fora desta etapa.
+
+Fluxo manual:
+
+```text
+http://127.0.0.1:3000/documents
+```
+
+1. Entre com JWT dev.
+2. Selecione um caso.
+3. Selecione um arquivo ficticio pequeno.
+4. Clique em Enviar documento.
+5. Confirme que o documento aparece na lista.
+6. Recarregue a pagina e confirme que ele continua listado.
+
+## 10. Rodar E2E automatizado
 
 Com PostgreSQL e FastAPI rodando:
 
@@ -181,7 +223,7 @@ O script valida:
 - idempotencia por `job_id`
 - audit_log sem JWT completo ou conteudo integral do documento
 
-## 10. Validacoes obrigatorias
+## 11. Validacoes obrigatorias
 
 Backend:
 
@@ -222,7 +264,7 @@ git diff --check
 git status --short
 ```
 
-## 11. Conferencias manuais uteis
+## 12. Conferencias manuais uteis
 
 Consultar `audit_log`:
 
@@ -248,7 +290,7 @@ Consultar partes do caso:
 docker compose exec postgres psql -U legaltech -d legaltech -c "SELECT case_id, party_type, name, created_at FROM case_parties ORDER BY created_at DESC LIMIT 10;"
 ```
 
-## 12. Encerrar servidores locais
+## 13. Encerrar servidores locais
 
 Se os servidores foram iniciados em background, encontre os PIDs:
 
@@ -275,7 +317,7 @@ Para resetar dados locais, use apenas se quiser apagar o volume local:
 docker compose down -v
 ```
 
-## 13. Regras de seguranca
+## 14. Regras de seguranca
 
 - Nao usar dados reais.
 - Nao usar tokens reais.

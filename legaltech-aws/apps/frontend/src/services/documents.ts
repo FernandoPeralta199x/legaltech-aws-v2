@@ -31,6 +31,20 @@ export type EnqueueProcessingResult = {
   status: string;
 };
 
+export type DocumentUploadPayload = {
+  caseId: string;
+  file: File;
+  metadata?: Record<string, unknown>;
+};
+
+const AUTHORITATIVE_METADATA_FIELDS = new Set([
+  "organization_id",
+  "tenant_id",
+  "storage_bucket",
+  "storage_key",
+  "uploaded_by"
+]);
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -95,6 +109,21 @@ function makeMockDocument(payload: DocumentCreate): Document {
   };
 }
 
+function safeUploadMetadata(
+  metadata: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (!metadata) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(metadata).filter(
+      ([key, value]) =>
+        !AUTHORITATIVE_METADATA_FIELDS.has(key) && value !== undefined
+    )
+  );
+}
+
 export async function listDocuments(
   params: { caseId?: string; status?: string } = {}
 ): Promise<ServiceResult<Document[]>> {
@@ -153,6 +182,29 @@ export async function createDocument(
       source: "mock"
     };
   }
+}
+
+export async function uploadDocument(
+  payload: DocumentUploadPayload
+): Promise<ServiceResult<Document>> {
+  const formData = new FormData();
+  const metadata = safeUploadMetadata(payload.metadata);
+
+  formData.set("case_id", payload.caseId);
+  formData.set("file", payload.file);
+  if (Object.keys(metadata).length > 0) {
+    formData.set("metadata", JSON.stringify(metadata));
+  }
+
+  const response = await apiClient.postForm<BackendDocument>(
+    "/api/v1/documents/upload",
+    formData
+  );
+
+  return {
+    data: mapBackendDocument(response.data),
+    source: "api"
+  };
 }
 
 export async function getDocument(

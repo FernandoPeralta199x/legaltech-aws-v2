@@ -238,6 +238,22 @@ class DocumentsRoutesTest(unittest.TestCase):
         )
         self.assertEqual("documents.upload", self.audit_service.events[0]["action"])
 
+    def test_upload_document_requires_bearer_jwt(self) -> None:
+        response = self.client.post(
+            "/api/v1/documents/upload",
+            data={"case_id": str(uuid4())},
+            files={
+                "file": (
+                    "contrato.pdf",
+                    b"%PDF-1.4 conteudo fake",
+                    "application/pdf",
+                )
+            },
+        )
+
+        self.assertEqual(401, response.status_code)
+        self.assertEqual([], self.service.calls)
+
     def test_upload_document_without_permission_is_forbidden(self) -> None:
         self.permission_service.allowed = False
 

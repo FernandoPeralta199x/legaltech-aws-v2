@@ -26,8 +26,23 @@ const allowedDocumentStatuses = new Set([
 const allowedContentTypes = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
   "text/plain"
 ]);
+const maxDocumentUploadSizeBytes = 10 * 1024 * 1024;
+const allowedUploadMimeTypesByExtension: Record<string, ReadonlySet<string>> = {
+  ".docx": new Set([
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ]),
+  ".jpeg": new Set(["image/jpeg"]),
+  ".jpg": new Set(["image/jpeg"]),
+  ".md": new Set(["text/markdown", "text/plain"]),
+  ".pdf": new Set(["application/pdf"]),
+  ".png": new Set(["image/png"]),
+  ".txt": new Set(["text/plain"])
+};
+const tolerantUploadMimeTypes = new Set(["", "application/octet-stream"]);
 
 function result(errors: ValidationErrors): ValidationResult {
   return {
@@ -38,6 +53,15 @@ function result(errors: ValidationErrors): ValidationResult {
 
 function hasOnlySafeIdentifierCharacters(value: string): boolean {
   return /^[A-Za-z0-9./-]+$/.test(value);
+}
+
+function fileExtension(filename: string): string {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex < 0) {
+    return "";
+  }
+
+  return filename.slice(lastDotIndex).toLowerCase();
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -143,6 +167,41 @@ export function validateDocumentForm(input: {
 
   if (!input.status || !allowedDocumentStatuses.has(input.status)) {
     errors.status = "Selecione um status válido.";
+  }
+
+  return result(errors);
+}
+
+export function validateDocumentUploadForm(input: {
+  caseId?: string | null;
+  file?: Pick<File, "name" | "size" | "type"> | null;
+}): ValidationResult {
+  const errors: ValidationErrors = {};
+  const file = input.file ?? null;
+
+  if (!input.caseId?.trim()) {
+    errors.caseId = "Selecione um caso vinculado.";
+  }
+
+  if (!file) {
+    errors.file = "Selecione um arquivo para upload.";
+    return result(errors);
+  }
+
+  const extension = fileExtension(file.name);
+  const allowedMimeTypes = allowedUploadMimeTypesByExtension[extension];
+  const contentType = file.type.toLowerCase();
+  const mimeTypeIsAcceptable =
+    tolerantUploadMimeTypes.has(contentType) ||
+    Boolean(allowedMimeTypes?.has(contentType));
+
+  if (
+    file.size <= 0 ||
+    file.size > maxDocumentUploadSizeBytes ||
+    !allowedMimeTypes ||
+    !mimeTypeIsAcceptable
+  ) {
+    errors.file = "Use PDF, PNG, JPG, JPEG, DOCX, TXT ou MD com no máximo 10 MB.";
   }
 
   return result(errors);

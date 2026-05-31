@@ -11,8 +11,22 @@ from fastapi import HTTPException, UploadFile, status
 from src.core.config import Settings, get_settings
 
 
-ALLOWED_UPLOAD_EXTENSIONS = frozenset({".pdf", ".docx", ".txt", ".md"})
+ALLOWED_UPLOAD_EXTENSIONS = frozenset(
+    {".pdf", ".docx", ".txt", ".md", ".png", ".jpg", ".jpeg"}
+)
+ALLOWED_UPLOAD_CONTENT_TYPES_BY_EXTENSION = {
+    ".docx": frozenset(
+        {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+    ),
+    ".jpeg": frozenset({"image/jpeg"}),
+    ".jpg": frozenset({"image/jpeg"}),
+    ".md": frozenset({"text/markdown", "text/plain"}),
+    ".pdf": frozenset({"application/pdf"}),
+    ".png": frozenset({"image/png"}),
+    ".txt": frozenset({"text/plain"}),
+}
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
+TOLERATED_GENERIC_CONTENT_TYPES = frozenset({"", DEFAULT_CONTENT_TYPE})
 LOCAL_STORAGE_BUCKET = "local-dev"
 READ_CHUNK_SIZE_BYTES = 1024 * 1024
 
@@ -109,6 +123,7 @@ class LocalDocumentStorage:
     ) -> StoredDocument:
         safe_filename = self._safe_filename(filename)
         self._validate_extension(safe_filename)
+        self._validate_content_type(safe_filename, content_type)
 
         organization_path = str(organization_id)
         case_path = str(case_id)
@@ -247,6 +262,26 @@ class LocalDocumentStorage:
                 detail=f"Unsupported document extension. Allowed: {allowed}.",
             )
 
+    def _validate_content_type(self, filename: str, content_type: str) -> None:
+        extension = Path(filename).suffix.lower()
+        normalized_content_type = (content_type or "").split(";", 1)[0].strip().lower()
+        allowed_content_types = ALLOWED_UPLOAD_CONTENT_TYPES_BY_EXTENSION.get(extension)
+        if (
+            not allowed_content_types
+            or normalized_content_type in allowed_content_types
+            or normalized_content_type in TOLERATED_GENERIC_CONTENT_TYPES
+        ):
+            return
+
+        allowed = ", ".join(sorted(allowed_content_types))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Unsupported content type for document extension. "
+                f"Allowed for {extension}: {allowed}."
+            ),
+        )
+
     def _ensure_path_inside_root(self, target_path: Path) -> None:
         try:
             target_path.relative_to(self.root_path)
@@ -306,6 +341,7 @@ class S3DocumentStorage:
     ) -> StoredDocument:
         safe_filename = self._safe_filename(filename)
         self._validate_extension(safe_filename)
+        self._validate_content_type(safe_filename, content_type)
         storage_key = (
             f"organizations/{organization_id}/cases/{case_id}/documents/"
             f"{uuid4().hex}_{safe_filename}"
@@ -465,6 +501,13 @@ class S3DocumentStorage:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported document extension. Allowed: {allowed}.",
             )
+
+    def _validate_content_type(self, filename: str, content_type: str) -> None:
+        LocalDocumentStorage(
+            root_path=tempfile.gettempdir(),
+            max_size_bytes=self.max_size_bytes,
+            allowed_extensions=self.allowed_extensions,
+        )._validate_content_type(filename, content_type)
 
     def _safe_content_disposition_filename(self, filename: str) -> str:
         return re.sub(r'["\\\r\n]+', "_", Path(filename).name)

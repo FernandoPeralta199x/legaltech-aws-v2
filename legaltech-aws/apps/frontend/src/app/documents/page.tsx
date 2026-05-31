@@ -3,13 +3,14 @@
 import {
   Download,
   FileText,
-  Plus,
   RefreshCw,
-  Send
+  Send,
+  Upload,
+  X
 } from "lucide-react";
 import Link from "next/link";
-import type { FormEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -27,31 +28,25 @@ import { formatDate } from "@/lib/formatters";
 import { ApiClientError } from "@/src/services/apiClient";
 import { listCases } from "@/src/services/cases";
 import {
-  createDocument,
   enqueueDocumentProcessing,
   getDocumentDownloadUrl,
-  listDocuments
+  listDocuments,
+  uploadDocument
 } from "@/src/services/documents";
-import { validateDocumentForm, type ValidationErrors } from "@/src/lib/validation";
-import type { Case, Document, DocumentCreate, DocumentStatus } from "@/types";
+import { validateDocumentUploadForm, type ValidationErrors } from "@/src/lib/validation";
+import type { Case, Document } from "@/types";
 
 type DocumentForm = {
   caseId: string;
-  contentType: string;
-  filename: string;
   notes: string;
-  sizeBytes: string;
-  status: DocumentStatus;
 };
 
 const emptyDocumentForm: DocumentForm = {
   caseId: "",
-  contentType: "application/pdf",
-  filename: "",
-  notes: "",
-  sizeBytes: "1024",
-  status: "pending_upload"
+  notes: ""
 };
+
+const acceptedUploadTypes = ".pdf,.png,.jpg,.jpeg,.docx,.txt,.md";
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
@@ -59,6 +54,39 @@ function errorMessage(error: unknown): string {
   }
 
   return error instanceof Error ? error.message : "Não foi possível carregar documentos.";
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function documentTypeLabel(contentType: string): string {
+  const labels: Record<string, string> = {
+    "application/pdf": "PDF",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
+    "image/jpeg": "JPG",
+    "image/png": "PNG",
+    "text/markdown": "MD",
+    "text/plain": "TXT"
+  };
+
+  return labels[contentType] ?? contentType.split("/")[1]?.toUpperCase() ?? "Arquivo";
+}
+
+function documentSourceLabel(document: Document): string {
+  if (document.status === "uploaded") {
+    return "Enviado localmente";
+  }
+
+  return "Metadata apenas";
 }
 
 export default function DocumentsPage() {
@@ -72,9 +100,11 @@ export default function DocumentsPage() {
   const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(true);
   const [pendingEnqueue, setPendingEnqueue] = useState<Document | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCase, setSelectedCase] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refreshDocuments = useCallback(async () => {
     setLoading(true);
@@ -126,46 +156,64 @@ export default function DocumentsPage() {
     setActionMessage("");
   }
 
+  function clearSelectedFile() {
+    setSelectedFile(null);
+    setFormErrors((current) => ({ ...current, file: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setFormErrors((current) => ({ ...current, file: "" }));
+    setError("");
+    setActionMessage("");
+  }
+
+  function closeUploadForm() {
+    setShowForm(false);
+    setFormErrors({});
+    setForm((current) => ({ ...emptyDocumentForm, caseId: current.caseId }));
+    clearSelectedFile();
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) {
       return;
     }
 
-    const validation = validateDocumentForm(form);
+    const validation = validateDocumentUploadForm({
+      caseId: form.caseId,
+      file: selectedFile
+    });
     setFormErrors(validation.errors);
     if (!validation.valid) {
-      setError("Revise os campos destacados antes de criar o metadado do documento.");
+      setError("Revise os campos destacados antes de enviar o documento.");
       return;
     }
 
-    const sizeBytes = Number(form.sizeBytes);
     setSubmitting(true);
     setError("");
     setActionMessage("");
 
     try {
-      const payload: DocumentCreate = {
-        case_id: form.caseId,
-        content_type: form.contentType,
-        filename: form.filename.trim(),
+      const result = await uploadDocument({
+        caseId: form.caseId,
+        file: selectedFile as File,
         metadata: {
           notes: form.notes.trim(),
-          source: "frontend_metadata_only"
-        },
-        size_bytes: sizeBytes,
-        status: form.status
-      };
-      const result = await createDocument(payload);
+          source: "frontend_local_upload"
+        }
+      });
       setDocuments((current) => [result.data, ...current]);
-      setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
-      setActionMessage(
-        result.source === "mock"
-          ? "Metadado criado no fallback local. Nenhum arquivo real foi enviado."
-          : "Metadado do documento criado com sucesso no backend. Upload real não faz parte desta tela."
-      );
+      setFallbackReason("");
+      setActionMessage("Documento enviado com sucesso no storage local de desenvolvimento.");
       setShowForm(false);
       setForm((current) => ({ ...emptyDocumentForm, caseId: current.caseId }));
+      clearSelectedFile();
       setFormErrors({});
     } catch (err) {
       setError(errorMessage(err));
@@ -230,18 +278,18 @@ export default function DocumentsPage() {
                 Atualizar
               </Button>
               <Button
-                icon={<Plus aria-hidden="true" size={15} />}
+                icon={<Upload aria-hidden="true" size={15} />}
                 onClick={() => {
                   setShowForm((current) => !current);
                   setError("");
                   setActionMessage("");
                 }}
               >
-                Novo metadado
+                Enviar documento
               </Button>
             </div>
           }
-          description="Metadados de documentos vinculados a casos. Upload real, S3 e OCR continuam fora desta tela."
+          description="Upload local de desenvolvimento. S3, OCR e IA continuam fora do MVP local."
           eyebrow="Documentos"
           title="Documentos enviados"
         />
@@ -268,9 +316,9 @@ export default function DocumentsPage() {
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-[var(--text)]">Novo metadado de documento</h2>
+              <h2 className="text-sm font-semibold text-[var(--text)]">Enviar documento</h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
-                Esta tela cria apenas metadata. Nenhum upload real, S3, OCR ou IA é executado aqui.
+                Upload local de desenvolvimento. S3, OCR e IA continuam fora do MVP local.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -292,60 +340,57 @@ export default function DocumentsPage() {
                   )}
                 </SelectInput>
               </FormField>
-              <FormField error={formErrors.filename} label="Nome do documento" required>
-                <TextInput
-                  invalid={Boolean(formErrors.filename)}
-                  onChange={(event) => updateForm("filename", event.target.value)}
-                  placeholder="contrato-exemplo.pdf"
-                  value={form.filename}
+              <FormField error={formErrors.file} label="Arquivo" required>
+                <input
+                  aria-invalid={Boolean(formErrors.file) || undefined}
+                  accept={acceptedUploadTypes}
+                  className={`cv-input w-full px-3 ${formErrors.file ? "cv-input-invalid" : ""}`}
+                  onChange={handleFileChange}
+                  ref={fileInputRef}
+                  type="file"
                 />
-              </FormField>
-              <FormField error={formErrors.contentType} label="Tipo do arquivo" required>
-                <SelectInput
-                  invalid={Boolean(formErrors.contentType)}
-                  onChange={(event) => updateForm("contentType", event.target.value)}
-                  value={form.contentType}
-                >
-                  <option value="application/pdf">PDF</option>
-                  <option value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">DOCX</option>
-                  <option value="text/plain">TXT</option>
-                </SelectInput>
-              </FormField>
-              <FormField error={formErrors.sizeBytes} label="Tamanho em bytes" required>
-                <TextInput
-                  invalid={Boolean(formErrors.sizeBytes)}
-                  min={1}
-                  onChange={(event) => updateForm("sizeBytes", event.target.value)}
-                  type="number"
-                  value={form.sizeBytes}
-                />
-              </FormField>
-              <FormField error={formErrors.status} label="Status" required>
-                <SelectInput
-                  invalid={Boolean(formErrors.status)}
-                  onChange={(event) => updateForm("status", event.target.value as DocumentStatus)}
-                  value={form.status}
-                >
-                  <option value="pending_upload">Aguardando upload</option>
-                  <option value="uploaded">Enviado</option>
-                  <option value="processing">Processando</option>
-                  <option value="processed">Processado</option>
-                </SelectInput>
               </FormField>
               <FormField label="Observação">
                 <TextInput
                   onChange={(event) => updateForm("notes", event.target.value)}
-                  placeholder="Metadado fictício de desenvolvimento"
+                  placeholder="Observação fictícia de desenvolvimento"
                   value={form.notes}
                 />
               </FormField>
             </div>
+            {selectedFile && (
+              <div className="cv-list-row mt-4 flex items-center gap-3 px-4 py-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surf3)]">
+                  <FileText className="text-[var(--text2)]" size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-[var(--text)]">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-[11px] text-[var(--text3)]">
+                    {formatBytes(selectedFile.size)} · {documentTypeLabel(selectedFile.type)}
+                  </p>
+                </div>
+                <button
+                  aria-label="Remover arquivo selecionado"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text2)] transition hover:bg-red-500/10 hover:text-red-500"
+                  onClick={clearSelectedFile}
+                  type="button"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button disabled={submitting} onClick={() => setShowForm(false)} variant="secondary">
+              <Button disabled={submitting} onClick={closeUploadForm} variant="secondary">
                 Cancelar
               </Button>
-              <Button loading={submitting} type="submit">
-                Criar metadado
+              <Button
+                icon={<Upload aria-hidden="true" size={15} />}
+                loading={submitting}
+                type="submit"
+              >
+                Enviar documento
               </Button>
             </div>
           </form>
@@ -369,7 +414,7 @@ export default function DocumentsPage() {
 
         <Card
           title="Arquivos recentes"
-          description="Metadata real quando o backend está disponível; fallback local em desenvolvimento."
+          description="Documentos e metadados persistidos pelo backend local quando a API está disponível."
         >
           {loading ? (
             <LoadingState
@@ -390,11 +435,11 @@ export default function DocumentsPage() {
           ) : visibleDocuments.length === 0 ? (
             <EmptyState
               action={
-                <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)}>
-                  Criar metadado
+                <Button icon={<Upload size={15} />} onClick={() => setShowForm(true)}>
+                  Enviar documento
                 </Button>
               }
-              description={selectedCase ? "Nenhum documento encontrado para o caso selecionado." : "Crie metadata para validar o vínculo documento-caso sem upload real."}
+              description={selectedCase ? "Nenhum documento encontrado para o caso selecionado." : "Envie um arquivo fictício para validar o vínculo documento-caso no MVP local."}
               icon={<FileText size={20} />}
               title="Sem documentos"
               variant="compact"
@@ -415,10 +460,10 @@ export default function DocumentsPage() {
                         {doc.filename}
                       </p>
                       <p className="text-[11px] text-[var(--text3)]">
-                        {doc.sizeLabel} · {doc.contentType.split("/")[1]?.toUpperCase()}
+                        {doc.sizeLabel} · {documentTypeLabel(doc.contentType)}
                       </p>
                       <span className="cv-badge cv-badge-muted mt-1">
-                        Metadata apenas
+                        {documentSourceLabel(doc)}
                       </span>
                     </div>
                   </div>

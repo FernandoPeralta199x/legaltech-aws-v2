@@ -37,6 +37,11 @@ Conclusao: Projeto reforcado para MVP local controlado, ainda nao production-rea
   lista permitida.
 - Exemplos de ambiente e docs receberam aviso explicito sobre variaveis
   `NEXT_PUBLIC_*`.
+- A tela `/documents` passou a enviar arquivos reais para o backend local via
+  `multipart/form-data`, preservando `Authorization: Bearer` no `apiClient`.
+- O upload local valida caso, tamanho, extensao e MIME basico, grava em
+  `apps/api/storage/local_uploads/` e nao aceita `organization_id` vindo do
+  frontend como fonte de autoridade.
 
 ## Limitacoes Do MVP Local
 
@@ -45,7 +50,8 @@ Conclusao: Projeto reforcado para MVP local controlado, ainda nao production-rea
   de producao.
 - Cognito real, S3 real, SQS real, Lambda, OCR, IA/RAG e APIs externas reais
   seguem fora do escopo.
-- Upload real no frontend e presigned upload completo ainda nao estao prontos.
+- Upload real no frontend existe apenas para MVP local/dev; presigned upload
+  completo para S3 ainda nao esta pronto.
 - RLS no PostgreSQL, WAF, rate limiting, observabilidade e politicas formais de
   retencao/LGPD permanecem pendentes.
 
@@ -126,7 +132,9 @@ Conclusao: Projeto reforcado para MVP local controlado, ainda nao production-rea
 ## Documentos Sensiveis
 
 - Nao usar dados reais no MVP local.
-- Storage local fica em pasta ignorada pelo Git.
+- Storage local fica em `apps/api/storage/local_uploads/`, pasta ignorada pelo
+  Git. Limpe esses arquivos quando necessario e nao compartilhe artefatos
+  locais.
 - S3 futuro deve ser privado e acessado por presigned URL temporaria.
 - Relatorios juridicos finais continuam exigindo revisao humana.
 

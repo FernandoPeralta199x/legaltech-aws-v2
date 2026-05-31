@@ -47,20 +47,27 @@ Elas nao sao bugs necessariamente; sao fronteiras para tarefas futuras.
 
 ## Documentos e normalizacao
 
-- Upload real pelo frontend ainda nao existe.
+- Upload funcional pelo frontend existe apenas no MVP local/dev e grava
+  arquivos ficticios em storage local ignorado pelo Git.
 - Storage S3 esta preparado, mas nao conectado a bucket real.
 - Presigned upload completo ainda nao esta implementado.
+- Download real do arquivo local ainda nao foi exposto; a URL local/mock nao
+  revela caminho absoluto nem storage key.
 - Normalizacao Markdown suporta somente:
   - `.txt`
   - `.md`
   - `.docx` simples
   - `.pdf` com texto extraivel
+- Upload local tambem aceita imagens `.png`, `.jpg` e `.jpeg` como anexos do
+  caso, mas nao executa OCR nem extracao de texto nesta etapa.
 - PDF escaneado ou sem texto fica como `requires_ocr`; OCR real esta fora do
   escopo atual.
 - DOCX com elementos complexos, imagens, notas, cabecalhos/rodapes e tabelas
   sofisticadas pode perder estrutura.
 - O Markdown convertido fica no storage local/mock ignorado pelo Git; nao deve
   ser commitado.
+- Arquivos enviados no MVP local ficam em `apps/api/storage/local_uploads/` por
+  padrao e nao devem conter dados reais.
 
 ## Processamento, IA e RAG
 
