@@ -165,6 +165,13 @@ export default function DashboardPage() {
               <Button href="/cases" icon={<Plus aria-hidden="true" size={15} />}>
                 Novo caso
               </Button>
+              <Button
+                href="/cases/new"
+                icon={<Plus aria-hidden="true" size={15} />}
+                variant="secondary"
+              >
+                Novo pedido experimental
+              </Button>
             </div>
           }
           description="Visão geral dos casos, documentos e atividade preparada para o backend."
