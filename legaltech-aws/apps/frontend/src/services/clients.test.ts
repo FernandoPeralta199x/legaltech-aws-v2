@@ -31,15 +31,26 @@ test("listClients maps backend clients and reports api source", async () => {
 });
 
 test("listClients falls back to mock only when the API is unavailable", async () => {
+  const originalMockFallback = process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+  process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = "true";
+
   globalThis.fetch = (async () => {
     throw new TypeError("fetch failed");
   }) as typeof fetch;
 
-  const result = await listClients();
+  try {
+    const result = await listClients();
 
-  assert.equal(result.source, "mock");
-  assert.ok(result.fallbackReason);
-  assert.ok(result.data.length > 0);
+    assert.equal(result.source, "mock");
+    assert.ok(result.fallbackReason);
+    assert.ok(result.data.length > 0);
+  } finally {
+    if (originalMockFallback === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+    } else {
+      process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = originalMockFallback;
+    }
+  }
 });
 
 test("listClients does not hide authorization errors behind fallback", async () => {
