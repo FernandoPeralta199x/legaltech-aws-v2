@@ -25,7 +25,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
-import { ApiClientError } from "@/src/services/apiClient";
+import { errorMessage } from "@/src/lib/errorMessage";
 import { createCase, listCases } from "@/src/services/cases";
 import { listClients } from "@/src/services/clients";
 import { validateCaseForm, type ValidationErrors } from "@/src/lib/validation";
@@ -77,14 +77,6 @@ const emptyCaseForm: CaseForm = {
   title: ""
 };
 
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return `${error.code}: ${error.message}`;
-  }
-
-  return error instanceof Error ? error.message : "Não foi possível carregar casos.";
-}
-
 function caseDisplayTitle(legalCase: Case): string {
   const title = legalCase.metadata?.title;
   return typeof title === "string" && title.trim()
@@ -126,7 +118,7 @@ export default function CasesPage() {
           : ""
       );
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar casos."));
       setFallbackReason("");
     } finally {
       setLoading(false);
@@ -211,7 +203,7 @@ export default function CasesPage() {
       }));
       setFormErrors({});
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar casos."));
     } finally {
       setSubmitting(false);
     }

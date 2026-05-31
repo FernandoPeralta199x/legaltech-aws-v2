@@ -25,7 +25,7 @@ import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
-import { ApiClientError } from "@/src/services/apiClient";
+import { errorMessage } from "@/src/lib/errorMessage";
 import { listCases } from "@/src/services/cases";
 import {
   enqueueDocumentProcessing,
@@ -47,14 +47,6 @@ const emptyDocumentForm: DocumentForm = {
 };
 
 const acceptedUploadTypes = ".pdf,.png,.jpg,.jpeg,.docx,.txt,.md";
-
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return `${error.code}: ${error.message}`;
-  }
-
-  return error instanceof Error ? error.message : "Não foi possível carregar documentos.";
-}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) {
@@ -128,7 +120,7 @@ export default function DocumentsPage() {
           : ""
       );
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar documentos."));
       setFallbackReason("");
     } finally {
       setLoading(false);
@@ -216,7 +208,7 @@ export default function DocumentsPage() {
       clearSelectedFile();
       setFormErrors({});
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar documentos."));
     } finally {
       setSubmitting(false);
     }
@@ -236,7 +228,7 @@ export default function DocumentsPage() {
           : `URL temporária gerada. Expiração: ${result.data.expires_in_seconds}s.`
       );
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar documentos."));
     } finally {
       setActionBusyId("");
     }
@@ -257,7 +249,7 @@ export default function DocumentsPage() {
       setActionMessage(`Processamento enfileirado: ${result.data.job_id}.`);
       setPendingEnqueue(null);
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar documentos."));
     } finally {
       setActionBusyId("");
     }

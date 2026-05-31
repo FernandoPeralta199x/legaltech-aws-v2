@@ -27,19 +27,11 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
 import { mockAgentExecutions, mockReports } from "@/lib/mockData";
-import { ApiClientError } from "@/src/services/apiClient";
 import { listCases } from "@/src/services/cases";
 import { listClients } from "@/src/services/clients";
 import { listDocuments } from "@/src/services/documents";
+import { errorMessage } from "@/src/lib/errorMessage";
 import type { Case, Client, Document } from "@/types";
-
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return `${error.code}: ${error.message}`;
-  }
-
-  return error instanceof Error ? error.message : "Não foi possível carregar o dashboard.";
-}
 
 function caseDisplayTitle(legalCase: Case): string {
   const title = legalCase.metadata?.title;
@@ -85,7 +77,7 @@ export default function DashboardPage() {
           : ""
       );
     } catch (err) {
-      setError(errorMessage(err));
+      setError(errorMessage(err, "Não foi possível carregar o dashboard."));
       setFallbackReason("");
     } finally {
       setLoading(false);
