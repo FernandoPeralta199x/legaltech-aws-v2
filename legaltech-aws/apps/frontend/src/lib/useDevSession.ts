@@ -20,6 +20,11 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): string {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[useDevSession] localStorage session is not allowed in production. Use Cognito/httpOnly cookies."
+    );
+  }
   return window.localStorage.getItem(AUTH_STORAGE_KEY) ?? "";
 }
 

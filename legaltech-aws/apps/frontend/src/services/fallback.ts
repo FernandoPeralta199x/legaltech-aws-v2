@@ -9,7 +9,8 @@ export type ServiceResult<T> = {
 };
 
 export function isMockFallbackEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK !== "false";
+  if (process.env.NODE_ENV === "production") return false;
+  return process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK === "true";
 }
 
 export function shouldUseMockFallback(error: unknown): boolean {
