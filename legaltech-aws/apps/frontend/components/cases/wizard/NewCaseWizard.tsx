@@ -26,11 +26,11 @@ import {
 const TOTAL_STEPS = 5;
 
 const STEP_TITLES: Record<number, string> = {
-  1: "Quem são as partes?",
-  2: "Envie o contrato",
-  3: "Escolha o produto",
-  4: "Personalize sua análise",
-  5: "Revisão e simulação"
+  1: "Identifique partes e cliente",
+  2: "Anexe contrato ou documento",
+  3: "Escolha o produto jurídico",
+  4: "Ajuste os módulos da análise",
+  5: "Revise o Novo Pedido"
 };
 
 function defaultModulesFor(produto: Produto): Record<Modulo, boolean> {
@@ -90,7 +90,7 @@ export function NewCaseWizard() {
     setSubmitNotice({
       title: "Simulação concluída",
       description:
-        "Nenhum pedido foi enviado para um backend real. Você será redirecionado para a lista de casos locais."
+        "Nenhum pedido foi enviado para um backend real. Você será redirecionado para Casos para seguir o fluxo operacional do MVP local."
     });
     await new Promise((resolve) => setTimeout(resolve, 900));
     setSubmitting(false);
@@ -100,6 +100,7 @@ export function NewCaseWizard() {
   return (
     <WizardShell
       backHref="/cases"
+      description="Preencha as informações que futuramente poderão originar um caso real. Nesta etapa, tudo permanece no frontend."
       step={step}
       title={STEP_TITLES[step]}
       totalSteps={TOTAL_STEPS}

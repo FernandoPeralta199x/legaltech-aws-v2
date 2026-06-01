@@ -127,7 +127,7 @@ export function ContractDropzone({ file, onChange }: ContractDropzoneProps) {
         <div className="mt-4 flex items-center gap-1.5 rounded-lg border border-[rgba(32,201,151,0.2)] bg-[var(--teal-dim)] px-3 py-2">
           <Lock className="shrink-0 text-[var(--teal)]" size={12} />
           <p className="text-[11px] text-[var(--text2)]">
-            Arquivos processados em ambiente seguro e criptografado.
+            Simulação local: nenhum arquivo é enviado para S3 ou backend real.
           </p>
         </div>
       </div>
@@ -167,8 +167,8 @@ function FilePreview({
               />
             </div>
             <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-[var(--text2)]">
-              {file.status === "uploading" && `Enviando ${file.progress}%`}
-              {file.status === "extracting" && "Extraindo texto…"}
+              {file.status === "uploading" && `Preparando ${file.progress}%`}
+              {file.status === "extracting" && "Simulando leitura…"}
               {file.status === "done" && "Pronto"}
               {file.status === "error" && "Erro"}
             </span>
@@ -191,8 +191,8 @@ function FilePreview({
         <div className="flex items-start gap-2 rounded-lg border border-[rgba(96,165,250,0.2)] bg-[var(--blue-dim)] px-3 py-2.5">
           <Sparkles className="mt-0.5 shrink-0 text-[var(--blue)]" size={14} />
           <p className="text-xs leading-5 text-[var(--text2)]">
-            Já extraímos automaticamente o texto do contrato. A análise por IA usará
-            essas informações na etapa seguinte.
+            Pré-processamento visual concluído. Esta simulação não executa OCR,
+            IA ou extração real de texto.
           </p>
         </div>
       )}

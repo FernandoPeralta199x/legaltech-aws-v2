@@ -25,7 +25,7 @@ export function WizardActions({
   onNext,
   onSubmit,
   nextLabel = "Continuar",
-  submitLabel = "Enviar pedido"
+  submitLabel = "Concluir simulação"
 }: WizardActionsProps) {
   const isLast = step === totalSteps;
 
@@ -49,7 +49,7 @@ export function WizardActions({
           size="lg"
           variant="primary"
         >
-          {submitting ? "Enviando..." : submitLabel}
+          {submitting ? "Concluindo simulação..." : submitLabel}
         </Button>
       ) : (
         <Button

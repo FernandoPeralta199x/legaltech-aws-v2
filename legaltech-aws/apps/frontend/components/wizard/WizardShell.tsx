@@ -12,6 +12,7 @@ type WizardShellProps = {
   totalSteps: number;
   backHref?: string;
   backLabel?: string;
+  description?: string;
   children: ReactNode;
 };
 
@@ -21,6 +22,7 @@ export function WizardShell({
   totalSteps,
   backHref,
   backLabel = "Voltar para casos",
+  description,
   children
 }: WizardShellProps) {
   return (
@@ -37,12 +39,22 @@ export function WizardShell({
 
       <div className="flex items-end justify-between gap-4">
         <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--teal)]">
+            Novo Pedido - fluxo frontend-first
+          </p>
           <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
             {title}
           </h1>
-          <p className="mt-1 text-xs text-[var(--text2)]">
-            Etapa {step} de {totalSteps}
-          </p>
+          <div className="mt-2 space-y-1">
+            {description && (
+              <p className="text-sm leading-6 text-[var(--text2)]">
+                {description}
+              </p>
+            )}
+            <p className="text-xs text-[var(--text3)]">
+              Etapa {step} de {totalSteps} - simulação local, sem submit real.
+            </p>
+          </div>
         </div>
       </div>
 

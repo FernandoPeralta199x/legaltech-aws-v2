@@ -6,13 +6,21 @@ export default function NewCasePage() {
   return (
     <AuthGuard>
       <AppLayout>
-        <section className="mx-auto mb-6 w-full max-w-3xl rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text2)]">
-            Fluxo novo - MVP local
+        <section className="mx-auto mb-6 w-full max-w-3xl rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--teal)]">
+            Novo Pedido - MVP local
           </p>
-          <p className="mt-1 text-xs leading-5 text-[var(--text2)]">
-            Este wizard é experimental, usa apenas dados fictícios e ainda não faz
-            submit real nem integra o backend novo da ADR-001.
+          <h1 className="mt-2 text-xl font-bold leading-tight text-[var(--text)]">
+            Inicie o fluxo principal de criação
+          </h1>
+          <p className="mt-2 text-xs leading-5 text-[var(--text2)]">
+            Este wizard guia a simulação frontend-first do pedido: partes,
+            contrato, produto jurídico, módulos e revisão final.
+          </p>
+          <p className="mt-2 text-[11px] leading-5 text-[var(--text3)]">
+            Use apenas dados fictícios. Concluir a simulação não cria caso real
+            no backend; ao final você volta para Casos para acompanhar o MVP
+            local.
           </p>
         </section>
         <NewCaseWizard />

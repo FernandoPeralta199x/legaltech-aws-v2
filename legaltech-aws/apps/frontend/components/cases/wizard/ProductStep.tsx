@@ -16,11 +16,11 @@ export function ProductStep({ produto, onChange }: ProductStepProps) {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          O que você precisa analisar?
+          Qual produto jurídico orienta este pedido?
         </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Cada produto inclui um conjunto de consultas e análises. Você poderá ajustar
-          os módulos opcionais na próxima etapa.
+          A escolha define o tipo de análise simulada e os módulos sugeridos. Nenhuma
+          consulta externa ou IA real será acionada nesta etapa.
         </p>
       </div>
 

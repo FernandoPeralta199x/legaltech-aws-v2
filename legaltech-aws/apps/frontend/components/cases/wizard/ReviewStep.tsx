@@ -50,21 +50,23 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg font-semibold text-[var(--text)]">Revisão da simulação</h2>
+        <h2 className="text-lg font-semibold text-[var(--text)]">
+          Revisão final do Novo Pedido
+        </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Confira tudo antes de concluir a simulação local. Nada será enviado para um
-          backend real nesta etapa.
+          Confira os dados antes de concluir a simulação local. Esta revisão prepara
+          o caminho para um futuro rascunho real, mas ainda não envia nada ao backend.
         </p>
       </div>
 
-      <Section label="Produto selecionado">
+      <Section label="Produto jurídico">
         <p className="text-sm font-semibold text-[var(--text)]">
           {PRODUTOS[produto].titulo}
         </p>
         <p className="mt-1 text-xs text-[var(--text2)]">{PRODUTOS[produto].descricao}</p>
       </Section>
 
-      <Section label={`Partes (${parties.length})`}>
+      <Section label={`Partes / Cliente (${parties.length})`}>
         <ul className="space-y-2">
           {parties.map((p) => (
             <li className="flex items-start gap-3 text-xs" key={p.id}>
@@ -87,7 +89,7 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
         </ul>
       </Section>
 
-      <Section label="Contrato">
+      <Section label="Contrato ou documento">
         {arquivo ? (
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--teal-dim)] text-[var(--teal)]">
@@ -99,16 +101,18 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
               </p>
               <p className="text-[11px] text-[var(--text3)]">
                 {(arquivo.size / 1024 / 1024).toFixed(2)} MB ·{" "}
-                {arquivo.status === "done" ? "Pronto" : "Processando…"}
+                {arquivo.status === "done" ? "Pronto para simulação" : "Preparando…"}
               </p>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-[var(--text2)]">Nenhum contrato enviado.</p>
+          <p className="text-xs text-[var(--text2)]">
+            Nenhum contrato selecionado.
+          </p>
         )}
       </Section>
 
-      <Section label="Módulos">
+      <Section label="Módulos simulados">
         <div className="space-y-3 text-xs">
           <div>
             <p className="font-semibold text-[var(--text)]">
@@ -138,9 +142,9 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
       <div className="flex items-start gap-2 rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-3 py-2.5">
         <Info className="mt-0.5 shrink-0 text-[var(--text2)]" size={14} />
         <p className="text-xs leading-5 text-[var(--text2)]">
-          Esta etapa apenas confirma a simulação local do wizard. Ao concluir, o
-          sistema mostra um retorno de sucesso e volta para /cases; nenhum pedido real
-          é criado.
+          Concluir a simulação não cria caso real, não envia contrato e não aciona
+          IA, OCR ou integrações externas. O retorno para /cases mantém o usuário no
+          fluxo operacional do MVP local.
         </p>
       </div>
     </div>
