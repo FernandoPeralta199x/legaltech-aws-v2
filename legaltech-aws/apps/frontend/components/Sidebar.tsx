@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  Plus,
   Scale,
   Settings,
   Shield,
@@ -24,10 +25,11 @@ const navGroups = [
   {
     label: "Principal",
     items: [
-      { href: "/dashboard", label: "Dashboard",   icon: LayoutDashboard },
+      { href: "/cases/new", label: "Novo Pedido", icon: Plus },
       { href: "/cases",     label: "Casos",        icon: BriefcaseBusiness },
       { href: "/reports",   label: "Relatórios",   icon: FileText },
-      { href: "/clients",   label: "Clientes",     icon: UsersRound }
+      { href: "/clients",   label: "Clientes",     icon: UsersRound },
+      { href: "/dashboard", label: "Dashboard",    icon: LayoutDashboard }
     ]
   },
   {
@@ -43,6 +45,17 @@ const navGroups = [
     items: [{ href: "/settings", label: "Configurações", icon: Settings }]
   }
 ];
+
+function isNavItemActive(pathname: string, href: string) {
+  if (href === "/cases") {
+    return (
+      pathname === "/cases" ||
+      (pathname.startsWith("/cases/") && !pathname.startsWith("/cases/new"))
+    );
+  }
+
+  return pathname === href || (href !== "/" && pathname.startsWith(href));
+}
 
 function NavItem({
   href,
@@ -97,8 +110,7 @@ function NavItem({
 export function Sidebar() {
   const pathname = usePathname();
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/" && pathname.startsWith(href));
+  const isActive = (href: string) => isNavItemActive(pathname, href);
 
   return (
     <aside className="cv-sidebar sticky top-0 hidden h-screen w-64 shrink-0 flex-col lg:flex">
@@ -175,8 +187,7 @@ export function MobileSidebar({ open, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/" && pathname.startsWith(href));
+  const isActive = (href: string) => isNavItemActive(pathname, href);
 
   function handleLogout() {
     clearStoredSession();

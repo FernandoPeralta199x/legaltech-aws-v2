@@ -9,7 +9,6 @@ import {
   Info,
   Plus,
   RefreshCw,
-  Sparkles,
   Upload,
   UserPlus,
   UsersRound
@@ -35,13 +34,13 @@ import { listClients } from "@/src/services/clients";
 import { listDocuments } from "@/src/services/documents";
 import type { Case, Client, Document } from "@/types";
 
-type ActionBadge = "Operacional" | "Experimental" | "Simulado";
+type ActionBadge = "Operacional" | "MVP local" | "Simulado";
 
 const badgeStyle: Record<ActionBadge, string> = {
   Operacional:
     "bg-[var(--teal-dim)] text-[var(--teal)] border-[rgba(32,201,151,0.25)]",
-  Experimental:
-    "bg-[var(--orange-dim)] text-[var(--orange)] border-[rgba(249,115,22,0.25)]",
+  "MVP local":
+    "bg-[var(--blue-dim)] text-[var(--blue)] border-[rgba(96,165,250,0.25)]",
   Simulado:
     "bg-[var(--surf3)] text-[var(--text2)] border-[var(--bd)]"
 };
@@ -138,6 +137,19 @@ export default function DashboardPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button
+                href="/cases/new"
+                icon={<Plus aria-hidden="true" size={15} />}
+              >
+                Novo Pedido
+              </Button>
+              <Button
+                href="/cases"
+                icon={<ArrowRight aria-hidden="true" size={15} />}
+                variant="secondary"
+              >
+                Ver casos
+              </Button>
+              <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
                 loading={loading}
                 onClick={() => void refreshDashboard()}
@@ -145,22 +157,9 @@ export default function DashboardPage() {
               >
                 Atualizar
               </Button>
-              <Button
-                href="/cases"
-                icon={<ArrowRight aria-hidden="true" size={15} />}
-              >
-                Ver casos
-              </Button>
-              <Button
-                href="/cases/new"
-                icon={<Sparkles aria-hidden="true" size={15} />}
-                variant="secondary"
-              >
-                Wizard experimental
-              </Button>
             </div>
           }
-          description="Backend Docker local respondendo. Nenhum recurso AWS real está ativo neste ambiente."
+          description="Visão geral do MVP local. Inicie um novo pedido pelo wizard e acompanhe casos, documentos e relatórios sem recursos AWS reais."
           eyebrow="Dashboard"
           title="Painel operacional"
         />
@@ -291,37 +290,31 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* ── Quick actions ── */}
+            {/* ── Main flow actions ── */}
             <section aria-labelledby="actions-heading">
               <h2
                 className="mb-4 text-sm font-semibold text-[var(--text)]"
                 id="actions-heading"
               >
-                Ações rápidas
+                Fluxo principal
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {(
                   [
                     {
-                      title: "Revisar casos",
+                      title: "Novo pedido",
                       description:
-                        "Gerencie os casos jurídicos da organização.",
+                        "Entrada principal do fluxo. Wizard MVP local, sem submit real.",
+                      href: "/cases/new",
+                      icon: Plus,
+                      badge: "MVP local" as ActionBadge
+                    },
+                    {
+                      title: "Acompanhar casos",
+                      description:
+                        "Veja, analise e edite casos jurídicos existentes.",
                       href: "/cases",
                       icon: BriefcaseBusiness,
-                      badge: "Operacional" as ActionBadge
-                    },
-                    {
-                      title: "Cadastrar cliente",
-                      description: "Adicione um novo cliente à base.",
-                      href: "/clients",
-                      icon: UserPlus,
-                      badge: "Operacional" as ActionBadge
-                    },
-                    {
-                      title: "Enviar documento",
-                      description: "Upload local de desenvolvimento.",
-                      href: "/documents",
-                      icon: Upload,
                       badge: "Operacional" as ActionBadge
                     },
                     {
@@ -332,11 +325,18 @@ export default function DashboardPage() {
                       badge: "Simulado" as ActionBadge
                     },
                     {
-                      title: "Testar wizard",
-                      description: "Wizard experimental — sem submit real.",
-                      href: "/cases/new",
-                      icon: Sparkles,
-                      badge: "Experimental" as ActionBadge
+                      title: "Clientes",
+                      description: "Gerencie a base jurídica de clientes.",
+                      href: "/clients",
+                      icon: UserPlus,
+                      badge: "Operacional" as ActionBadge
+                    },
+                    {
+                      title: "Enviar documento",
+                      description: "Upload local de desenvolvimento.",
+                      href: "/documents",
+                      icon: Upload,
+                      badge: "Operacional" as ActionBadge
                     }
                   ] as const
                 ).map((action) => {

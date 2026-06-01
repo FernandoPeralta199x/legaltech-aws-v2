@@ -216,6 +216,12 @@ export default function CasesPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button
+                href="/cases/new"
+                icon={<Plus aria-hidden="true" size={15} />}
+              >
+                Novo pedido
+              </Button>
+              <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
                 loading={loading}
                 onClick={() => void refreshCases()}
@@ -230,14 +236,15 @@ export default function CasesPage() {
                   setError("");
                   setSuccessMessage("");
                 }}
+                variant="secondary"
               >
-                Novo caso
+                Criar caso rápido
               </Button>
             </div>
           }
-          description="Casos jurídicos carregados do backend FastAPI e vinculados a clientes da organização autenticada."
+          description="Área operacional para ver, analisar e editar casos já criados. Para iniciar o fluxo principal, use Novo Pedido."
           eyebrow="Casos"
-          title="Fluxos jurídicos"
+          title="Operação de casos"
         />
 
         {fallbackReason && (
