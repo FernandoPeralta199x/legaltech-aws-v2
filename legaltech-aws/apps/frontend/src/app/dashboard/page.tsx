@@ -9,6 +9,7 @@ import {
   Info,
   Plus,
   RefreshCw,
+  Shield,
   Upload,
   UserPlus,
   UsersRound
@@ -34,9 +35,27 @@ import { listClients } from "@/src/services/clients";
 import { listDocuments } from "@/src/services/documents";
 import type { Case, Client, Document } from "@/types";
 
-type ActionBadge = "Operacional" | "MVP local" | "Simulado";
+type ActionBadge =
+  | "Base"
+  | "Entrada"
+  | "Entrega"
+  | "Governança"
+  | "Insumos"
+  | "MVP local"
+  | "Operacional"
+  | "Simulado";
 
 const badgeStyle: Record<ActionBadge, string> = {
+  Base:
+    "bg-[var(--blue-dim)] text-[var(--blue)] border-[rgba(96,165,250,0.25)]",
+  Entrada:
+    "bg-[var(--teal-dim)] text-[var(--teal)] border-[rgba(32,201,151,0.3)]",
+  Entrega:
+    "bg-[var(--surf3)] text-[var(--text2)] border-[var(--bd)]",
+  Governança:
+    "bg-[var(--orange-dim)] text-[var(--orange)] border-[rgba(249,115,22,0.25)]",
+  Insumos:
+    "bg-[var(--blue-dim)] text-[var(--blue)] border-[rgba(96,165,250,0.25)]",
   Operacional:
     "bg-[var(--teal-dim)] text-[var(--teal)] border-[rgba(32,201,151,0.25)]",
   "MVP local":
@@ -58,6 +77,106 @@ const ACTIVE_STATUSES = new Set<string>([
   "review",
   "approved"
 ]);
+
+const funnelSteps = [
+  {
+    title: "Novo Pedido",
+    description: "Início no wizard",
+    href: "/cases/new",
+    icon: Plus
+  },
+  {
+    title: "Caso",
+    description: "Acompanhamento",
+    href: "/cases",
+    icon: BriefcaseBusiness
+  },
+  {
+    title: "Documento",
+    description: "Insumos locais",
+    href: "/documents",
+    icon: Upload
+  },
+  {
+    title: "Análise",
+    description: "Revisão humana",
+    href: "/analyst",
+    icon: ClipboardCheck
+  },
+  {
+    title: "Relatório",
+    description: "Entrega final",
+    href: "/reports",
+    icon: FileText
+  }
+] as const;
+
+const processAreas = [
+  {
+    title: "Novo Pedido",
+    description: "Entrada principal pelo wizard MVP local.",
+    href: "/cases/new",
+    icon: Plus,
+    badge: "Entrada" as ActionBadge,
+    primary: true
+  },
+  {
+    title: "Casos",
+    description: "Acompanhamento operacional dos pedidos criados.",
+    href: "/cases",
+    icon: BriefcaseBusiness,
+    badge: "Operacional" as ActionBadge,
+    primary: false
+  },
+  {
+    title: "Documentos",
+    description: "Arquivos fictícios e metadados como insumos.",
+    href: "/documents",
+    icon: Upload,
+    badge: "Insumos" as ActionBadge,
+    primary: false
+  },
+  {
+    title: "Analista",
+    description: "Etapa de revisão e decisão humana.",
+    href: "/analyst",
+    icon: ClipboardCheck,
+    badge: "Governança" as ActionBadge,
+    primary: false
+  },
+  {
+    title: "Relatórios",
+    description: "Entrega simulada após revisão humana.",
+    href: "/reports",
+    icon: FileText,
+    badge: "Entrega" as ActionBadge,
+    primary: false
+  },
+  {
+    title: "Clientes",
+    description: "Base de relacionamento da operação.",
+    href: "/clients",
+    icon: UserPlus,
+    badge: "Base" as ActionBadge,
+    primary: false
+  },
+  {
+    title: "Administração",
+    description: "Governança, papéis e trilhas de auditoria.",
+    href: "/admin",
+    icon: Shield,
+    badge: "Governança" as ActionBadge,
+    primary: false
+  }
+] as const;
+
+const nextSteps = [
+  { label: "Iniciar Novo Pedido", href: "/cases/new", icon: Plus },
+  { label: "Ver Casos", href: "/cases", icon: BriefcaseBusiness },
+  { label: "Enviar Documento", href: "/documents", icon: Upload },
+  { label: "Ver Relatórios", href: "/reports", icon: FileText },
+  { label: "Ver Clientes", href: "/clients", icon: UsersRound }
+] as const;
 
 function caseTitle(legalCase: Case): string {
   const title = legalCase.metadata?.title;
@@ -135,10 +254,12 @@ export default function DashboardPage() {
         {/* ── Hero ── */}
         <PageTitle
           actions={
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
               <Button
+                className="sm:min-w-44"
                 href="/cases/new"
-                icon={<Plus aria-hidden="true" size={15} />}
+                icon={<Plus aria-hidden="true" size={17} />}
+                size="lg"
               >
                 Novo Pedido
               </Button>
@@ -159,7 +280,7 @@ export default function DashboardPage() {
               </Button>
             </div>
           }
-          description="Visão geral do MVP local. Inicie um novo pedido pelo wizard e acompanhe casos, documentos e relatórios sem recursos AWS reais."
+          description="Cockpit do MVP local. O fluxo começa em Novo Pedido; daqui você acompanha casos, alimenta documentos, passa pela análise humana e consulta relatórios sem recursos AWS reais."
           eyebrow="Dashboard"
           title="Painel operacional"
         />
@@ -215,18 +336,89 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-8">
 
+            {/* ── Operational funnel ── */}
+            <section aria-labelledby="funnel-heading">
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2
+                    className="text-sm font-semibold text-[var(--text)]"
+                    id="funnel-heading"
+                  >
+                    Fluxo operacional
+                  </h2>
+                  <p className="text-xs leading-5 text-[var(--text2)]">
+                    Novo Pedido abre o fluxo; o dashboard orienta as etapas de
+                    acompanhamento, insumos, análise e entrega.
+                  </p>
+                </div>
+                <Link
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--teal)] transition hover:opacity-80"
+                  href="/cases/new"
+                >
+                  Começar pelo wizard
+                  <ArrowRight aria-hidden="true" size={12} />
+                </Link>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {funnelSteps.map((step, index) => {
+                  const Icon = step.icon;
+                  const isEntry = index === 0;
+                  return (
+                    <Link
+                      className={`group relative rounded-lg border px-4 py-3 transition hover:-translate-y-0.5 hover:bg-[var(--surf3)] ${
+                        isEntry
+                          ? "border-[rgba(32,201,151,0.32)] bg-[var(--teal-dim)]"
+                          : "border-[var(--bd)] bg-[var(--surf2)]"
+                      }`}
+                      href={step.href}
+                      key={step.href}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                            isEntry
+                              ? "border-[rgba(32,201,151,0.3)] bg-[var(--surf)] text-[var(--teal)]"
+                              : "border-[var(--bd)] bg-[var(--surf)] text-[var(--text2)]"
+                          }`}
+                        >
+                          <Icon aria-hidden="true" size={15} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-semibold text-[var(--text)]">
+                            {step.title}
+                          </span>
+                          <span className="block truncate text-[11px] text-[var(--text2)]">
+                            {step.description}
+                          </span>
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+
             {/* ── Metrics ── */}
             <section aria-labelledby="metrics-heading">
-              <h2 className="sr-only" id="metrics-heading">
-                Métricas operacionais
-              </h2>
+              <div className="mb-4">
+                <h2
+                  className="text-sm font-semibold text-[var(--text)]"
+                  id="metrics-heading"
+                >
+                  Métricas operacionais
+                </h2>
+                <p className="text-xs leading-5 text-[var(--text2)]">
+                  Dados carregados por clientes, casos e documentos já
+                  existentes no MVP local.
+                </p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {(
                   [
                     {
                       label: "Total de casos",
                       value: cases.length,
-                      detail: "Todos os status",
+                      detail: "Pedidos já convertidos em casos",
                       icon: BriefcaseBusiness,
                       color: "text-[var(--teal)]",
                       bg: "bg-[var(--teal-dim)] border-[rgba(32,201,151,0.22)]"
@@ -234,7 +426,7 @@ export default function DashboardPage() {
                     {
                       label: "Clientes",
                       value: clients.length,
-                      detail: "Da organização",
+                      detail: "Base de relacionamento",
                       icon: UsersRound,
                       color: "text-[var(--blue)]",
                       bg: "bg-[var(--blue-dim)] border-[rgba(96,165,250,0.22)]"
@@ -242,7 +434,7 @@ export default function DashboardPage() {
                     {
                       label: "Documentos",
                       value: documents.length,
-                      detail: "Metadados carregados",
+                      detail: "Insumos vinculados aos casos",
                       icon: FileText,
                       color: "text-[var(--teal)]",
                       bg: "bg-[var(--teal-dim)] border-[rgba(32,201,151,0.22)]"
@@ -250,7 +442,7 @@ export default function DashboardPage() {
                     {
                       label: "Casos em andamento",
                       value: activeCasesCount,
-                      detail: "Submetidos ou em análise",
+                      detail: "Acompanhamento operacional",
                       icon: ClipboardCheck,
                       color: "text-[var(--orange)]",
                       bg: "bg-[var(--orange-dim)] border-[rgba(249,115,22,0.22)]"
@@ -290,88 +482,91 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* ── Main flow actions ── */}
+            {/* ── Process areas and next steps ── */}
             <section aria-labelledby="actions-heading">
-              <h2
-                className="mb-4 text-sm font-semibold text-[var(--text)]"
-                id="actions-heading"
-              >
-                Fluxo principal
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {(
-                  [
-                    {
-                      title: "Novo pedido",
-                      description:
-                        "Entrada principal do fluxo. Wizard MVP local, sem submit real.",
-                      href: "/cases/new",
-                      icon: Plus,
-                      badge: "MVP local" as ActionBadge
-                    },
-                    {
-                      title: "Acompanhar casos",
-                      description:
-                        "Veja, analise e edite casos jurídicos existentes.",
-                      href: "/cases",
-                      icon: BriefcaseBusiness,
-                      badge: "Operacional" as ActionBadge
-                    },
-                    {
-                      title: "Ver relatórios",
-                      description: "Relatórios simulados — dados fictícios.",
-                      href: "/reports",
-                      icon: FileText,
-                      badge: "Simulado" as ActionBadge
-                    },
-                    {
-                      title: "Clientes",
-                      description: "Gerencie a base jurídica de clientes.",
-                      href: "/clients",
-                      icon: UserPlus,
-                      badge: "Operacional" as ActionBadge
-                    },
-                    {
-                      title: "Enviar documento",
-                      description: "Upload local de desenvolvimento.",
-                      href: "/documents",
-                      icon: Upload,
-                      badge: "Operacional" as ActionBadge
-                    }
-                  ] as const
-                ).map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <Link
-                      className="cv-card cv-card-hover group flex flex-col gap-3 p-4"
-                      href={action.href}
-                      key={action.href}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--bd)] bg-[var(--surf2)] transition group-hover:border-[rgba(32,201,151,0.25)] group-hover:bg-[var(--teal-dim)]">
+              <div className="mb-4 flex flex-col gap-1">
+                <h2
+                  className="text-sm font-semibold text-[var(--text)]"
+                  id="actions-heading"
+                >
+                  Áreas do processo
+                </h2>
+                <p className="text-xs leading-5 text-[var(--text2)]">
+                  Atalhos para operar o ciclo sem sair do contexto do cockpit.
+                </p>
+              </div>
+              <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {processAreas.map((area) => {
+                    const Icon = area.icon;
+                    return (
+                      <Link
+                        className={`cv-card cv-card-hover group flex flex-col gap-3 p-4 ${
+                          area.primary
+                            ? "border-[rgba(32,201,151,0.35)] bg-[var(--teal-dim)]"
+                            : ""
+                        }`}
+                        href={area.href}
+                        key={area.href}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
+                              area.primary
+                                ? "border-[rgba(32,201,151,0.3)] bg-[var(--surf)] text-[var(--teal)]"
+                                : "border-[var(--bd)] bg-[var(--surf2)] text-[var(--text2)] group-hover:border-[rgba(32,201,151,0.25)] group-hover:bg-[var(--teal-dim)] group-hover:text-[var(--teal)]"
+                            }`}
+                          >
+                            <Icon aria-hidden="true" size={16} />
+                          </div>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badgeStyle[area.badge]}`}
+                          >
+                            {area.badge}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-[var(--text)]">
+                            {area.title}
+                          </p>
+                          <p className="mt-0.5 text-[11px] leading-4 text-[var(--text2)]">
+                            {area.description}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                <div className="rounded-lg border border-[var(--bd)] bg-[var(--surf2)] p-4">
+                  <p className="text-xs font-semibold text-[var(--text)]">
+                    Próximos passos
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {nextSteps.map((step) => {
+                      const Icon = step.icon;
+                      return (
+                        <Link
+                          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-xs font-semibold text-[var(--text2)] transition hover:bg-[var(--surf3)] hover:text-[var(--text)]"
+                          href={step.href}
+                          key={step.href}
+                        >
                           <Icon
                             aria-hidden="true"
-                            className="text-[var(--text2)] transition group-hover:text-[var(--teal)]"
-                            size={16}
+                            className="shrink-0 text-[var(--text3)]"
+                            size={14}
                           />
-                        </div>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badgeStyle[action.badge]}`}
-                        >
-                          {action.badge}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-[var(--text)]">
-                          {action.title}
-                        </p>
-                        <p className="mt-0.5 text-[11px] leading-4 text-[var(--text2)]">
-                          {action.description}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
+                          <span className="flex-1">{step.label}</span>
+                          <ArrowRight
+                            aria-hidden="true"
+                            className="shrink-0 text-[var(--text3)]"
+                            size={12}
+                          />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -394,11 +589,11 @@ export default function DashboardPage() {
                 {recentCases.length === 0 ? (
                   <EmptyState
                     action={
-                      <Button href="/cases" icon={<Plus size={15} />}>
-                        Criar caso
+                      <Button href="/cases/new" icon={<Plus size={15} />}>
+                        Novo Pedido
                       </Button>
                     }
-                    description="Nenhum caso carregado. Crie casos fictícios para validar o fluxo integrado."
+                    description="Nenhum caso carregado. Inicie pelo wizard para validar o fluxo integrado com dados fictícios."
                     icon={<BriefcaseBusiness size={20} />}
                     title="Fila vazia"
                     variant="compact"
@@ -512,7 +707,7 @@ export default function DashboardPage() {
                         "Sem SQS real",
                         "Sem OCR real",
                         "Sem IA / RAG real",
-                        "Wizard = simulação local"
+                        "Wizard sem submit real"
                       ].map((item) => (
                         <p
                           className="flex items-center gap-1.5 text-[11px] text-blue-700 dark:text-blue-300/80"
