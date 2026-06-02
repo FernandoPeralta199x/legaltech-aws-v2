@@ -4,8 +4,9 @@
  * Mapeamento canônico do wizard de criação de caso. As chaves de Produto
  * (`dados_partes` | `consulta_objeto` | `analise_contratual` | `reuniao_equipe`)
  * coincidem com o `ProductType` já usado em `services/cases.ts` e
- * `types/index.ts`. Os módulos refletem os agentes/integrações expostos pelo
- * pipeline SQS do backend.
+ * `types/index.ts`. No MVP local, os módulos compõem uma simulação frontend-first.
+ * A visão futura inclui IA, OCR, conectores externos, storage cloud e processamento
+ * assíncrono, sem acionar integrações reais nesta versão.
  */
 
 export type Produto =
@@ -39,29 +40,29 @@ export type ModuloMeta = {
 export const PRODUTOS: Record<Produto, ProdutoMeta> = {
   dados_partes: {
     titulo: "Dados das partes",
-    descricao: "Levantamento completo das partes envolvidas no contrato.",
-    inclui: ["Consulta cadastral", "Histórico jurídico", "Reputação pública"],
+    descricao: "Simulação local dos dados das partes para preparar futuras consultas.",
+    inclui: ["Critério cadastral", "Histórico jurídico futuro", "Reputação pública futura"],
     precoBaseCents: 18700,
     slaHoras: 24
   },
   consulta_objeto: {
     titulo: "Consulta do objeto",
-    descricao: "Verificação do objeto contratual e informações públicas correlatas.",
-    inclui: ["Validação do objeto", "Pesquisa pública", "Resumo por IA"],
+    descricao: "Composição local do objeto contratual e critérios de análise futura.",
+    inclui: ["Critério do objeto", "Pesquisa pública futura", "Resumo por IA futura"],
     precoBaseCents: 14900,
     slaHoras: 24
   },
   analise_contratual: {
     titulo: "Análise contratual",
-    descricao: "Leitura cláusula a cláusula com identificação de riscos e obrigações.",
-    inclui: ["Análise por IA", "Identificação de riscos", "Mapeamento de obrigações"],
+    descricao: "Simulação local de critérios para leitura contratual e riscos.",
+    inclui: ["IA planejada", "Critérios de risco", "Mapeamento de obrigações"],
     precoBaseCents: 28900,
     slaHoras: 48
   },
   reuniao_equipe: {
     titulo: "Reunião com advogado",
-    descricao: "Conversa direta com profissional do time jurídico.",
-    inclui: ["Análise prévia", "Reunião dedicada", "Parecer final"],
+    descricao: "Preparação local para uma futura etapa com profissional jurídico.",
+    inclui: ["Critérios prévios", "Reunião planejada", "Parecer futuro"],
     precoBaseCents: 49000,
     slaHoras: 72
   }
@@ -71,32 +72,32 @@ export const MODULOS: Record<Modulo, ModuloMeta> = {
   escavador: {
     titulo: "Escavador",
     descricao:
-      "Consulta processos judiciais, histórico jurídico e informações públicas das partes.",
+      "Futuro conector para processos judiciais, histórico jurídico e dados públicos.",
     precoCents: 4900
   },
   targetdata: {
     titulo: "TargetData",
-    descricao: "Consulta dados cadastrais, comerciais e enriquecimento de informações.",
+    descricao: "Futuro conector para dados cadastrais, comerciais e enriquecimento.",
     precoCents: 3900
   },
   ia_deepseek: {
     titulo: "Inteligência Artificial",
-    descricao: "Organiza dados coletados, resume informações e classifica riscos.",
+    descricao: "Módulo planejado para organizar dados, resumir informações e apoiar riscos.",
     precoCents: 2900
   },
   serasa_procon: {
     titulo: "Serasa / Procon",
-    descricao: "Consulta score, restrições, reputação e reclamações públicas.",
+    descricao: "Futuro conector para score, restrições, reputação e reclamações.",
     precoCents: 5900
   },
   analise_contratual_ia: {
     titulo: "Análise Contratual por IA",
-    descricao: "Lê o contrato e identifica cláusulas, riscos, obrigações e inconsistências.",
+    descricao: "Módulo planejado para apoiar leitura, riscos e obrigações contratuais.",
     precoCents: 7900
   },
   revisao_humana: {
     titulo: "Revisão Humana",
-    descricao: "Envia os relatórios para avaliação da equipe interna ou advogado responsável.",
+    descricao: "Etapa preparada para futura avaliação da equipe ou advogado responsável.",
     precoCents: 12900
   }
 };
