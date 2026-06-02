@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  ArrowRight,
   BriefcaseBusiness,
   Calendar,
   FileText,
   Filter,
   Plus,
   RefreshCw,
-  Search
+  Search,
+  Shield,
+  UsersRound
 } from "lucide-react";
 import Link from "next/link";
 import type { FormEvent } from "react";
@@ -29,7 +32,7 @@ import { errorMessage } from "@/src/lib/errorMessage";
 import { createCase, listCases } from "@/src/services/cases";
 import { listClients } from "@/src/services/clients";
 import { validateCaseForm, type ValidationErrors } from "@/src/lib/validation";
-import type { Case, CaseCreate, Client, Priority, ProductType } from "@/types";
+import type { Case, CaseCreate, CaseStatus, Client, Priority, ProductType } from "@/types";
 
 const caseTypeLabel: Record<string, string> = {
   compra_venda: "Compra e Venda",
@@ -59,6 +62,25 @@ const productOptions: Array<{ id: ProductType; label: string }> = [
   { id: "reuniao_equipe", label: "Reunião com equipe" }
 ];
 
+const statusFilterOptions: Array<{ id: CaseStatus; label: string }> = [
+  { id: "draft", label: "Rascunho" },
+  { id: "submitted", label: "Enviado" },
+  { id: "triagem_pendente", label: "Triagem" },
+  { id: "coleta_pendente", label: "Coleta" },
+  { id: "processamento_documental", label: "Processamento documental" },
+  { id: "analise_contratual", label: "Análise contratual" },
+  { id: "compliance", label: "Compliance" },
+  { id: "minuta_relatorio", label: "Minuta de relatório" },
+  { id: "revisao_humana", label: "Revisão humana" },
+  { id: "processing", label: "Processando" },
+  { id: "review", label: "Revisão" },
+  { id: "approved", label: "Aprovado" },
+  { id: "delivered", label: "Entregue" },
+  { id: "completed", label: "Concluído" },
+  { id: "failed", label: "Falha" },
+  { id: "cancelled", label: "Cancelado" }
+];
+
 type CaseForm = {
   caseType: string;
   clientId: string;
@@ -82,6 +104,10 @@ function caseDisplayTitle(legalCase: Case): string {
   return typeof title === "string" && title.trim()
     ? title
     : caseTypeLabel[legalCase.caseType] ?? legalCase.caseType;
+}
+
+function productDisplayLabel(product: ProductType): string {
+  return productOptions.find((option) => option.id === product)?.label ?? product;
 }
 
 export default function CasesPage() {
@@ -159,6 +185,11 @@ export default function CasesPage() {
     setSuccessMessage("");
   }
 
+  function clearListFilters() {
+    setFilter("");
+    setQuery("");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) {
@@ -219,7 +250,7 @@ export default function CasesPage() {
                 href="/cases/new"
                 icon={<Plus aria-hidden="true" size={15} />}
               >
-                Novo pedido
+                Novo Pedido
               </Button>
               <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
@@ -242,7 +273,7 @@ export default function CasesPage() {
               </Button>
             </div>
           }
-          description="Área operacional para ver, analisar e editar casos já criados. Para iniciar o fluxo principal, use Novo Pedido."
+          description="Acompanhe registros existentes, abra detalhes para analisar e editar, e use Novo Pedido como fluxo principal de entrada do MVP local."
           eyebrow="Casos"
           title="Operação de casos"
         />
@@ -269,9 +300,10 @@ export default function CasesPage() {
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-[var(--text)]">Novo caso</h2>
+              <h2 className="text-sm font-semibold text-[var(--text)]">Caso rápido (dev)</h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
-                O tenant vem do JWT dev. Selecione apenas cliente e metadados do fluxo jurídico.
+                Ação operacional direta para o MVP local. O fluxo principal continua
+                sendo Novo Pedido.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -371,7 +403,7 @@ export default function CasesPage() {
               <input
                 className="cv-input w-full pl-9 pr-3 text-sm"
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar casos..."
+                placeholder="Buscar por código, cliente ou título..."
                 type="search"
                 value={query}
               />
@@ -387,13 +419,11 @@ export default function CasesPage() {
                 value={filter}
               >
                 <option value="">Todos os status</option>
-                <option value="draft">Rascunho</option>
-                <option value="submitted">Enviado</option>
-                <option value="processing">Processando</option>
-                <option value="review">Revisão</option>
-                <option value="approved">Aprovado</option>
-                <option value="delivered">Entregue</option>
-                <option value="failed">Falha</option>
+                {statusFilterOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -422,13 +452,36 @@ export default function CasesPage() {
         ) : filteredCases.length === 0 ? (
           <EmptyState
             action={
-              <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)}>
-                Criar caso
-              </Button>
+              query || filter ? (
+                <Button icon={<Filter size={15} />} onClick={clearListFilters} variant="secondary">
+                  Limpar filtros
+                </Button>
+              ) : (
+                <Button href="/cases/new" icon={<Plus size={15} />}>
+                  Novo Pedido
+                </Button>
+              )
             }
-            description={clients.length === 0 ? "Cadastre um cliente antes de criar casos." : "Crie um caso fictício para validar o fluxo integrado com backend."}
+            secondaryAction={
+              query || filter ? (
+                <Button href="/cases/new" icon={<Plus size={15} />}>
+                  Novo Pedido
+                </Button>
+              ) : (
+                <Button onClick={() => setShowForm(true)} variant="secondary">
+                  Criar caso rápido
+                </Button>
+              )
+            }
+            description={
+              query || filter
+                ? "Nenhum registro existente corresponde à busca atual. Limpe os filtros ou inicie uma nova simulação em Novo Pedido."
+                : clients.length === 0
+                  ? "Use Novo Pedido para simular o fluxo principal. O caso rápido exige um cliente já disponível no MVP local."
+                  : "Use Novo Pedido para compor uma simulação frontend-first ou crie um caso rápido para validação operacional local."
+            }
             icon={<BriefcaseBusiness size={20} />}
-            title={query || filter ? "Nenhum caso corresponde aos filtros" : "Nenhum caso encontrado"}
+            title={query || filter ? "Nenhum caso corresponde aos filtros" : "Nenhum registro operacional ainda"}
           />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -456,7 +509,7 @@ export default function CasesPage() {
                 </h2>
                 <p className="mt-1 truncate text-xs text-[var(--text2)]">{c.clientName}</p>
                 <p className="mt-1 text-[11px] text-[var(--text3)]">
-                  {caseTypeLabel[c.caseType] ?? c.caseType}
+                  {caseTypeLabel[c.caseType] ?? c.caseType} · {productDisplayLabel(c.product)}
                 </p>
 
                 <div className="mt-4">
@@ -480,17 +533,32 @@ export default function CasesPage() {
                   </div>
                 </div>
 
-                <dl className="mt-4 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-[var(--text2)]">
-                    <FileText size={11} />
-                    {c.documentsCount} documentos
+                <div className="mt-4 grid gap-2 text-xs">
+                  <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                    <UsersRound className="shrink-0 text-[var(--text3)]" size={12} />
+                    <span className="truncate">Cliente: {c.clientName}</span>
                   </div>
-                  <PriorityBadge priority={c.priority} />
-                </dl>
+                  <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                    <FileText className="shrink-0 text-[var(--text3)]" size={12} />
+                    <span className="truncate">
+                      Documentos: {c.documentsCount} na listagem
+                    </span>
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                    <Shield className="shrink-0 text-[var(--text3)]" size={12} />
+                    <span className="truncate">Relatório: acompanhar no detalhe</span>
+                  </div>
+                </div>
 
-                <div className="mt-3 flex items-center gap-1.5 border-t border-[var(--bd)] pt-3 text-[11px] text-[var(--text3)]">
-                  <Calendar size={11} />
-                  Atualizado em {formatDate(c.updatedAt)}
+                <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--bd)] pt-3 text-[11px] text-[var(--text3)]">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Calendar className="shrink-0" size={11} />
+                    <span className="truncate">Atualizado em {formatDate(c.updatedAt)}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <PriorityBadge priority={c.priority} />
+                    <ArrowRight className="text-[var(--text3)] transition group-hover:text-[var(--teal)]" size={13} />
+                  </span>
                 </div>
               </Link>
             ))}
