@@ -3,6 +3,7 @@
 import {
   Download,
   FileText,
+  Plus,
   RefreshCw,
   Send,
   Upload,
@@ -75,10 +76,10 @@ function documentTypeLabel(contentType: string): string {
 
 function documentSourceLabel(document: Document): string {
   if (document.status === "uploaded") {
-    return "Enviado localmente";
+    return "Anexo local do caso";
   }
 
-  return "Metadata apenas";
+  return "Registro de metadados";
 }
 
 export default function DocumentsPage() {
@@ -202,7 +203,7 @@ export default function DocumentsPage() {
       });
       setDocuments((current) => [result.data, ...current]);
       setFallbackReason("");
-      setActionMessage("Documento enviado com sucesso no storage local de desenvolvimento.");
+      setActionMessage("Documento enviado e vinculado ao caso no storage local do MVP.");
       setShowForm(false);
       setForm((current) => ({ ...emptyDocumentForm, caseId: current.caseId }));
       clearSelectedFile();
@@ -225,7 +226,7 @@ export default function DocumentsPage() {
       setActionMessage(
         result.source === "mock"
           ? "Backend indisponível: URL temporária simulada para desenvolvimento."
-          : `URL temporária gerada. Expiração: ${result.data.expires_in_seconds}s.`
+          : `URL temporária gerada pelo backend local. Expiração: ${result.data.expires_in_seconds}s.`
       );
     } catch (err) {
       setError(errorMessage(err, "Não foi possível carregar documentos."));
@@ -246,7 +247,7 @@ export default function DocumentsPage() {
 
     try {
       const result = await enqueueDocumentProcessing(documentId);
-      setActionMessage(`Processamento enfileirado: ${result.data.job_id}.`);
+      setActionMessage(`Job de processamento registrado: ${result.data.job_id}.`);
       setPendingEnqueue(null);
     } catch (err) {
       setError(errorMessage(err, "Não foi possível carregar documentos."));
@@ -261,6 +262,13 @@ export default function DocumentsPage() {
         <PageTitle
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                href="/cases/new"
+                icon={<Plus aria-hidden="true" size={15} />}
+                variant="secondary"
+              >
+                Novo Pedido
+              </Button>
               <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
                 loading={loading}
@@ -281,14 +289,14 @@ export default function DocumentsPage() {
               </Button>
             </div>
           }
-          description="Upload local de desenvolvimento. S3, OCR e IA continuam fora do MVP local."
+          description="Organize anexos vinculados a casos e use documentos como insumos do fluxo jurídico. Upload é local/MVP; OCR, IA, cloud e SQS real não estão ativos nesta tela."
           eyebrow="Documentos"
-          title="Documentos enviados"
+          title="Insumos e anexos jurídicos"
         />
 
         {fallbackReason && (
           <Notification title="Fallback local ativo" tone="warning">
-            A API não respondeu. Estes documentos são mockados ou simulados para desenvolvimento.
+            A API não respondeu. A listagem pode usar dados de demonstração do fallback local.
           </Notification>
         )}
         {error && !loading && (
@@ -308,9 +316,9 @@ export default function DocumentsPage() {
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-[var(--text)]">Enviar documento</h2>
+              <h2 className="text-sm font-semibold text-[var(--text)]">Enviar documento ao caso</h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
-                Upload local de desenvolvimento. S3, OCR e IA continuam fora do MVP local.
+                Vincule um arquivo ao caso selecionado para organizar os insumos do MVP local. O envio não executa OCR, IA, storage cloud ou SQS real.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -345,7 +353,7 @@ export default function DocumentsPage() {
               <FormField label="Observação">
                 <TextInput
                   onChange={(event) => updateForm("notes", event.target.value)}
-                  placeholder="Observação fictícia de desenvolvimento"
+                  placeholder="Observação para o MVP local"
                   value={form.notes}
                 />
               </FormField>
@@ -389,7 +397,7 @@ export default function DocumentsPage() {
         )}
 
         <div className="mb-6 max-w-sm">
-          <FormField label="Filtrar por caso">
+          <FormField label="Filtrar por caso vinculado">
             <SelectInput
               onChange={(event) => setSelectedCase(event.target.value)}
               value={selectedCase}
@@ -405,8 +413,13 @@ export default function DocumentsPage() {
         </div>
 
         <Card
-          title="Arquivos recentes"
-          description="Documentos e metadados persistidos pelo backend local quando a API está disponível."
+          actions={
+            <Button href="/reports" size="sm" variant="secondary">
+              Relatórios
+            </Button>
+          }
+          title="Documentos do fluxo"
+          description="Arquivos e metadados vinculados a casos. Relatórios é a área geral de entrega/revisão; não há relatório prometido por documento."
         >
           {loading ? (
             <LoadingState
@@ -431,9 +444,24 @@ export default function DocumentsPage() {
                   Enviar documento
                 </Button>
               }
-              description={selectedCase ? "Nenhum documento encontrado para o caso selecionado." : "Envie um arquivo fictício para validar o vínculo documento-caso no MVP local."}
+              secondaryAction={
+                selectedCase ? (
+                  <Button onClick={() => setSelectedCase("")} variant="secondary">
+                    Ver todos os casos
+                  </Button>
+                ) : (
+                  <Button href="/cases/new" icon={<Plus size={15} />} variant="secondary">
+                    Novo Pedido
+                  </Button>
+                )
+              }
+              description={
+                selectedCase
+                  ? "Nenhum documento encontrado para o caso selecionado. Envie um anexo local ou limpe o filtro para revisar outros casos."
+                  : "Envie arquivos locais vinculados a casos ou inicie Novo Pedido para organizar primeiro o contexto jurídico."
+              }
               icon={<FileText size={20} />}
-              title="Sem documentos"
+              title={selectedCase ? "Sem documentos neste caso" : "Sem documentos enviados"}
               variant="compact"
             />
           ) : (
@@ -503,7 +531,7 @@ export default function DocumentsPage() {
 
         <ConfirmDialog
           confirmLabel="Enfileirar"
-          description="A API vai validar RBAC, tenant, case e document antes de publicar o job. O payload envia apenas IDs e metadados mínimos."
+          description="A API valida RBAC, tenant, caso e documento antes de registrar o job. Esta ação não promete OCR, IA ou análise jurídica automática nesta tela."
           loading={Boolean(actionBusyId)}
           onCancel={() => setPendingEnqueue(null)}
           onConfirm={() => void confirmEnqueue()}
