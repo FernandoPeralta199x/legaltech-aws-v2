@@ -30,9 +30,9 @@ import { validateClientForm, type ValidationErrors } from "@/src/lib/validation"
 import type { Client, ClientCreate, ClientUpdate } from "@/types";
 
 const riskConfig: Record<string, { label: string; className: string }> = {
-  high: { label: "Risco alto", className: "text-red-700 bg-red-50 border-red-200" },
-  low: { label: "Risco baixo", className: "text-green-700 bg-green-50 border-green-200" },
-  medium: { label: "Risco médio", className: "text-amber-700 bg-amber-50 border-amber-200" }
+  high: { label: "Indicador local alto", className: "text-red-700 bg-red-50 border-red-200" },
+  low: { label: "Indicador local baixo", className: "text-green-700 bg-green-50 border-green-200" },
+  medium: { label: "Indicador local médio", className: "text-amber-700 bg-amber-50 border-amber-200" }
 };
 
 const emptyForm: ClientCreate = {
@@ -194,6 +194,12 @@ export default function ClientsPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button
+                href="/cases/new"
+                icon={<Plus aria-hidden="true" size={15} />}
+              >
+                Novo Pedido
+              </Button>
+              <Button
                 icon={<RefreshCw aria-hidden="true" size={15} />}
                 loading={loading}
                 onClick={() => void refreshClients()}
@@ -204,19 +210,20 @@ export default function ClientsPage() {
               <Button
                 icon={<Plus aria-hidden="true" size={15} />}
                 onClick={startCreateClient}
+                variant="secondary"
               >
                 Novo cliente
               </Button>
             </div>
           }
-          description="Clientes cadastrados via backend FastAPI, com fallback local controlado para desenvolvimento."
+          description="Organize a base de relacionamento jurídico do MVP local e use esses dados como referência para Novo Pedido, Casos, Documentos e Relatórios."
           eyebrow="Clientes"
-          title="Base de clientes"
+          title="Base de relacionamento jurídico"
         />
 
         {fallbackReason && (
           <Notification title="Fallback local ativo" tone="warning">
-            A API não respondeu. Os dados exibidos são fictícios e servem apenas para desenvolvimento.
+            A API não respondeu. Os dados exibidos são de demonstração e servem apenas para desenvolvimento local.
           </Notification>
         )}
         {successMessage && (
@@ -241,8 +248,8 @@ export default function ClientsPage() {
               </h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
                 {editingClient
-                  ? "Edite apenas dados cadastrais. A organização continua vindo do JWT/contexto do backend."
-                  : "Use apenas dados fictícios. A organização continua vindo do JWT/contexto do backend."}
+                  ? "Edite apenas dados cadastrais. Organização e permissões continuam vindo do JWT/contexto do backend."
+                  : "Cadastre um cliente local para organizar partes e iniciar pedidos no MVP local. Organização e permissões continuam vindo do JWT/contexto do backend."}
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -250,13 +257,13 @@ export default function ClientsPage() {
                 <TextInput
                   invalid={Boolean(formErrors.name)}
                   onChange={(event) => updateForm("name", event.target.value)}
-                  placeholder="Cliente fictício de desenvolvimento"
+                  placeholder="Cliente local de desenvolvimento"
                   value={form.name}
                 />
               </FormField>
               <FormField
                 error={formErrors.document}
-                hint="Opcional. Use identificadores fictícios em ambiente local."
+                hint="Opcional. Use identificadores de demonstração em ambiente local."
                 label="Documento"
               >
                 <TextInput
@@ -300,7 +307,7 @@ export default function ClientsPage() {
             <input
               className="cv-input w-full pl-9 pr-3 text-sm"
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar clientes..."
+              placeholder="Buscar por nome, documento, e-mail ou telefone..."
               type="search"
               value={query}
             />
@@ -314,7 +321,7 @@ export default function ClientsPage() {
 
         {loading ? (
           <LoadingState
-            description="Consultando a API real ou fallback local configurado."
+            description="Consultando a base local ou a API configurada para clientes."
             label="Carregando clientes"
           />
         ) : error && clients.length === 0 ? (
@@ -330,11 +337,26 @@ export default function ClientsPage() {
         ) : filteredClients.length === 0 ? (
           <EmptyState
             action={
-              <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)}>
-                Criar cliente
+              query ? (
+                <Button icon={<Search size={15} />} onClick={() => setQuery("")} variant="secondary">
+                  Limpar busca
+                </Button>
+              ) : (
+                <Button href="/cases/new" icon={<Plus size={15} />}>
+                  Novo Pedido
+                </Button>
+              )
+            }
+            secondaryAction={
+              <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)} variant="secondary">
+                Novo cliente
               </Button>
             }
-            description={query ? "Nenhum cliente corresponde à busca atual." : "Cadastre o primeiro cliente fictício para validar o fluxo integrado."}
+            description={
+              query
+                ? "Nenhum cliente corresponde à busca atual. Limpe a busca ou inicie um Novo Pedido quando o atendimento precisar seguir."
+                : "Cadastre clientes locais para organizar contatos e partes, ou inicie Novo Pedido como fluxo principal do MVP local."
+            }
             icon={<UsersRound size={20} />}
             title={query ? "Busca sem resultados" : "Sem clientes cadastrados"}
           />
@@ -382,12 +404,19 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-[var(--text2)]">
                       <BriefcaseBusiness size={12} className="shrink-0 text-[var(--text3)]" />
-                      {client.casesCount} caso{client.casesCount !== 1 ? "s" : ""}
+                      <span className="truncate">
+                        {client.casesCount > 0
+                          ? `${client.casesCount} caso${client.casesCount !== 1 ? "s" : ""} informado${client.casesCount !== 1 ? "s" : ""} na base`
+                          : "Acompanhe casos vinculados na área de Casos"}
+                      </span>
                     </div>
                   </dl>
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bd)] pt-4">
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${risk.className}`}>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${risk.className}`}
+                      title="Indicador operacional local; não substitui revisão jurídica."
+                    >
                       {risk.label}
                     </span>
                     <span className="text-[11px] text-[var(--text3)]">
