@@ -42,42 +42,42 @@ const roleLabels: Record<string, string> = {
 };
 
 const auditActionLabel: Record<string, string> = {
-  case_created: "Caso criado",
-  case_submitted: "Caso enviado",
-  document_uploaded: "Documento enviado",
-  document_processed: "Documento processado",
-  agent_started: "Agente iniciado",
-  agent_completed: "Agente concluído",
-  report_generated: "Relatório gerado",
-  review_approved: "Revisão aprovada",
-  review_rejected: "Revisão rejeitada",
-  review_adjustment: "Ajuste solicitado",
-  status_changed: "Status alterado",
-  user_login: "Login",
-  user_logout: "Logout"
+  case_created: "Caso registrado no mock",
+  case_submitted: "Caso marcado no mock",
+  document_uploaded: "Documento anexado no mock",
+  document_processed: "Documento marcado no mock",
+  agent_started: "Agente demonstrativo iniciado",
+  agent_completed: "Agente demonstrativo concluído",
+  report_generated: "Relatório demonstrativo registrado",
+  review_approved: "Registro positivo no mock",
+  review_rejected: "Registro negativo no mock",
+  review_adjustment: "Ajuste mockado solicitado",
+  status_changed: "Status mockado alterado",
+  user_login: "Login demonstrativo",
+  user_logout: "Logout demonstrativo"
 };
 
 export default function AdminPage() {
   const statusCounts = [
     {
-      label: "Em análise",
+      label: "Análise local/mock",
       count: mockCases.filter((c) =>
         ["processing", "analise_contratual", "compliance", "minuta_relatorio"].includes(c.status)
       ).length,
       color: "text-violet-700"
     },
     {
-      label: "Revisão humana",
+      label: "Revisão local",
       count: mockCases.filter((c) => c.status === "revisao_humana").length,
       color: "text-amber-700"
     },
     {
-      label: "Entregues",
+      label: "Entrega demonstrativa",
       count: mockCases.filter((c) => c.status === "delivered").length,
       color: "text-teal-400"
     },
     {
-      label: "Rascunho",
+      label: "Rascunho local",
       count: mockCases.filter((c) => c.status === "draft").length,
       color: "text-slate-600"
     }
@@ -105,7 +105,7 @@ export default function AdminPage() {
               </Link>
             </>
           }
-          description="Visão de governança local para acompanhar organização, equipe, papéis e trilhas operacionais do MVP. Os dados abaixo são demonstrativos/mockados e não representam administração, auth/RBAC, sessões, notificações ou auditoria reais."
+          description="Visão de governança local para acompanhar organização, equipe, papéis e registros operacionais mockados do MVP. Os dados abaixo são demonstrativos e não representam administração, auth/RBAC, sessões, notificações ou auditoria reais."
           eyebrow="Administração"
           title="Governança operacional do MVP local"
         />
@@ -120,9 +120,9 @@ export default function AdminPage() {
                 </p>
                 <p className="mt-2 text-xs leading-5 text-[var(--text2)]">
                   Esta tela organiza uma leitura do MVP local. Convites por
-                  e-mail, criação real de usuário, alteração de role, RBAC real,
-                  sessões reais, localização, notificações, webhooks, billing e
-                  auditoria production-ready dependem de backend/auth/serviços
+                  e-mail, criação real de usuário, alteração real de perfil/role,
+                  RBAC real, sessões reais, localização, notificações, webhooks,
+                  billing e auditoria real dependem de backend/auth/serviços
                   futuros.
                 </p>
               </div>
@@ -161,17 +161,17 @@ export default function AdminPage() {
         <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Usuários mockados ativos",
+              label: "Membros ativos no mock",
               value: mockUsers.filter((u) => u.status === "active").length,
-              hint: "Equipe demonstrativa do MVP local.",
+              hint: "Equipe demonstrativa; não cria usuário real.",
               icon: Users,
               color: "text-brand-teal-dark",
               bg: "bg-brand-teal/10 border-brand-teal/20"
             },
             {
-              label: "Organizações locais",
+              label: "Organizações demonstrativas",
               value: mockOrganizations.length,
-              hint: "Tenants demonstrativos, sem admin real.",
+              hint: "Tenants demonstrativos, sem tenant admin real.",
               icon: Building2,
               color: "text-brand-teal-light",
               bg: "bg-brand-teal/10 border-brand-teal/20"
@@ -185,7 +185,7 @@ export default function AdminPage() {
               bg: "bg-violet-500/10 border-violet-500/20"
             },
             {
-              label: "Eventos mockados de auditoria",
+              label: "Registros mockados de auditoria",
               value: mockAuditLogs.length,
               hint: "Referência visual; não é trilha auditável real.",
               icon: Shield,
@@ -221,7 +221,7 @@ export default function AdminPage() {
           {/* Users */}
           <Card
             title="Equipe local do MVP"
-            description="Contas demonstrativas por papel. Não cria usuário real, convite, senha ou alteração de perfil."
+            description="Contas demonstrativas por papel. Não cria usuário real, convite, senha, verificação ou alteração real de perfil."
           >
             <div className="divide-y divide-white/[0.06]">
               {mockUsers.map((user) => (
@@ -254,7 +254,7 @@ export default function AdminPage() {
 
           {/* Organizations */}
           <Card
-            title="Organizações locais / Tenants"
+            title="Organizações demonstrativas / Tenants"
             description="Planos e limites demonstrativos. Não há billing, tenant admin real ou alteração de organização nesta tela."
           >
             <div className="space-y-4">
@@ -302,7 +302,7 @@ export default function AdminPage() {
 
           {/* Cases by status */}
           <Card
-            title="Casos por status local"
+            title="Casos por status mockado"
             description="Distribuição derivada dos mocks existentes para orientar a operação."
           >
             <div className="space-y-3">
@@ -331,8 +331,8 @@ export default function AdminPage() {
 
           {/* Audit logs */}
           <Card
-            title="Eventos de auditoria mockados"
-            description="Trilha visual de referência. Logs reais, retenção e auditoria production-ready dependem do backend."
+            title="Registros de auditoria mockados"
+            description="Trilha visual de referência. Logs reais, retenção e auditoria real dependem de backend/auth aprovados."
           >
             <div className="space-y-3">
               {mockAuditLogs.map((log) => (
@@ -371,11 +371,11 @@ export default function AdminPage() {
               {[
                 {
                   role: "admin",
-                  desc: "Referência de governança: administra a leitura local de equipe, organização e limites do MVP."
+                  desc: "Referência de governança: organiza a leitura local de equipe, organização e limites do MVP."
                 },
                 {
                   role: "analyst",
-                  desc: "Referência operacional: acompanha triagem e revisão conceitual sem aprovação real no backend."
+                  desc: "Referência operacional: acompanha triagem e revisão conceitual sem aprovação persistida."
                 },
                 {
                   role: "client",
@@ -413,7 +413,7 @@ export default function AdminPage() {
                     Membros funcionais, convite/cadastro por e-mail, verificação
                     de e-mail, criação de senha, sessões reais com localização
                     aproximada e notificações por e-mail/WhatsApp ficam para uma
-                    etapa com backend, auth e serviços externos aprovados.
+                    etapa com backend, auth e serviços externos definidos.
                   </p>
                 </div>
               </div>
