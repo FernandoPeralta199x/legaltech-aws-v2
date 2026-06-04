@@ -29,8 +29,8 @@ const STEP_TITLES: Record<number, string> = {
   1: "Identifique partes e cliente",
   2: "Anexe contrato ou documento",
   3: "Escolha o produto jurídico",
-  4: "Ajuste os módulos da análise",
-  5: "Revise o Novo Pedido"
+  4: "Ajuste os módulos da simulação",
+  5: "Revise a simulação"
 };
 
 function defaultModulesFor(produto: Produto): Record<Modulo, boolean> {
@@ -88,9 +88,9 @@ export function NewCaseWizard() {
     if (!canAdvance || !produto) return;
     setSubmitting(true);
     setSubmitNotice({
-      title: "Simulação concluída",
+      title: "Simulação local registrada",
       description:
-        "Nenhum pedido foi enviado para um backend real. Você será redirecionado para Casos para seguir o fluxo operacional do MVP local."
+        "Sem submit real nesta versão: o registro local da simulação não cria caso real no backend. Você será redirecionado para Casos para seguir o fluxo operacional do MVP local."
     });
     await new Promise((resolve) => setTimeout(resolve, 900));
     setSubmitting(false);
@@ -100,7 +100,7 @@ export function NewCaseWizard() {
   return (
     <WizardShell
       backHref="/cases"
-      description="Preencha as informações que futuramente poderão originar um caso real. Nesta etapa, tudo permanece no frontend."
+      description="Preencha as informações da simulação local do pedido. Nesta versão, não há submit real nem criação real de caso no backend."
       step={step}
       title={STEP_TITLES[step]}
       totalSteps={TOTAL_STEPS}
@@ -131,7 +131,7 @@ export function NewCaseWizard() {
         onBack={() => setStep((s) => Math.max(1, s - 1))}
         onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
         onSubmit={handleSubmit}
-        submitLabel="Concluir simulação"
+        submitLabel="Registrar simulação local"
         step={step}
         submitting={submitting}
         totalSteps={TOTAL_STEPS}

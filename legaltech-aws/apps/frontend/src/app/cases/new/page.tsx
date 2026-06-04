@@ -11,16 +11,16 @@ export default function NewCasePage() {
             Novo Pedido - MVP local
           </p>
           <h1 className="mt-2 text-xl font-bold leading-tight text-[var(--text)]">
-            Inicie o fluxo principal de criação
+            Inicie o fluxo principal do MVP local
           </h1>
           <p className="mt-2 text-xs leading-5 text-[var(--text2)]">
             Este wizard guia a simulação frontend-first do pedido: partes,
-            contrato, produto jurídico, módulos e revisão final.
+            contrato, produto jurídico, módulos e revisão da simulação.
           </p>
           <p className="mt-2 text-[11px] leading-5 text-[var(--text3)]">
-            Use apenas dados fictícios. Concluir a simulação não cria caso real
-            no backend; ao final você volta para Casos para acompanhar o MVP
-            local.
+            Use apenas dados demonstrativos. Registrar a simulação não faz
+            submit real nem cria caso real no backend; ao final você volta para
+            Casos para acompanhar o MVP local.
           </p>
         </section>
         <NewCaseWizard />

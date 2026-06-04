@@ -51,11 +51,12 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Revisão final do Novo Pedido
+          Revisão da simulação do Novo Pedido
         </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Confira os dados antes de concluir a simulação local. Esta revisão prepara
-          o caminho para um futuro rascunho real, mas ainda não envia nada ao backend.
+          Confira os dados antes de registrar a simulação local. Esta revisão
+          organiza o resumo do pedido local, sem submit real e sem criação real
+          de caso no backend.
         </p>
       </div>
 
@@ -116,18 +117,18 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
         <div className="space-y-3 text-xs">
           <div>
             <p className="font-semibold text-[var(--text)]">
-              Ativos ({ativos.length})
+              Incluídos na simulação ({ativos.length})
             </p>
             <p className="mt-1 text-[var(--text2)]">
               {ativos.length
                 ? ativos.map((m) => MODULOS[m].titulo).join(", ")
-                : "Nenhum módulo ativo."}
+                : "Nenhum módulo incluído na simulação."}
             </p>
           </div>
           {inativos.length > 0 && (
             <div>
               <p className="font-semibold text-[var(--text2)]">
-                Desativados ({inativos.length})
+                Fora da simulação ({inativos.length})
               </p>
               <p className="mt-1 text-[var(--text3)]">
                 {inativos.map((m) => MODULOS[m].titulo).join(", ")}
@@ -142,9 +143,9 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
       <div className="flex items-start gap-2 rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-3 py-2.5">
         <Info className="mt-0.5 shrink-0 text-[var(--text2)]" size={14} />
         <p className="text-xs leading-5 text-[var(--text2)]">
-          Concluir a simulação não cria caso real, não envia contrato e não aciona
-          IA, OCR ou integrações externas. O retorno para /cases mantém o usuário no
-          fluxo operacional do MVP local.
+          O registro local da simulação não cria caso real, não faz submit real
+          e não aciona IA, OCR ou integrações externas. O retorno para /cases
+          mantém o usuário no fluxo operacional do MVP local.
         </p>
       </div>
     </div>
