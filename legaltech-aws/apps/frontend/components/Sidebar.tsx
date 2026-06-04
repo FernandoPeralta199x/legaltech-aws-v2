@@ -23,26 +23,32 @@ import { clearStoredSession } from "@/src/lib/authStorage";
 
 const navGroups = [
   {
-    label: "Principal",
+    label: "Principal / Operação",
     items: [
       { href: "/cases/new", label: "Novo Pedido", icon: Plus },
       { href: "/cases",     label: "Casos",        icon: BriefcaseBusiness },
-      { href: "/reports",   label: "Relatórios",   icon: FileText },
-      { href: "/clients",   label: "Clientes",     icon: UsersRound },
-      { href: "/dashboard", label: "Dashboard",    icon: LayoutDashboard }
+      { href: "/documents", label: "Documentos",   icon: BarChart3 },
+      { href: "/analyst",   label: "Analista",     icon: ClipboardCheck },
+      { href: "/reports",   label: "Relatórios",   icon: FileText }
     ]
   },
   {
-    label: "Operação",
-    items: [
-      { href: "/analyst",   label: "Analista",      icon: ClipboardCheck },
-      { href: "/admin",     label: "Administração", icon: Shield },
-      { href: "/documents", label: "Documentos",    icon: BarChart3 }
-    ]
+    label: "Relacionamento",
+    items: [{ href: "/clients", label: "Clientes", icon: UsersRound }]
+  },
+  {
+    label: "Governança",
+    items: [{ href: "/admin", label: "Administração", icon: Shield }]
+  },
+  {
+    label: "Visão geral",
+    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }]
   },
   {
     label: "Sistema",
-    items: [{ href: "/settings", label: "Configurações", icon: Settings }]
+    items: [
+      { href: "/settings", label: "Configurações", icon: Settings }
+    ]
   }
 ];
 
@@ -168,11 +174,11 @@ export function Sidebar() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--teal)]" />
             </span>
             <p className="text-[11px] font-semibold text-[var(--teal)]">
-              Sistema ativo
+              MVP local
             </p>
           </div>
           <p className="mt-1 text-[10px] leading-4 text-[var(--text2)]">
-            API real com fallback local em desenvolvimento.
+            API local com fallback de desenvolvimento.
           </p>
         </div>
       </div>
