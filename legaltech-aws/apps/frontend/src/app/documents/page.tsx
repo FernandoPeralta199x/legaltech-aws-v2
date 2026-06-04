@@ -79,7 +79,7 @@ function documentSourceLabel(document: Document): string {
     return "Anexo local do caso";
   }
 
-  return "Registro de metadados";
+  return "Metadados do MVP local";
 }
 
 export default function DocumentsPage() {
@@ -203,7 +203,7 @@ export default function DocumentsPage() {
       });
       setDocuments((current) => [result.data, ...current]);
       setFallbackReason("");
-      setActionMessage("Documento enviado e vinculado ao caso no storage local do MVP.");
+      setActionMessage("Documento enviado e vinculado ao caso no armazenamento local do MVP.");
       setShowForm(false);
       setForm((current) => ({ ...emptyDocumentForm, caseId: current.caseId }));
       clearSelectedFile();
@@ -225,8 +225,8 @@ export default function DocumentsPage() {
       setFallbackReason(result.source === "mock" ? result.fallbackReason ?? fallbackReason : fallbackReason);
       setActionMessage(
         result.source === "mock"
-          ? "Backend indisponível: URL temporária simulada para desenvolvimento."
-          : `URL temporária gerada pelo backend local. Expiração: ${result.data.expires_in_seconds}s.`
+          ? "Backend local indisponível: URL temporária simulada para desenvolvimento."
+          : `URL temporária gerada pela API local. Expiração: ${result.data.expires_in_seconds}s.`
       );
     } catch (err) {
       setError(errorMessage(err, "Não foi possível carregar documentos."));
@@ -247,7 +247,7 @@ export default function DocumentsPage() {
 
     try {
       const result = await enqueueDocumentProcessing(documentId);
-      setActionMessage(`Job de processamento registrado: ${result.data.job_id}.`);
+      setActionMessage(`Job local/MVP de processamento registrado: ${result.data.job_id}.`);
       setPendingEnqueue(null);
     } catch (err) {
       setError(errorMessage(err, "Não foi possível carregar documentos."));
@@ -289,14 +289,14 @@ export default function DocumentsPage() {
               </Button>
             </div>
           }
-          description="Organize anexos vinculados a casos e use documentos como insumos do fluxo jurídico. Upload é local/MVP; OCR, IA, cloud e SQS real não estão ativos nesta tela."
+          description="Organize documentos como insumos locais vinculados a casos. Upload é local/MVP; OCR, IA, cloud e SQS reais não estão ativos nesta tela."
           eyebrow="Documentos"
           title="Insumos e anexos jurídicos"
         />
 
         {fallbackReason && (
           <Notification title="Fallback local ativo" tone="warning">
-            A API não respondeu. A listagem pode usar dados de demonstração do fallback local.
+            A API local não respondeu. A listagem pode usar dados demonstrativos do fallback local.
           </Notification>
         )}
         {error && !loading && (
@@ -305,7 +305,7 @@ export default function DocumentsPage() {
           </Notification>
         )}
         {actionMessage && (
-          <Notification onDismiss={() => setActionMessage("")} title="Operação concluída" tone="success">
+          <Notification onDismiss={() => setActionMessage("")} title="Ação local do MVP" tone="success">
             {actionMessage}
           </Notification>
         )}
@@ -318,7 +318,7 @@ export default function DocumentsPage() {
             <div className="mb-4 flex flex-col gap-1">
               <h2 className="text-sm font-semibold text-[var(--text)]">Enviar documento ao caso</h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
-                Vincule um arquivo ao caso selecionado para organizar os insumos do MVP local. O envio não executa OCR, IA, storage cloud ou SQS real.
+                Vincule um arquivo ao caso selecionado para organizar insumos do MVP local. O envio local não executa OCR, IA, storage cloud ou SQS real.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -434,7 +434,7 @@ export default function DocumentsPage() {
                   Tentar novamente
                 </Button>
               }
-              description="A listagem de documentos não pôde ser carregada. Erros do backend são exibidos sem fallback indevido."
+              description="A listagem de documentos não pôde ser carregada. Erros da API local são exibidos sem fallback indevido."
               details={error}
             />
           ) : visibleDocuments.length === 0 ? (
@@ -508,7 +508,7 @@ export default function DocumentsPage() {
                   <div className="flex items-center gap-2 md:ml-auto">
                     <IconButton
                       disabled={Boolean(actionBusyId)}
-                      label="Gerar URL temporária"
+                      label="Gerar URL temporária local"
                       loading={actionBusyId === `download-${doc.id}`}
                       onClick={() => void handleDownloadUrl(doc.id)}
                     >
@@ -516,7 +516,7 @@ export default function DocumentsPage() {
                     </IconButton>
                     <IconButton
                       disabled={Boolean(actionBusyId)}
-                      label="Enfileirar processamento"
+                      label="Registrar processamento local"
                       loading={actionBusyId === `enqueue-${doc.id}`}
                       onClick={() => setPendingEnqueue(doc)}
                     >
@@ -530,13 +530,13 @@ export default function DocumentsPage() {
         </Card>
 
         <ConfirmDialog
-          confirmLabel="Enfileirar"
-          description="A API valida RBAC, tenant, caso e documento antes de registrar o job. Esta ação não promete OCR, IA ou análise jurídica automática nesta tela."
+          confirmLabel="Registrar localmente"
+          description="A API local valida o contexto do caso e documento quando disponível antes de registrar o job local/MVP. Esta ação não promete OCR, IA ou análise jurídica automática nesta tela."
           loading={Boolean(actionBusyId)}
           onCancel={() => setPendingEnqueue(null)}
           onConfirm={() => void confirmEnqueue()}
           open={Boolean(pendingEnqueue)}
-          title={`Enfileirar processamento de ${pendingEnqueue?.filename ?? "documento"}?`}
+          title={`Registrar processamento local de ${pendingEnqueue?.filename ?? "documento"}?`}
         />
       </AppLayout>
     </AuthGuard>

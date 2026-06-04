@@ -99,13 +99,13 @@ const funnelSteps = [
   },
   {
     title: "Análise",
-    description: "Revisão humana",
+    description: "Triagem local",
     href: "/analyst",
     icon: ClipboardCheck
   },
   {
     title: "Relatório",
-    description: "Entrega final",
+    description: "Entrega/revisão",
     href: "/reports",
     icon: FileText
   }
@@ -130,7 +130,7 @@ const processAreas = [
   },
   {
     title: "Documentos",
-    description: "Arquivos fictícios e metadados como insumos.",
+    description: "Arquivos locais e metadados como insumos.",
     href: "/documents",
     icon: Upload,
     badge: "Insumos" as ActionBadge,
@@ -138,7 +138,7 @@ const processAreas = [
   },
   {
     title: "Analista",
-    description: "Etapa de revisão e decisão humana.",
+    description: "Triagem local e revisão conceitual.",
     href: "/analyst",
     icon: ClipboardCheck,
     badge: "Governança" as ActionBadge,
@@ -146,7 +146,7 @@ const processAreas = [
   },
   {
     title: "Relatórios",
-    description: "Entrega simulada após revisão humana.",
+    description: "Entrega e revisão do MVP local.",
     href: "/reports",
     icon: FileText,
     badge: "Entrega" as ActionBadge,
@@ -162,7 +162,7 @@ const processAreas = [
   },
   {
     title: "Administração",
-    description: "Governança, papéis e trilhas de auditoria.",
+    description: "Governança local e papéis demonstrativos.",
     href: "/admin",
     icon: Shield,
     badge: "Governança" as ActionBadge,
@@ -280,7 +280,7 @@ export default function DashboardPage() {
               </Button>
             </div>
           }
-          description="Cockpit do MVP local. O fluxo começa em Novo Pedido; daqui você acompanha casos, alimenta documentos, passa pela análise humana e consulta relatórios sem recursos AWS reais."
+          description="Cockpit do MVP local. O fluxo começa em Novo Pedido; daqui você acompanha casos, organiza documentos como insumos locais, passa pela triagem local e consulta relatórios sem AWS, IA/OCR/RAG reais."
           eyebrow="Dashboard"
           title="Painel operacional"
         />
@@ -288,8 +288,8 @@ export default function DashboardPage() {
         {/* ── API status notifications ── */}
         {!loading && fallbackActive && (
           <Notification title="Fallback local ativo" tone="warning">
-            O backend não respondeu. Métricas e listas estão usando dados
-            fictícios de desenvolvimento.
+            O backend local não respondeu. Métricas e listas estão usando dados
+            demonstrativos do fallback local.
           </Notification>
         )}
         {!loading && error && (
@@ -308,7 +308,7 @@ export default function DashboardPage() {
               className="shrink-0 text-[var(--teal)]"
               size={13}
             />
-            API local respondendo — dados carregados do backend Docker.
+            API local respondendo — dados carregados do backend local.
           </div>
         )}
 
@@ -348,7 +348,7 @@ export default function DashboardPage() {
                   </h2>
                   <p className="text-xs leading-5 text-[var(--text2)]">
                     Novo Pedido abre o fluxo; o dashboard orienta as etapas de
-                    acompanhamento, insumos, análise e entrega.
+                    acompanhamento, insumos locais, triagem e entrega/revisão.
                   </p>
                 </div>
                 <Link
@@ -583,7 +583,7 @@ export default function DashboardPage() {
                     <ArrowRight aria-hidden="true" size={12} />
                   </Link>
                 }
-                description="Últimos casos carregados do backend local."
+                description="Últimos casos carregados da API local ou fallback."
                 title="Casos recentes"
               >
                 {recentCases.length === 0 ? (
@@ -638,7 +638,7 @@ export default function DashboardPage() {
                     <ArrowRight aria-hidden="true" size={12} />
                   </Link>
                 }
-                description="Últimos documentos carregados do backend local."
+                description="Últimos documentos carregados da API local ou fallback."
                 title="Documentos recentes"
               >
                 {recentDocuments.length === 0 ? (
