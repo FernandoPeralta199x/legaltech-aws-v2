@@ -28,7 +28,7 @@ export function EstimateCard({ valorCents, prazoHoras }: EstimateCardProps) {
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text2)]">
-              Valor estimado
+              Valor referencial simulado
             </p>
             <p className="text-base font-bold text-[var(--text)]">
               {formatBRL(valorCents)}
@@ -41,7 +41,7 @@ export function EstimateCard({ valorCents, prazoHoras }: EstimateCardProps) {
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text2)]">
-              Prazo estimado
+              Prazo referencial simulado
             </p>
             <p className="text-base font-bold text-[var(--text)]">
               {formatPrazo(prazoHoras)}
