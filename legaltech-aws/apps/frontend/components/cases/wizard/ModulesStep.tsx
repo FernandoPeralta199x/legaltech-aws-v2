@@ -39,11 +39,12 @@ export function ModulesStep({ produto, state, onChange }: ModulesStepProps) {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Ajuste os módulos da análise
+          Ajuste a composição simulada
         </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Ative módulos opcionais para montar a simulação do pedido. Os módulos
-          representam o fluxo futuro e não acionam integrações reais agora.
+          Inclua módulos na simulação do pedido. Eles compõem o roteiro local
+          e não acionam consulta externa, IA/OCR/RAG ou integração real nesta
+          versão; essas capacidades seguem no roadmap.
         </p>
       </div>
 
