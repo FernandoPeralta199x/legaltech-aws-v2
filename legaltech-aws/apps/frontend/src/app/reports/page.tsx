@@ -33,29 +33,29 @@ const statusMeta: Record<
   { delivery: string; exportLabel: string; exportTitle: string }
 > = {
   approved: {
-    delivery: "Aprovado para entrega futura",
-    exportLabel: "Exportação futura",
-    exportTitle: "Exportação real ainda não implementada no MVP local."
+    delivery: "Aprovação demonstrativa",
+    exportLabel: "Exportação roadmap",
+    exportTitle: "Exportação/PDF real ainda não implementados no MVP local."
   },
   delivered: {
     delivery: "Entrega simulada no MVP local",
-    exportLabel: "PDF planejado",
-    exportTitle: "Download real de PDF ainda não existe nesta versão."
+    exportLabel: "PDF roadmap",
+    exportTitle: "PDF real ainda não existe nesta versão."
   },
   draft: {
-    delivery: "Rascunho de análise",
-    exportLabel: "PDF bloqueado",
-    exportTitle: "PDF bloqueado até aprovação e implementação de exportação real."
+    delivery: "Rascunho demonstrativo",
+    exportLabel: "PDF não implementado",
+    exportTitle: "PDF/exportação real ainda não implementados nesta versão."
   },
   in_review: {
-    delivery: "Em revisão humana simulada",
-    exportLabel: "PDF bloqueado",
-    exportTitle: "PDF bloqueado enquanto o relatório está em revisão."
+    delivery: "Revisão simulada no MVP",
+    exportLabel: "PDF não implementado",
+    exportTitle: "PDF real indisponível nesta revisão demonstrativa."
   },
   rejected: {
-    delivery: "Ajuste necessário",
-    exportLabel: "PDF bloqueado",
-    exportTitle: "PDF bloqueado para relatório rejeitado."
+    delivery: "Ajuste demonstrativo",
+    exportLabel: "PDF não implementado",
+    exportTitle: "PDF/exportação real indisponíveis para relatório mockado."
   }
 };
 
@@ -72,7 +72,7 @@ export default function ReportsPage() {
     <AuthGuard>
       <AppLayout>
         <PageTitle
-          description="Área de entrega e revisão do MVP local. Os relatórios abaixo usam dados mockados e representam o valor esperado do fluxo Novo Pedido, Caso, Análise, Revisão e Relatório."
+          description="Área de entrega e revisão do MVP local. Os relatórios abaixo usam dados mockados e representam uma entrega demonstrativa do fluxo Novo Pedido, Caso, Documentos, Triagem local e Relatório."
           eyebrow="Relatórios"
           title="Entrega e revisão"
         />
@@ -85,17 +85,17 @@ export default function ReportsPage() {
               tone: "border-[rgba(32,201,151,0.22)] bg-[var(--teal-dim)] text-[var(--teal)]"
             },
             {
-              label: "Em revisão",
+              label: "Revisão mockada",
               value: pending,
               tone: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
             },
             {
-              label: "Aprovados/entregues",
+              label: "Aprovação/entrega mockada",
               value: approved,
               tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             },
             {
-              label: "PDF bloqueado",
+              label: "PDF não implementado",
               value: blocked,
               tone: "border-[var(--bd)] bg-[var(--surf2)] text-[var(--text2)]"
             }
@@ -113,9 +113,9 @@ export default function ReportsPage() {
             <span className="font-semibold text-amber-700 dark:text-amber-300">
               MVP local:
             </span>{" "}
-            relatórios, revisão humana, IA/RAG e exportação PDF real ainda não
+            relatórios, revisão operacional, IA/RAG e exportação PDF real ainda não
             estão integrados. Esta tela organiza a entrega esperada sem acionar
-            backend ou download real.
+            backend de relatórios ou download real.
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export default function ReportsPage() {
                 Ver casos
               </Button>
             }
-            description="Quando houver relatórios mockados no MVP local, eles aparecerão aqui como etapa de entrega e revisão."
+            description="Quando houver relatórios mockados no MVP local, eles aparecerão aqui como etapa de entrega/revisão demonstrativa."
             icon={<FileText size={20} />}
             secondaryAction={<Button href="/cases/new">Novo Pedido</Button>}
             title="Nenhum relatório disponível"
@@ -137,8 +137,8 @@ export default function ReportsPage() {
               const relatedCase = mockCases.find((item) => item.id === report.caseId);
               const meta = statusMeta[report.status] ?? {
                 delivery: "Status em acompanhamento",
-                exportLabel: "PDF planejado",
-                exportTitle: "Exportação real ainda não implementada."
+                exportLabel: "PDF roadmap",
+                exportTitle: "Exportação/PDF real ainda não implementados no MVP local."
               };
 
               return (
@@ -211,7 +211,7 @@ export default function ReportsPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text3)]">Gerado em</p>
+                      <p className="text-[var(--text3)]">Data demonstrativa</p>
                       <p className="mt-0.5 font-medium text-[var(--text2)]">
                         {formatDate(report.generatedAt)}
                         {report.approvedBy ? ` · ${report.approvedBy}` : ""}

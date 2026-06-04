@@ -64,19 +64,19 @@ const productOptions: Array<{ id: ProductType; label: string }> = [
 
 const statusFilterOptions: Array<{ id: CaseStatus; label: string }> = [
   { id: "draft", label: "Rascunho" },
-  { id: "submitted", label: "Enviado" },
+  { id: "submitted", label: "Enviado no MVP" },
   { id: "triagem_pendente", label: "Triagem" },
   { id: "coleta_pendente", label: "Coleta" },
-  { id: "processamento_documental", label: "Processamento documental" },
-  { id: "analise_contratual", label: "Análise contratual" },
+  { id: "processamento_documental", label: "Processamento local de documentos" },
+  { id: "analise_contratual", label: "Análise local" },
   { id: "compliance", label: "Compliance" },
   { id: "minuta_relatorio", label: "Minuta de relatório" },
-  { id: "revisao_humana", label: "Revisão humana" },
-  { id: "processing", label: "Processando" },
-  { id: "review", label: "Revisão" },
-  { id: "approved", label: "Aprovado" },
-  { id: "delivered", label: "Entregue" },
-  { id: "completed", label: "Concluído" },
+  { id: "revisao_humana", label: "Revisão conceitual" },
+  { id: "processing", label: "Processamento local" },
+  { id: "review", label: "Revisão local" },
+  { id: "approved", label: "Aprovação local" },
+  { id: "delivered", label: "Entrega local" },
+  { id: "completed", label: "Concluído no MVP" },
   { id: "failed", label: "Falha" },
   { id: "cancelled", label: "Cancelado" }
 ];
@@ -225,7 +225,7 @@ export default function CasesPage() {
       setSuccessMessage(
         result.source === "mock"
           ? "Caso criado no fallback local de desenvolvimento."
-          : "Caso criado com sucesso no backend."
+          : "Caso criado pela API local."
       );
       setShowForm(false);
       setForm((current) => ({
@@ -280,11 +280,11 @@ export default function CasesPage() {
 
         {fallbackReason && (
           <Notification title="Fallback local ativo" tone="warning">
-            A API não respondeu. A lista usa dados fictícios e não substitui validação com PostgreSQL local.
+            A API local não respondeu. A lista usa dados demonstrativos e não substitui validação com PostgreSQL local.
           </Notification>
         )}
         {successMessage && (
-          <Notification onDismiss={() => setSuccessMessage("")} title="Operação concluída" tone="success">
+          <Notification onDismiss={() => setSuccessMessage("")} title="Ação local registrada" tone="success">
             {successMessage}
           </Notification>
         )}
@@ -300,7 +300,7 @@ export default function CasesPage() {
             onSubmit={handleSubmit}
           >
             <div className="mb-4 flex flex-col gap-1">
-              <h2 className="text-sm font-semibold text-[var(--text)]">Caso rápido (dev)</h2>
+              <h2 className="text-sm font-semibold text-[var(--text)]">Caso rápido local</h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
                 Ação operacional direta para o MVP local. O fluxo principal continua
                 sendo Novo Pedido.
@@ -312,7 +312,7 @@ export default function CasesPage() {
                   <TextInput
                     invalid={Boolean(formErrors.title)}
                     onChange={(event) => updateForm("title", event.target.value)}
-                    placeholder="Análise contratual fictícia"
+                    placeholder="Análise contratual local"
                     value={form.title}
                   />
                 </FormField>
@@ -376,7 +376,7 @@ export default function CasesPage() {
                 <FormField label="Observações">
                   <TextArea
                     onChange={(event) => updateForm("notes", event.target.value)}
-                    placeholder="Observação fictícia de desenvolvimento"
+                    placeholder="Observação demonstrativa local"
                     value={form.notes}
                   />
                 </FormField>
@@ -436,7 +436,7 @@ export default function CasesPage() {
 
         {loading ? (
           <LoadingState
-            description="Carregando clientes e casos da API real ou fallback local."
+            description="Carregando clientes e casos da API local ou fallback local."
             label="Carregando casos"
           />
         ) : error && cases.length === 0 ? (
@@ -446,7 +446,7 @@ export default function CasesPage() {
                 Tentar novamente
               </Button>
             }
-            description="A listagem de casos não pôde ser carregada. Se for 401/403, gere um JWT dev com permissões adequadas."
+            description="A listagem de casos não pôde ser carregada pela API local. Se for 401/403, gere um JWT dev com permissões adequadas."
             details={error}
           />
         ) : filteredCases.length === 0 ? (
