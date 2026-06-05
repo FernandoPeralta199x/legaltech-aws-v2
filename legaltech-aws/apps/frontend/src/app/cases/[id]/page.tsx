@@ -55,7 +55,7 @@ const TABS = [
   { id: "parties", label: "Partes", icon: Users },
   { id: "documents", label: "Documentos", icon: FileText },
   { id: "timeline", label: "Timeline", icon: Clock },
-  { id: "agents", label: "Análise IA", icon: Bot },
+  { id: "agents", label: "Triagem local", icon: Bot },
   { id: "report", label: "Relatório", icon: Shield }
 ];
 
@@ -273,7 +273,7 @@ export default function CaseDetailPage({ params }: PageProps) {
     const validationErrors = validatePartyForm(partyForm);
     setPartyFormErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
-      setPartyError("Revise os campos destacados antes de salvar a parte.");
+      setPartyError("Revise os campos destacados antes de registrar a parte local.");
       return;
     }
 
@@ -298,11 +298,11 @@ export default function CaseDetailPage({ params }: PageProps) {
       setPartySuccessMessage(
         result.source === "mock"
           ? editingParty
-            ? "Parte atualizada no fallback local de desenvolvimento."
-            : "Parte criada no fallback local de desenvolvimento."
+            ? "Registro local de parte atualizado no fallback de desenvolvimento."
+            : "Registro local de parte criado no fallback de desenvolvimento."
           : editingParty
-            ? "Parte atualizada com sucesso no backend."
-            : "Parte criada com sucesso no backend."
+            ? "Registro de parte atualizado pela API local."
+            : "Registro de parte criado pela API local."
       );
       resetPartyForm();
     } catch (err) {
@@ -325,7 +325,7 @@ export default function CaseDetailPage({ params }: PageProps) {
       <AuthGuard>
         <AppLayout>
           <LoadingState
-            description="Consultando caso, cliente e documentos vinculados."
+            description="Consultando visão local do caso, cliente e documentos indicados."
             label="Carregando caso"
             rows={4}
           />
@@ -344,7 +344,7 @@ export default function CaseDetailPage({ params }: PageProps) {
                 Voltar para casos
               </Button>
             }
-            description="Não foi possível carregar o detalhe do caso. Verifique o token dev, permissões e se o backend está disponível."
+            description="Não foi possível carregar o detalhe do caso. Verifique o token dev, permissões e se a API local está disponível."
             details={error || "Caso não encontrado."}
             title="Caso não encontrado"
           />
@@ -361,8 +361,8 @@ export default function CaseDetailPage({ params }: PageProps) {
     <AuthGuard>
       <AppLayout>
         {fallbackReason && (
-          <Notification title="Fallback local ativo" tone="warning">
-            Backend indisponível: detalhes carregados por fallback mockado local.
+          <Notification title="Fallback local do MVP" tone="warning">
+            API local indisponível: detalhes carregados por fallback mockado local.
           </Notification>
         )}
         {error && (
@@ -373,7 +373,7 @@ export default function CaseDetailPage({ params }: PageProps) {
         {partySuccessMessage && (
           <Notification
             onDismiss={() => setPartySuccessMessage("")}
-            title="Partes atualizadas"
+            title="Ação local registrada"
             tone="success"
           >
             {partySuccessMessage}
@@ -527,12 +527,12 @@ export default function CaseDetailPage({ params }: PageProps) {
                   <AlertTriangle className="shrink-0 text-amber-700" size={20} />
                   <div>
                       <p className="text-sm font-semibold text-amber-900">
-                      Aguardando revisão humana
+                      Revisão demonstrativa
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
-                      Este caso está na etapa de revisão humana obrigatória. Um
-                      analista jurídico precisa revisar e aprovar o relatório antes da
-                      entrega ao cliente.
+                      Este caso está em etapa demonstrativa de revisão. Revisão
+                      humana persistida, aprovação real e entrega ao cliente ficam no
+                      roadmap.
                     </p>
                   </div>
                 </div>
@@ -558,7 +558,7 @@ export default function CaseDetailPage({ params }: PageProps) {
                 }
                 description="Cadastre partes fictícias vinculadas a este caso para validar o fluxo local."
                 icon={<Users size={20} />}
-                title="Nenhuma parte cadastrada"
+                title="Nenhuma parte registrada"
               />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -626,7 +626,7 @@ export default function CaseDetailPage({ params }: PageProps) {
                       {editingParty ? "Editar parte" : "Adicionar parte"}
                     </h2>
                     <p className="mt-1 text-xs leading-5 text-[var(--text2)]">
-                      Use apenas dados fictícios. O vínculo com organização e caso é validado pelo backend.
+                      Use apenas dados fictícios. A referência de organização e caso é validada pela API local quando disponível.
                     </p>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -744,7 +744,7 @@ export default function CaseDetailPage({ params }: PageProps) {
         {/* Tab: Timeline */}
         {activeTab === "timeline" && (
           <div className="animate-in">
-            <Card title="Histórico de eventos">
+            <Card title="Linha do tempo local">
               <Timeline events={caseTimeline} />
             </Card>
           </div>
@@ -756,14 +756,14 @@ export default function CaseDetailPage({ params }: PageProps) {
             <div className="mb-4 flex items-center gap-2">
               <Bot className="text-brand-teal" size={18} />
               <h2 className="text-sm font-semibold text-slate-900">
-                Execuções dos agentes de IA
+                Roteiro de IA planejada
               </h2>
             </div>
             {caseAgents.length === 0 ? (
               <EmptyState
-                description="Execuções de agentes ainda são mockadas nesta tela até haver endpoint dedicado."
+                description="As execuções de agentes são demonstrativas nesta tela até haver endpoint e integração real dedicados."
                 icon={<Bot size={20} />}
-                title="Nenhum agente executado"
+                title="Nenhuma execução demonstrativa"
               />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -780,7 +780,7 @@ export default function CaseDetailPage({ params }: PageProps) {
           <div className="animate-in">
             {!caseReport ? (
               <EmptyState
-                description="O relatório será disponibilizado após processamento e revisão humana. Não há IA real integrada nesta etapa."
+                description="O resumo demonstrativo ainda não está disponível. Revisão humana persistida, IA real e PDF/exportação ficam no roadmap."
                 icon={<Shield size={20} />}
                 title="Relatório não disponível"
               />
@@ -804,8 +804,9 @@ export default function CaseDetailPage({ params }: PageProps) {
                     <div className="mb-5 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                       <AlertTriangle className="shrink-0 text-amber-700" size={16} />
                       <p className="text-xs text-amber-800">
-                        Este relatório está em revisão humana obrigatória. Aguarde
-                        a aprovação de um analista antes da entrega ao cliente.
+                        Este relatório está em revisão demonstrativa. Validação
+                        humana persistida, aprovação real e entrega ao cliente ficam
+                        no roadmap.
                       </p>
                     </div>
                   )}
@@ -816,7 +817,7 @@ export default function CaseDetailPage({ params }: PageProps) {
                 </Card>
 
                 {caseReport.risks.length > 0 && (
-                  <Card title="Riscos identificados">
+                  <Card title="Indicadores demonstrativos de risco">
                     <div className="space-y-4">
                       {caseReport.risks.map((risk) => (
                         <div
@@ -863,15 +864,15 @@ export default function CaseDetailPage({ params }: PageProps) {
                 <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
                   <FileText className="shrink-0 text-slate-500" size={16} />
                   <p className="text-xs text-slate-600">
-                    Download do relatório em PDF disponível somente após aprovação
-                    do analista.
+                    PDF/exportação real ainda não está implementado nesta versão;
+                    permanece como etapa planejada do roadmap.
                   </p>
                   <button
                     className="ml-auto shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 cursor-not-allowed opacity-50"
                     disabled
                     type="button"
                   >
-                    Baixar PDF
+                    PDF no roadmap
                   </button>
                 </div>
               </div>
