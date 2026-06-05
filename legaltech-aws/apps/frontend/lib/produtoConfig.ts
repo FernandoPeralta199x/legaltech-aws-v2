@@ -41,28 +41,28 @@ export const PRODUTOS: Record<Produto, ProdutoMeta> = {
   dados_partes: {
     titulo: "Dados das partes",
     descricao: "Simulação local dos dados das partes para preparar futuras consultas.",
-    inclui: ["Critério cadastral", "Histórico jurídico futuro", "Reputação pública futura"],
+    inclui: ["Critério cadastral simulado", "Histórico jurídico futuro", "Reputação pública futura"],
     precoBaseCents: 18700,
     slaHoras: 24
   },
   consulta_objeto: {
     titulo: "Consulta do objeto",
     descricao: "Composição local do objeto contratual e critérios de análise futura.",
-    inclui: ["Critério do objeto", "Pesquisa pública futura", "Resumo por IA futura"],
+    inclui: ["Critério simulado do objeto", "Pesquisa pública futura", "Resumo por IA planejada"],
     precoBaseCents: 14900,
     slaHoras: 24
   },
   analise_contratual: {
     titulo: "Análise contratual",
     descricao: "Simulação local de critérios para leitura contratual e riscos.",
-    inclui: ["IA planejada", "Critérios de risco", "Mapeamento de obrigações"],
+    inclui: ["IA planejada", "Critérios de risco simulados", "Mapeamento simulado de obrigações"],
     precoBaseCents: 28900,
     slaHoras: 48
   },
   reuniao_equipe: {
     titulo: "Reunião com advogado",
     descricao: "Preparação local para uma futura etapa com profissional jurídico.",
-    inclui: ["Critérios prévios", "Reunião planejada", "Parecer futuro"],
+    inclui: ["Critérios prévios", "Reunião planejada", "Roteiro para parecer futuro"],
     precoBaseCents: 49000,
     slaHoras: 72
   }
@@ -72,31 +72,32 @@ export const MODULOS: Record<Modulo, ModuloMeta> = {
   escavador: {
     titulo: "Escavador",
     descricao:
-      "Futuro conector para processos judiciais, histórico jurídico e dados públicos.",
+      "Conector planejado para processos judiciais, histórico jurídico e dados públicos.",
     precoCents: 4900
   },
   targetdata: {
     titulo: "TargetData",
-    descricao: "Futuro conector para dados cadastrais, comerciais e enriquecimento.",
+    descricao: "Conector planejado para dados cadastrais, comerciais e enriquecimento.",
     precoCents: 3900
   },
   ia_deepseek: {
-    titulo: "Inteligência Artificial",
+    titulo: "IA planejada",
     descricao: "Módulo planejado para organizar dados, resumir informações e apoiar riscos.",
     precoCents: 2900
   },
   serasa_procon: {
     titulo: "Serasa / Procon",
-    descricao: "Futuro conector para score, restrições, reputação e reclamações.",
+    descricao:
+      "Conector planejado para indicadores futuros de score, restrições, reputação e reclamações.",
     precoCents: 5900
   },
   analise_contratual_ia: {
-    titulo: "Análise Contratual por IA",
+    titulo: "Análise contratual assistida planejada",
     descricao: "Módulo planejado para apoiar leitura, riscos e obrigações contratuais.",
     precoCents: 7900
   },
   revisao_humana: {
-    titulo: "Revisão Humana",
+    titulo: "Revisão humana planejada",
     descricao: "Etapa preparada para futura avaliação da equipe ou advogado responsável.",
     precoCents: 12900
   }
