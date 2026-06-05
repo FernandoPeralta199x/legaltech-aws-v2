@@ -16,8 +16,9 @@ export function ContractStep({ arquivo, onChange }: ContractStepProps) {
           Documento base do pedido
         </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Selecione um contrato ou documento fictício para compor a simulação.
-          O arquivo não é enviado para storage real nesta etapa.
+          Selecione um contrato ou documento local para compor a simulação.
+          Nesta versão, ele fica como anexo local do MVP; upload, storage,
+          OCR e IA reais seguem no roadmap.
         </p>
       </div>
       <ContractDropzone file={arquivo} onChange={onChange} />

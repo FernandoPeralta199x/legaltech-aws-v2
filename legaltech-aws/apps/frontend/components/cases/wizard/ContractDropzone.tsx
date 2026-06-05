@@ -118,7 +118,7 @@ export function ContractDropzone({ file, onChange }: ContractDropzoneProps) {
           />
         </div>
         <p className="text-sm font-semibold text-[var(--text)]">
-          Arraste o contrato aqui ou{" "}
+          Anexe localmente o contrato ou{" "}
           <span className="text-[var(--teal)]">clique para selecionar</span>
         </p>
         <p className="mt-1 text-xs text-[var(--text2)]">
@@ -127,7 +127,8 @@ export function ContractDropzone({ file, onChange }: ContractDropzoneProps) {
         <div className="mt-4 flex items-center gap-1.5 rounded-lg border border-[rgba(32,201,151,0.2)] bg-[var(--teal-dim)] px-3 py-2">
           <Lock className="shrink-0 text-[var(--teal)]" size={12} />
           <p className="text-[11px] text-[var(--text2)]">
-            Simulação local: nenhum arquivo é enviado para S3 ou backend real.
+            Simulação local: anexo usado apenas no Wizard, sem upload real para
+            S3 ou backend nesta versão.
           </p>
         </div>
       </div>
@@ -169,7 +170,7 @@ function FilePreview({
             <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-[var(--text2)]">
               {file.status === "uploading" && `Preparando ${file.progress}%`}
               {file.status === "extracting" && "Simulando leitura…"}
-              {file.status === "done" && "Pronto"}
+              {file.status === "done" && "Pronto para simulação"}
               {file.status === "error" && "Erro"}
             </span>
             <span className="shrink-0 text-[11px] text-[var(--text3)]">
@@ -191,8 +192,9 @@ function FilePreview({
         <div className="flex items-start gap-2 rounded-lg border border-[rgba(96,165,250,0.2)] bg-[var(--blue-dim)] px-3 py-2.5">
           <Sparkles className="mt-0.5 shrink-0 text-[var(--blue)]" size={14} />
           <p className="text-xs leading-5 text-[var(--text2)]">
-            Pré-processamento visual concluído. Esta simulação não executa OCR,
-            IA ou extração real de texto.
+            Pré-leitura visual da simulação pronta. Esta versão não executa
+            OCR, IA/RAG ou extração real de texto; esses recursos seguem no
+            roadmap.
           </p>
         </div>
       )}
