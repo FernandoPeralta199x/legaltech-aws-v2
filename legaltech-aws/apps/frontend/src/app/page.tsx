@@ -19,71 +19,71 @@ const features = [
     icon: FileSearch,
     title: "Análise Contratual",
     description:
-      "IA identifica cláusulas críticas, riscos e inconsistências em contratos complexos em minutos."
+      "Triagem assistida demonstrativa para mapear cláusulas, riscos e inconsistências no MVP local."
   },
   {
     icon: Bot,
     title: "Agentes Especializados",
     description:
-      "Pipeline de agentes autônomos: triagem, processamento documental, compliance e geração de relatório."
+      "Roteiro operacional do MVP local para triagem, documentos, revisão e relatórios demonstrativos."
   },
   {
     icon: Users,
     title: "Consulta de Partes",
     description:
-      "Verificação automática de dados das partes envolvidas com validação e histórico jurídico."
+      "Etapa preparada para consulta planejada de partes, sem consulta externa real nesta versão."
   },
   {
     icon: ShieldCheck,
     title: "Due Diligence",
     description:
-      "Análise completa de documentação, certidões e riscos para tomada de decisão segura."
+      "Roteiro demonstrativo para organizar documentos, certidões e riscos antes de integrações reais."
   },
   {
     icon: Lock,
     title: "Revisão Humana Obrigatória",
     description:
-      "Nenhum relatório é entregue sem validação de um analista jurídico. Segurança e responsabilidade."
+      "O MVP local orienta a leitura de resumos demonstrativos; revisão humana persistida fica no roadmap."
   },
   {
     icon: Sparkles,
     title: "Relatórios Profissionais",
     description:
-      "Relatórios claros, objetivos e estruturados, prontos para uso jurídico e tomada de decisão."
+      "Resumos demonstrativos claros e estruturados para apoiar revisão e decisões no MVP local."
   }
 ];
 
 const steps = [
   {
     num: "01",
-    title: "Crie um caso",
-    description: "Escolha o produto, informe as partes e faça upload dos documentos."
+    title: "Simule um novo pedido",
+    description: "Escolha o produto, informe as partes e use documentos como anexos locais da simulação."
   },
   {
     num: "02",
-    title: "IA processa tudo",
+    title: "Simulação local organiza o fluxo",
     description:
-      "Agentes especializados analisam, extraem insights e identificam riscos automaticamente."
+      "O roteiro do MVP local estrutura informações e módulos planejados sem IA, OCR/RAG ou consulta externa reais nesta versão."
   },
   {
     num: "03",
-    title: "Analista revisa",
+    title: "Revisão conceitual",
     description:
-      "Um especialista jurídico valida o relatório antes de qualquer entrega ao cliente."
+      "A leitura do resumo demonstrativo apoia a revisão local; aprovação persistida e entrega real ficam no roadmap."
   },
   {
     num: "04",
-    title: "Relatório entregue",
+    title: "Resumo demonstrativo",
     description:
-      "Relatório final aprovado, com riscos, recomendações e documentação estruturada."
+      "Entrega demonstrativa com riscos e recomendações simuladas, sem relatório final real nesta versão."
   }
 ];
 
 const products = [
-  { label: "Dados das Partes", desc: "Verificação cadastral e histórico" },
-  { label: "Consulta do Objeto", desc: "Análise do bem ou serviço contratado" },
-  { label: "Análise Contratual", desc: "Cláusulas, riscos e recomendações" },
-  { label: "Reunião com Advogado", desc: "Consultoria especializada online" }
+  { label: "Dados das Partes", desc: "Referência cadastral planejada" },
+  { label: "Consulta do Objeto", desc: "Critério simulado sobre bem ou serviço" },
+  { label: "Análise Contratual", desc: "Cláusulas, riscos e recomendações simuladas" },
+  { label: "Reunião com Advogado", desc: "Roteiro para atendimento futuro" }
 ];
 
 const trustItems = [
@@ -151,20 +151,20 @@ export default function LandingPage() {
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-4 py-1.5">
             <Sparkles className="text-brand-teal" size={13} />
             <span className="text-xs font-semibold text-brand-teal">
-              Plataforma LegalTech com IA
+              MVP local para fluxo jurídico assistido
             </span>
           </div>
           <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-            Análise jurídica inteligente
+            Fluxo jurídico assistido
             <br />
             <span className="text-gradient-brand">
-              para contratos, partes e documentos
+              para pedidos, casos e documentos
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-slate-600">
-            Uma plataforma com inteligência artificial para agilizar a análise
-            contratual, organizar casos, acompanhar etapas e entregar relatórios
-            jurídicos com mais clareza e segurança.
+            Uma demonstração local para organizar pedidos, casos, documentos e
+            relatórios demonstrativos, preservando a visão futura de IA,
+            integrações e revisão jurídica real no roadmap.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -218,13 +218,13 @@ export default function LandingPage() {
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold text-slate-700">Casos recentes</p>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-brand-teal">
-                  Live
+                  Demo local
                 </span>
               </div>
               {[
-                { code: "CASO-2026-001", type: "Análise contratual", status: "Revisão humana", color: "border border-amber-200 bg-amber-50 text-amber-700" },
-                { code: "CASO-2026-002", type: "Due diligence", status: "Análise IA", color: "border border-violet-200 bg-violet-50 text-violet-700" },
-                { code: "CASO-2026-003", type: "Consulta de objeto", status: "Processando", color: "border border-emerald-200 bg-emerald-50 text-emerald-700" }
+                { code: "CASO-2026-001", type: "Análise contratual", status: "Revisão local", color: "border border-amber-200 bg-amber-50 text-amber-700" },
+                { code: "CASO-2026-002", type: "Due diligence", status: "IA planejada", color: "border border-violet-200 bg-violet-50 text-violet-700" },
+                { code: "CASO-2026-003", type: "Consulta de objeto", status: "Preparação local", color: "border border-emerald-200 bg-emerald-50 text-emerald-700" }
               ].map((c) => (
                 <div
                   className="flex items-center justify-between border-t border-slate-100 py-2"
@@ -255,7 +255,7 @@ export default function LandingPage() {
               Como funciona
             </h2>
             <p className="mt-3 text-sm text-slate-600">
-              Do envio do documento ao relatório final em 4 etapas claras.
+              Da simulação do pedido ao resumo demonstrativo em 4 etapas claras.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -287,7 +287,7 @@ export default function LandingPage() {
               Funcionalidades
             </p>
             <h2 className="mt-2 text-3xl font-bold text-slate-950">
-              Tudo que você precisa
+              Visão do fluxo jurídico
             </h2>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -322,7 +322,7 @@ export default function LandingPage() {
               Produtos
             </p>
             <h2 className="mt-2 text-3xl font-bold text-slate-950">
-              Escolha o tipo de análise
+              Escolha a opção de simulação
             </h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -350,11 +350,11 @@ export default function LandingPage() {
           <div className="rounded-lg border border-brand-teal/20 bg-brand-teal/5 p-10 text-center">
             <Lock className="mx-auto mb-4 text-brand-teal" size={32} />
             <h2 className="text-2xl font-bold text-slate-950">
-              Segurança e conformidade
+              Diretrizes de segurança e conformidade
             </h2>
             <p className="mt-3 text-sm text-slate-600">
-              Construído com boas práticas de segurança, privacidade e compliance
-              jurídico em cada etapa.
+              Boas práticas de segurança, privacidade, auditoria e conformidade
+              permanecem no roadmap para integrações reais futuras.
             </p>
             <ul className="mt-8 space-y-3">
               {trustItems.map((item) => (
@@ -376,7 +376,7 @@ export default function LandingPage() {
           </h2>
           <p className="mt-4 text-sm text-slate-600">
             Solicite uma demonstração e veja como o Contrato Visto pode
-            transformar a análise jurídica da sua equipe.
+            organizar o fluxo jurídico local e preparar integrações futuras.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -406,7 +406,7 @@ export default function LandingPage() {
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            © 2026 Contrato Visto — Análise jurídica inteligente. Dados
+            © 2026 Contrato Visto — MVP local de fluxo jurídico assistido. Dados
             demonstrativos, sem contratos reais.
           </p>
         </div>
