@@ -140,7 +140,7 @@ export default function ClientsPage() {
     const validation = validateClientForm(form);
     setFormErrors(validation.errors);
     if (!validation.valid) {
-      setError("Revise os campos destacados antes de criar o cliente.");
+      setError("Revise os campos destacados antes de registrar o cliente local.");
       return;
     }
 
@@ -173,11 +173,11 @@ export default function ClientsPage() {
       setSuccessMessage(
         result.source === "mock"
           ? editingClient
-            ? "Cliente atualizado no fallback local de desenvolvimento."
-            : "Cliente criado no fallback local de desenvolvimento."
+            ? "Registro local atualizado no fallback de desenvolvimento."
+            : "Registro local criado no fallback de desenvolvimento."
           : editingClient
-            ? "Cliente atualizado com sucesso no backend."
-            : "Cliente criado com sucesso no backend."
+            ? "Registro de cliente atualizado pela API local."
+            : "Registro de cliente criado pela API local."
       );
       resetFormState();
     } catch (err) {
@@ -227,7 +227,7 @@ export default function ClientsPage() {
           </Notification>
         )}
         {successMessage && (
-          <Notification onDismiss={() => setSuccessMessage("")} title="Operação concluída" tone="success">
+          <Notification onDismiss={() => setSuccessMessage("")} title="Ação local registrada" tone="success">
             {successMessage}
           </Notification>
         )}
@@ -248,8 +248,8 @@ export default function ClientsPage() {
               </h2>
               <p className="text-xs leading-5 text-[var(--text2)]">
                 {editingClient
-                  ? "Edite apenas dados cadastrais. Organização e permissões continuam vindo do JWT/contexto do backend."
-                  : "Cadastre um cliente local para organizar partes e iniciar pedidos no MVP local. Organização e permissões continuam vindo do JWT/contexto do backend."}
+                  ? "Edite apenas dados cadastrais. Organização e permissões continuam vindo do JWT/contexto da API local."
+                  : "Cadastre um cliente local para organizar partes e iniciar pedidos no MVP local. Organização e permissões continuam vindo do JWT/contexto da API local."}
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -295,7 +295,7 @@ export default function ClientsPage() {
                 Cancelar
               </Button>
               <Button loading={submitting} type="submit">
-                {editingClient ? "Salvar alterações" : "Criar cliente"}
+                {editingClient ? "Atualizar registro local" : "Registrar cliente local"}
               </Button>
             </div>
           </form>
@@ -331,7 +331,7 @@ export default function ClientsPage() {
                 Tentar novamente
               </Button>
             }
-            description="A listagem de clientes não pôde ser carregada. Erros de autorização e validação do backend são exibidos sem fallback."
+            description="A listagem de clientes não pôde ser carregada. Erros de autorização e validação da API local são exibidos sem fallback."
             details={error}
           />
         ) : filteredClients.length === 0 ? (
@@ -358,7 +358,7 @@ export default function ClientsPage() {
                 : "Cadastre clientes locais para organizar contatos e partes, ou inicie Novo Pedido como fluxo principal do MVP local."
             }
             icon={<UsersRound size={20} />}
-            title={query ? "Busca sem resultados" : "Sem clientes cadastrados"}
+            title={query ? "Busca sem resultados" : "Sem clientes na base local"}
           />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -406,8 +406,8 @@ export default function ClientsPage() {
                       <BriefcaseBusiness size={12} className="shrink-0 text-[var(--text3)]" />
                       <span className="truncate">
                         {client.casesCount > 0
-                          ? `${client.casesCount} caso${client.casesCount !== 1 ? "s" : ""} informado${client.casesCount !== 1 ? "s" : ""} na base`
-                          : "Acompanhe casos vinculados na área de Casos"}
+                          ? `${client.casesCount} referência${client.casesCount !== 1 ? "s" : ""} de caso${client.casesCount !== 1 ? "s" : ""} indicada${client.casesCount !== 1 ? "s" : ""} na base`
+                          : "Acompanhe referências de casos na área de Casos"}
                       </span>
                     </div>
                   </dl>
@@ -420,7 +420,7 @@ export default function ClientsPage() {
                       {risk.label}
                     </span>
                     <span className="text-[11px] text-[var(--text3)]">
-                      Desde {formatDate(client.createdAt)}
+                      Registro desde {formatDate(client.createdAt)}
                     </span>
                   </div>
                 </div>
