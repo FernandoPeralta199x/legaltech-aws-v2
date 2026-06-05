@@ -71,12 +71,12 @@ export function ProductCard({ produto, selected, onSelect }: ProductCardProps) {
 
       <div className="mt-1 flex items-center justify-between border-t border-[var(--bd)] pt-3 text-[11px] text-[var(--text2)]">
         <span>
-          A partir de{" "}
+          Referência simulada{" "}
           <span className="font-semibold text-[var(--text)]">
             R$ {(meta.precoBaseCents / 100).toFixed(2).replace(".", ",")}
           </span>
         </span>
-        <span>{meta.slaHoras}h</span>
+        <span>Prazo ref.: {meta.slaHoras}h</span>
       </div>
     </button>
   );
