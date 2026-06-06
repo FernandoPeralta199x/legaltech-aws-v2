@@ -42,10 +42,10 @@ import {
 import { validatePasswordChange } from "@/src/lib/validation";
 
 const TABS = [
-  { id: "org", label: "Organização", icon: Building2 },
-  { id: "members", label: "Membros", icon: Users },
-  { id: "security", label: "Segurança", icon: Shield },
-  { id: "notifications", label: "Notificações", icon: Bell },
+  { id: "org", label: "Configuração local", icon: Building2 },
+  { id: "members", label: "Equipe demo", icon: Users },
+  { id: "security", label: "Segurança local", icon: Shield },
+  { id: "notifications", label: "Preferências locais", icon: Bell },
   { id: "appearance", label: "Aparência", icon: Palette }
 ] as const;
 
@@ -63,29 +63,29 @@ const notificationItems: Array<{
   label: string;
 }> = [
   {
-    desc: "Quando um caso é adicionado à sua organização.",
+    desc: "Quando um registro local de caso é indicado no MVP.",
     key: "new_case_created",
-    label: "Novo caso criado"
+    label: "Registro local de caso"
   },
   {
-    desc: "Quando a análise documental ou contratual é concluída.",
+    desc: "Quando a análise demonstrativa local é marcada no roteiro.",
     key: "analysis_completed",
-    label: "Análise concluída"
+    label: "Análise demonstrativa"
   },
   {
-    desc: "Quando uma minuta ou relatório aguarda revisão humana.",
+    desc: "Quando um resumo demonstrativo fica em revisão local planejada.",
     key: "review_pending",
-    label: "Revisão pendente"
+    label: "Revisão local planejada"
   },
   {
-    desc: "Quando um relatório é aprovado para disponibilização.",
+    desc: "Quando um relatório demonstrativo recebe validação local.",
     key: "report_approved",
-    label: "Relatório aprovado"
+    label: "Validação local de relatório"
   },
   {
-    desc: "Quando um agente local falha e exige atenção operacional.",
+    desc: "Quando um módulo planejado exige atenção operacional local.",
     key: "agent_failed",
-    label: "Falha em agente"
+    label: "Atenção em módulo local"
   }
 ];
 
@@ -211,7 +211,7 @@ export default function SettingsPage() {
     <AuthGuard>
       <AppLayout>
         <PageTitle
-          description="Gerencie organização, segurança, notificações locais e aparência da plataforma."
+          description="Ajuste configurações locais e demonstrativas de organização, segurança, canais planejados e aparência."
           eyebrow="Configurações"
           title="Configurações"
         />
@@ -243,9 +243,9 @@ export default function SettingsPage() {
 
           <div className="min-w-0 flex-1">
             {activeTab === "org" && (
-              <Card title="Dados da organização">
+              <Card title="Dados locais da organização">
                 <div className="max-w-lg space-y-4">
-                  <Field label="Nome da organização">
+                  <Field label="Nome local da organização">
                     <input className={inputClass} defaultValue={org.name} type="text" />
                   </Field>
                   <Field label="CNPJ">
@@ -263,7 +263,7 @@ export default function SettingsPage() {
                         value={org.plan.charAt(0).toUpperCase() + org.plan.slice(1)}
                       />
                       <Button type="button" variant="secondary">
-                        Upgrade
+                        Upgrade em roadmap
                       </Button>
                     </div>
                   </Field>
@@ -273,7 +273,7 @@ export default function SettingsPage() {
                     type="button"
                     variant={saved ? "secondary" : "primary"}
                   >
-                    {saved ? "Salvo!" : "Salvar alterações"}
+                    {saved ? "Registrado localmente" : "Registrar configuração local"}
                   </Button>
                 </div>
               </Card>
@@ -281,8 +281,8 @@ export default function SettingsPage() {
 
             {activeTab === "members" && (
               <Card
-                description="Gerencie quem tem acesso à plataforma."
-                title="Membros da equipe"
+                description="Visualize referências de equipe do MVP local. Convites reais e permissões ficam no roadmap."
+                title="Equipe demonstrativa"
               >
                 <div className="divide-y divide-slate-200 dark:divide-slate-800">
                   {mockUsers.map((user) => (
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
                   <Button icon={<User size={13} />} type="button" variant="secondary">
-                    Convidar novo membro
+                    Convite em roadmap
                   </Button>
                 </div>
               </Card>
@@ -319,10 +319,10 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <Card
                   description="Validação local para desenvolvimento. Não aciona Cognito nem endpoint real."
-                  title="Segurança da conta"
+                  title="Segurança local da conta"
                 >
                   {passwordError && (
-                    <Notification tone="error" title="Senha não atualizada">
+                    <Notification tone="error" title="Senha local não validada">
                       {passwordError}
                     </Notification>
                   )}
@@ -406,14 +406,14 @@ export default function SettingsPage() {
                       />
                     </Field>
                     <Button icon={<Lock size={14} />} type="submit">
-                      Atualizar senha local
+                      Validar senha local
                     </Button>
                   </form>
                 </Card>
 
                 <Card
                   description="Dispositivos demonstrativos com acesso à sessão local. Tokens não são exibidos."
-                  title="Sessões ativas"
+                  title="Sessões demonstrativas"
                 >
                   <div className="divide-y divide-slate-200 dark:divide-slate-800">
                     {sessions.map((activeSession) => (
@@ -440,11 +440,11 @@ export default function SettingsPage() {
                         {activeSession.current ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
                             <CheckCircle2 size={12} />
-                            Sessão atual · {activeSession.lastSeen}
+                            Sessão local atual · {activeSession.lastSeen}
                           </span>
                         ) : (
                           <button className="text-left text-[10px] font-semibold text-red-700 transition hover:text-red-800 dark:text-red-300 dark:hover:text-red-200">
-                            Encerrar sessão local
+                            Encerramento em roadmap
                           </button>
                         )}
                       </div>
@@ -456,12 +456,13 @@ export default function SettingsPage() {
 
             {activeTab === "notifications" && (
               <Card
-                description="Preferências salvas localmente até existir endpoint real de envio."
-                title="Preferências de notificação"
+                description="Preferências demonstrativas salvas localmente até existir endpoint real de envio."
+                title="Preferências locais de notificação"
               >
                 <Notification tone="info" title="Canais ainda demonstrativos">
-                  E-mail e WhatsApp ficam configurados apenas no navegador. Nenhum SMTP,
-                  WhatsApp ou API externa é chamado nesta etapa.
+                  E-mail planejado e WhatsApp planejado ficam configurados apenas
+                  no navegador. Nenhum SMTP, WhatsApp ou API externa é chamado
+                  nesta etapa.
                 </Notification>
 
                 <div className="space-y-3">
@@ -483,13 +484,13 @@ export default function SettingsPage() {
                           <ChannelToggle
                             active={notificationPreferences[item.key].email}
                             icon={<Mail size={13} />}
-                            label="E-mail"
+                            label="E-mail planejado"
                             onClick={() => toggleNotificationChannel(item.key, "email")}
                           />
                           <ChannelToggle
                             active={notificationPreferences[item.key].whatsapp}
                             icon={<MessageCircle size={13} />}
-                            label="WhatsApp"
+                            label="WhatsApp planejado"
                             onClick={() => toggleNotificationChannel(item.key, "whatsapp")}
                           />
                         </div>
