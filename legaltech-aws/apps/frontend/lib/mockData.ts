@@ -328,7 +328,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-10T09:50:00.000Z",
     finishedAt: "2026-05-10T09:53:00.000Z",
     durationMs: 180000,
-    outputSummary: "Triagem concluída. 6 documentos identificados para processamento.",
+    outputSummary: "Triagem demonstrativa registrada. 6 documentos indicados para preparação local.",
     errorMessage: null
   },
   {
@@ -340,7 +340,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-10T10:00:00.000Z",
     finishedAt: "2026-05-10T10:28:00.000Z",
     durationMs: 1680000,
-    outputSummary: "5 documentos processados, chunks extraídos e vetorizados com sucesso.",
+    outputSummary: "5 documentos marcados no mock, com trechos demonstrativos preparados para visualização.",
     errorMessage: null
   },
   {
@@ -352,7 +352,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-10T10:30:00.000Z",
     finishedAt: "2026-05-10T11:05:00.000Z",
     durationMs: 2100000,
-    outputSummary: "Análise contratual concluída. 3 riscos identificados, 5 recomendações geradas.",
+    outputSummary: "Roteiro de análise local preparado. 3 indicadores simulados e 5 recomendações demonstrativas.",
     errorMessage: null
   },
   {
@@ -364,7 +364,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-10T11:10:00.000Z",
     finishedAt: "2026-05-10T11:25:00.000Z",
     durationMs: 900000,
-    outputSummary: "Verificação de compliance concluída. Sem pendências críticas.",
+    outputSummary: "Verificação demonstrativa de conformidade registrada. Sem pendências críticas no mock.",
     errorMessage: null
   },
   {
@@ -376,7 +376,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-10T11:30:00.000Z",
     finishedAt: "2026-05-10T11:48:00.000Z",
     durationMs: 1080000,
-    outputSummary: "Minuta do relatório gerada. Aguardando revisão humana.",
+    outputSummary: "Resumo demonstrativo preparado. Revisão humana planejada no roadmap.",
     errorMessage: null
   },
   {
@@ -388,7 +388,7 @@ export const mockAgentExecutions: AgentExecution[] = [
     startedAt: "2026-05-15T15:30:00.000Z",
     finishedAt: "2026-05-15T15:33:00.000Z",
     durationMs: 180000,
-    outputSummary: "Triagem concluída. 3 documentos em fila.",
+    outputSummary: "Triagem demonstrativa registrada. 3 documentos indicados no roteiro local.",
     errorMessage: null
   },
   {
@@ -524,8 +524,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-001",
     caseId: "case-001",
     status: "draft",
-    label: "Caso criado",
-    description: "Caso iniciado pelo cliente via plataforma.",
+    label: "Registro local de caso",
+    description: "Caso demonstrativo iniciado pelo cliente via plataforma.",
     actor: "Carlos Eduardo (cliente)",
     createdAt: "2026-05-10T09:00:00.000Z"
   },
@@ -533,8 +533,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-002",
     caseId: "case-001",
     status: "submitted",
-    label: "Enviado para análise",
-    description: "Cliente confirmou dados e enviou para processamento.",
+    label: "Marcado para triagem local",
+    description: "Cliente confirmou dados na simulação local para preparação do roteiro.",
     actor: "Carlos Eduardo (cliente)",
     createdAt: "2026-05-10T09:45:00.000Z"
   },
@@ -543,7 +543,7 @@ export const mockTimeline: TimelineEvent[] = [
     caseId: "case-001",
     status: "triagem_pendente",
     label: "Triagem iniciada",
-    description: "Agente de triagem ativado para classificar documentos.",
+    description: "Roteiro de triagem local indicado para classificar documentos demonstrativos.",
     actor: "Sistema",
     createdAt: "2026-05-10T09:50:00.000Z"
   },
@@ -551,8 +551,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-004",
     caseId: "case-001",
     status: "processamento_documental",
-    label: "Processamento documental",
-    description: "Documentos sendo processados e vetorizados.",
+    label: "Preparação documental local",
+    description: "Trechos demonstrativos preparados para visualização local.",
     actor: "Agente Documental",
     createdAt: "2026-05-10T10:00:00.000Z"
   },
@@ -560,8 +560,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-005",
     caseId: "case-001",
     status: "analise_contratual",
-    label: "Análise contratual",
-    description: "IA analisando cláusulas, riscos e compliance.",
+    label: "Triagem contratual local",
+    description: "Roteiro de IA planejada indicado para cláusulas, riscos e conformidade.",
     actor: "Agente Contratual",
     createdAt: "2026-05-10T10:30:00.000Z"
   },
@@ -569,8 +569,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-006",
     caseId: "case-001",
     status: "minuta_relatorio",
-    label: "Minuta de relatório gerada",
-    description: "IA gerou minuta do relatório jurídico.",
+    label: "Resumo demonstrativo preparado",
+    description: "Roteiro de relatório preparado na simulação local.",
     actor: "Agente Relator",
     createdAt: "2026-05-10T11:30:00.000Z"
   },
@@ -578,8 +578,8 @@ export const mockTimeline: TimelineEvent[] = [
     id: "tl-007",
     caseId: "case-001",
     status: "revisao_humana",
-    label: "Aguardando revisão humana",
-    description: "Relatório encaminhado para revisão do analista.",
+    label: "Revisão humana planejada",
+    description: "Etapa futura indicada no roteiro demonstrativo.",
     actor: "Sistema",
     createdAt: "2026-05-10T12:00:00.000Z"
   }
