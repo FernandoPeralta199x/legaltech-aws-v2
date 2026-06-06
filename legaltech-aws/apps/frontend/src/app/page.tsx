@@ -87,11 +87,11 @@ const products = [
 ];
 
 const trustItems = [
-  "Dados processados em ambiente seguro",
-  "Sem armazenamento de documentos sensíveis em texto",
-  "Revisão humana obrigatória antes da entrega",
-  "Auditoria completa de todas as ações",
-  "LGPD compliance por design"
+  "Fluxo local com diretrizes de segurança",
+  "Sem contratos reais nesta demonstração local",
+  "Revisão humana planejada no roadmap",
+  "Rastreabilidade planejada das ações",
+  "Diretrizes de LGPD no roadmap"
 ];
 
 export default function LandingPage() {
