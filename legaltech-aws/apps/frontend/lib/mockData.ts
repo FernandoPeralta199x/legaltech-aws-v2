@@ -484,7 +484,7 @@ export const mockReports: Report[] = [
     caseCode: "CASO-2026-002",
     status: "draft",
     title: "Rascunho — Análise de Contrato de Prestação de Serviços TI",
-    summary: "Análise em andamento. Aguardando conclusão do processamento documental.",
+    summary: "Análise demonstrativa em andamento. Preparação documental local pendente.",
     risks: [],
     recommendations: [],
     generatedAt: "2026-05-23T14:00:00.000Z",
@@ -614,7 +614,7 @@ export const mockAuditLogs: AuditLog[] = [
     userId: "user-003",
     userName: "Carlos Eduardo",
     action: "case_submitted",
-    description: "Caso enviado para análise.",
+    description: "Caso marcado para triagem local.",
     metadata: { caseCode: "CASO-2026-001" },
     createdAt: "2026-05-10T09:45:00.000Z"
   },
