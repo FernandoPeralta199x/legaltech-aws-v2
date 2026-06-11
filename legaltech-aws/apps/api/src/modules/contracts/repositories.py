@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Protocol
+from collections.abc import Mapping
+from typing import Any, Protocol
 from uuid import UUID
 
 from src.modules.contracts.schemas import (
@@ -14,6 +15,7 @@ from src.modules.contracts.schemas import (
     PartySchema,
     ProviderResultSchema,
     ReportSchema,
+    ReportRecommendation,
     TimelineEventSchema,
     TriageModuleSchema,
 )
@@ -45,6 +47,13 @@ class RequestRepository(Protocol):
         product_type: str | None = None,
         q: str | None = None,
     ) -> PaginatedResponse: ...
+
+    def get_case(
+        self,
+        *,
+        organization_id: UUID,
+        request_id: UUID,
+    ) -> CaseSchema | None: ...
 
 
 class CaseRepository(Protocol):
@@ -82,8 +91,48 @@ class CaseRepository(Protocol):
         q: str | None = None,
     ) -> PaginatedResponse: ...
 
+    def update_status(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        status: str,
+    ) -> CaseSchema | None: ...
+
+    def update_progress(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        progress: int,
+    ) -> CaseSchema | None: ...
+
+    def update_recommendation(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        recommendation: ReportRecommendation | None,
+    ) -> CaseSchema | None: ...
+
+    def update_risk_level(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        risk_level: str,
+    ) -> CaseSchema | None: ...
+
 
 class PartyRepository(Protocol):
+    def create(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> PartySchema: ...
+
     def list_by_case(
         self,
         *,
@@ -99,8 +148,25 @@ class PartyRepository(Protocol):
         party_id: UUID,
     ) -> PartySchema | None: ...
 
+    def update(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        party_id: UUID,
+        values: Mapping[str, Any],
+    ) -> PartySchema | None: ...
+
 
 class DocumentRepository(Protocol):
+    def create(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> DocumentSchema: ...
+
     def list_by_case(
         self,
         *,
@@ -114,6 +180,17 @@ class DocumentRepository(Protocol):
         organization_id: UUID,
         case_id: UUID,
         document_id: UUID,
+    ) -> DocumentSchema | None: ...
+
+    def update_status(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        document_id: UUID,
+        status: str | None = None,
+        ocr_status: str | None = None,
+        ai_read_status: str | None = None,
     ) -> DocumentSchema | None: ...
 
 
@@ -130,11 +207,19 @@ class TimelineRepository(Protocol):
         *,
         organization_id: UUID,
         case_id: UUID,
-        event: TimelineEventSchema,
+        values: Mapping[str, Any],
     ) -> TimelineEventSchema: ...
 
 
 class TriageRepository(Protocol):
+    def create_module(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> TriageModuleSchema: ...
+
     def list_modules(
         self,
         *,
@@ -150,8 +235,25 @@ class TriageRepository(Protocol):
         module_key: str,
     ) -> TriageModuleSchema | None: ...
 
+    def update_module(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        module_key: str,
+        values: Mapping[str, Any],
+    ) -> TriageModuleSchema | None: ...
+
 
 class ProviderResultRepository(Protocol):
+    def create(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> ProviderResultSchema: ...
+
     def list_by_case(
         self,
         *,
@@ -169,6 +271,14 @@ class ProviderResultRepository(Protocol):
 
 
 class ReportRepository(Protocol):
+    def create(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> ReportSchema: ...
+
     def get_current(
         self,
         *,
@@ -183,3 +293,19 @@ class ReportRepository(Protocol):
         case_id: UUID,
         report: ReportSchema,
     ) -> ReportSchema: ...
+
+    def update_status(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        status: str,
+    ) -> ReportSchema | None: ...
+
+    def update_content(
+        self,
+        *,
+        organization_id: UUID,
+        case_id: UUID,
+        values: Mapping[str, Any],
+    ) -> ReportSchema | None: ...
