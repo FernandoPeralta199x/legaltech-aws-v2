@@ -1,2 +1,3 @@
 export type { ApiError, ApiResponse, ApiSuccessResponse } from "./api";
-export type * from "./domain";
+export type { PaginatedResponse } from "./api";
+export * from "./domain";

@@ -1,5 +1,12 @@
 import { mockCases } from "../../lib/mockData";
-import type { Case, CaseCreate, CaseUpdate, Client, ProductType } from "../../types";
+import type {
+  Case,
+  CaseCreate,
+  CaseListFilters,
+  CaseUpdate,
+  Client,
+  ProductType
+} from "../../types";
 import {
   findStoredLocalCase,
   mergeCasesWithLocalCases
@@ -56,6 +63,35 @@ function progressFromStatus(status: string): number {
   };
 
   return progress[status] ?? 35;
+}
+
+function buildCaseListQuery(filters: CaseListFilters = {}): string {
+  const search = new URLSearchParams();
+
+  if (filters.status) search.set("status", filters.status);
+  if (filters.caseType) search.set("case_type", filters.caseType);
+  if (filters.clientId) search.set("client_id", filters.clientId);
+  if (filters.productType) search.set("product_type", filters.productType);
+  if (filters.riskLevel) search.set("risk_level", filters.riskLevel);
+  if (filters.q) search.set("q", filters.q);
+  if (filters.page) search.set("page", String(filters.page));
+  if (filters.pageSize) search.set("page_size", String(filters.pageSize));
+  if (filters.sortBy) search.set("sort_by", filters.sortBy);
+  if (filters.sortOrder) search.set("sort_order", filters.sortOrder);
+
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+function resolveListCasesArgs(
+  filtersOrClients: CaseListFilters | Client[] = {},
+  maybeClients: Client[] = []
+): { filters: CaseListFilters; clients: Client[] } {
+  if (Array.isArray(filtersOrClients)) {
+    return { filters: {}, clients: filtersOrClients };
+  }
+
+  return { filters: filtersOrClients, clients: maybeClients };
 }
 
 export function mapBackendCase(
@@ -124,10 +160,14 @@ export function enrichCasesWithClients(cases: Case[], clients: Client[]): Case[]
 }
 
 export async function listCases(
-  clients: Client[] = []
+  filtersOrClients: CaseListFilters | Client[] = {},
+  maybeClients: Client[] = []
 ): Promise<ServiceResult<Case[]>> {
+  const { clients, filters } = resolveListCasesArgs(filtersOrClients, maybeClients);
   try {
-    const response = await apiClient.get<BackendCase[]>("/api/v1/cases");
+    const response = await apiClient.get<BackendCase[]>(
+      `/api/v1/cases${buildCaseListQuery(filters)}`
+    );
     return {
       data: mergeCasesWithLocalCases(
         response.data.map((legalCase) => mapBackendCase(legalCase, clients))
@@ -193,10 +233,11 @@ export async function getCase(
       throw error;
     }
 
-    const legalCase =
-      findStoredLocalCase(caseId) ??
-      mockCases.find((item) => item.id === caseId) ??
-      mockCases[0];
+    const legalCase = findStoredLocalCase(caseId) ?? mockCases.find((item) => item.id === caseId);
+    if (!legalCase) {
+      throw error;
+    }
+
     return {
       data: legalCase,
       fallbackReason: fallbackReason(error),

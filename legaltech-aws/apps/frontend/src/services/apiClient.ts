@@ -1,5 +1,6 @@
 import { getStoredToken } from "../lib/authStorage";
 import type { ApiError, ApiResponse, ApiSuccessResponse } from "../../types/api";
+import { SOURCE_MODE_VALUES, type SourceMode } from "../../types";
 
 const DEFAULT_API_PORT = "8000";
 const LOCAL_API_FALLBACK_HOST = "127.0.0.1";
@@ -87,6 +88,33 @@ function normalizeApiError(error: ApiError | undefined, status: number): ApiErro
     code: "HTTP_ERROR",
     details: {},
     message: `Erro HTTP ${status}.`
+  };
+}
+
+function isSourceMode(value: unknown): value is SourceMode {
+  return (
+    typeof value === "string" &&
+    (SOURCE_MODE_VALUES as readonly string[]).includes(value)
+  );
+}
+
+function normalizeApiSuccess<T>(
+  payload: ApiResponse<T> | Partial<ApiSuccessResponse<T>>
+): ApiSuccessResponse<T> {
+  const message = (payload as { message?: unknown }).message;
+
+  return {
+    success: true,
+    data: payload.data as T,
+    error: null,
+    request_id:
+      typeof payload.request_id === "string" ? payload.request_id : "frontend-local",
+    source_mode: isSourceMode(payload.source_mode) ? payload.source_mode : "real",
+    timestamp:
+      typeof payload.timestamp === "string"
+        ? payload.timestamp
+        : new Date().toISOString(),
+    ...(typeof message === "string" ? { message } : {})
   };
 }
 
@@ -180,7 +208,7 @@ export async function apiRequest<T>(
     throw new ApiClientError(error, response.status);
   }
 
-  return payload;
+  return normalizeApiSuccess(payload);
 }
 
 export const apiClient = {

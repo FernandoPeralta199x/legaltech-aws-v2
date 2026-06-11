@@ -87,6 +87,37 @@ test("listCases maps backend cases and reports api source", async () => {
   assert.equal(result.data[0].product, "analise_contratual");
 });
 
+test("listCases accepts pagination and multi-case filters", async () => {
+  storage.clear();
+  let capturedUrl = "";
+  globalThis.fetch = (async (url) => {
+    capturedUrl = String(url);
+
+    return Response.json({
+      success: true,
+      data: []
+    });
+  }) as typeof fetch;
+
+  await listCases({
+    page: 2,
+    pageSize: 10,
+    productType: "analise_contratual",
+    q: "CASO",
+    riskLevel: "unknown",
+    sortBy: "updated_at",
+    sortOrder: "desc",
+    status: "created"
+  });
+
+  const url = new URL(capturedUrl);
+  assert.equal(url.searchParams.get("page"), "2");
+  assert.equal(url.searchParams.get("page_size"), "10");
+  assert.equal(url.searchParams.get("product_type"), "analise_contratual");
+  assert.equal(url.searchParams.get("risk_level"), "unknown");
+  assert.equal(url.searchParams.get("status"), "created");
+});
+
 test("listCases includes locally stored wizard cases before backend cases", async () => {
   storage.clear();
   const localCase = makeLocalCase();

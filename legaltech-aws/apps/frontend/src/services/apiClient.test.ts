@@ -145,3 +145,24 @@ test("apiClient handles non-standard error envelopes without undefined message a
     }
   );
 });
+
+test("apiClient preserves standard response envelope metadata", async () => {
+  storage.clear();
+
+  globalThis.fetch = (async () =>
+    Response.json({
+      success: true,
+      data: { id: "case-1" },
+      error: null,
+      request_id: "req-standard",
+      source_mode: "local",
+      timestamp: "2026-06-11T10:00:00.000Z"
+    })) as typeof fetch;
+
+  const response = await apiClient.get<{ id: string }>("/api/v1/cases/case-1");
+
+  assert.equal(response.data.id, "case-1");
+  assert.equal(response.error, null);
+  assert.equal(response.request_id, "req-standard");
+  assert.equal(response.source_mode, "local");
+});

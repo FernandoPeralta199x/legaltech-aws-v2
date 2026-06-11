@@ -27,9 +27,11 @@ export function formatDate(value: string): string {
 
 export function formatRiskLabel(value: RiskLevel): string {
   const labels: Record<RiskLevel, string> = {
+    critical: "Critico",
+    high: "Alto",
     low: "Baixo",
     medium: "Moderado",
-    high: "Alto"
+    unknown: "Nao informado"
   };
 
   return labels[value];
