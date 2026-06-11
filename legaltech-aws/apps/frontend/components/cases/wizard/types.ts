@@ -7,6 +7,8 @@ export type Party = {
   nome: string;
   nomeFantasia?: string;
   documento: string;
+  rg?: string;
+  birthDate?: string;
   email: string;
   telefone: string;
   endereco: string;
@@ -43,6 +45,8 @@ export function newParty(papel: Papel = "contratante"): Party {
     papel,
     nome: "",
     documento: "",
+    rg: "",
+    birthDate: "",
     email: "",
     telefone: "",
     endereco: "",

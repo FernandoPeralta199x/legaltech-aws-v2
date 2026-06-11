@@ -35,6 +35,7 @@ export function PartyForm({
   onRemove
 }: PartyFormProps) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const today = new Date().toISOString().slice(0, 10);
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -59,10 +60,18 @@ export function PartyForm({
     if (party.telefone && !isValidPhone(party.telefone)) {
       e.telefone = "Telefone inválido.";
     }
+    if (party.tipoPessoa === "pf" && party.birthDate && party.birthDate > today) {
+      e.birthDate = "Data de nascimento não pode ser futura.";
+    }
     return e;
-  }, [party]);
+  }, [party, today]);
 
-  const canSave = !errors.nome && !errors.documento && !errors.email && !errors.telefone;
+  const canSave =
+    !errors.nome &&
+    !errors.documento &&
+    !errors.email &&
+    !errors.telefone &&
+    !errors.birthDate;
 
   function update<K extends keyof Party>(key: K, value: Party[K]) {
     onChange({ ...party, [key]: value });
@@ -158,6 +167,32 @@ export function PartyForm({
             value={party.documento}
           />
         </FormField>
+
+        {party.tipoPessoa === "pf" && (
+          <>
+            <FormField label="RG">
+              <TextInput
+                onChange={(e) => update("rg", e.target.value)}
+                placeholder="Informe o RG"
+                value={party.rg ?? ""}
+              />
+            </FormField>
+
+            <FormField
+              error={touched.birthDate ? errors.birthDate : undefined}
+              label="Data de nascimento"
+            >
+              <TextInput
+                invalid={touched.birthDate && Boolean(errors.birthDate)}
+                max={today}
+                onBlur={() => setError("birthDate")}
+                onChange={(e) => update("birthDate", e.target.value)}
+                type="date"
+                value={party.birthDate ?? ""}
+              />
+            </FormField>
+          </>
+        )}
 
         <FormField error={touched.email ? errors.email : undefined} label="E-mail">
           <TextInput
