@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { clearStoredSession, saveStoredSession } from "../lib/authStorage";
-import { apiClient } from "./apiClient";
+import { ApiClientError, apiClient } from "./apiClient";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -127,4 +127,21 @@ test("apiClient rewrites a loopback env URL when the frontend is opened from a L
       Reflect.deleteProperty(globalThis, "location");
     }
   }
+});
+
+test("apiClient handles non-standard error envelopes without undefined message access", async () => {
+  storage.clear();
+
+  globalThis.fetch = (async () =>
+    Response.json({ detail: "Not Found" }, { status: 404 })) as typeof fetch;
+
+  await assert.rejects(
+    () => apiClient.get<unknown>("/api/v1/cases/case-local-missing"),
+    (error) => {
+      assert.equal(error instanceof ApiClientError, true);
+      assert.equal((error as ApiClientError).code, "HTTP_ERROR");
+      assert.equal((error as ApiClientError).message, "Erro HTTP 404.");
+      return true;
+    }
+  );
 });

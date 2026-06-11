@@ -10,6 +10,7 @@ import {
   type Modulo,
   type Produto
 } from "@/lib/produtoConfig";
+import { saveLocalCaseFromWizard } from "@/src/lib/localCases";
 
 import { ContractStep } from "./ContractStep";
 import { ModulesStep } from "./ModulesStep";
@@ -85,12 +86,18 @@ export function NewCaseWizard() {
   }, [step, parties, arquivo, produto]);
 
   async function handleSubmit() {
-    if (!canAdvance || !produto) return;
+    if (!canAdvance || !produto || submitting) return;
     setSubmitting(true);
+    const localCase = saveLocalCaseFromWizard({
+      arquivo,
+      modulos,
+      parties,
+      produto
+    });
     setSubmitNotice({
       title: "Simulação local registrada",
       description:
-        "Sem submit real nesta versão: o registro local da simulação não cria caso real no backend. Você será redirecionado para Casos para seguir o fluxo operacional do MVP local."
+        `Registro ${localCase.code} salvo somente neste navegador. Não há criação real no backend nesta versão; você será redirecionado para Casos para seguir o fluxo operacional do MVP local.`
     });
     await new Promise((resolve) => setTimeout(resolve, 900));
     setSubmitting(false);

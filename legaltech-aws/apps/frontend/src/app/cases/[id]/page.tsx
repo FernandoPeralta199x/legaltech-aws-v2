@@ -34,6 +34,7 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
 import { formatDate } from "@/lib/formatters";
+import { findStoredLocalCase } from "@/src/lib/localCases";
 import { ApiClientError } from "@/src/services/apiClient";
 import {
   createCaseParty,
@@ -185,6 +186,15 @@ export default function CaseDetailPage({ params }: PageProps) {
     setError("");
 
     try {
+      const localCase = findStoredLocalCase(id);
+      if (localCase) {
+        setCaseData(localCase);
+        setCaseDocuments([]);
+        setCaseParties(localCase.parties);
+        setFallbackReason("");
+        return;
+      }
+
       const clientsResult = await listClients();
       const [caseResult, documentsResult, partiesResult] = await Promise.all([
         getCase(id, clientsResult.data),

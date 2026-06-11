@@ -74,16 +74,34 @@ type ApiClientOptions = RequestInit & {
   token?: string;
 };
 
+function normalizeApiError(error: ApiError | undefined, status: number): ApiError {
+  if (
+    error &&
+    typeof error.code === "string" &&
+    typeof error.message === "string"
+  ) {
+    return error;
+  }
+
+  return {
+    code: "HTTP_ERROR",
+    details: {},
+    message: `Erro HTTP ${status}.`
+  };
+}
+
 export class ApiClientError extends Error {
   readonly code: string;
   readonly details?: Record<string, unknown>;
   readonly status: number;
 
-  constructor(error: ApiError, status: number) {
-    super(error.message);
+  constructor(error: ApiError | undefined, status: number) {
+    const normalizedError = normalizeApiError(error, status);
+
+    super(normalizedError.message);
     this.name = "ApiClientError";
-    this.code = error.code;
-    this.details = error.details;
+    this.code = normalizedError.code;
+    this.details = normalizedError.details;
     this.status = status;
   }
 }

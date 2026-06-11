@@ -1,5 +1,9 @@
 import { mockCases } from "../../lib/mockData";
 import type { Case, CaseCreate, CaseUpdate, Client, ProductType } from "../../types";
+import {
+  findStoredLocalCase,
+  mergeCasesWithLocalCases
+} from "../lib/localCases";
 import { apiClient } from "./apiClient";
 import { fallbackReason, shouldUseMockFallback, type ServiceResult } from "./fallback";
 
@@ -125,7 +129,9 @@ export async function listCases(
   try {
     const response = await apiClient.get<BackendCase[]>("/api/v1/cases");
     return {
-      data: response.data.map((legalCase) => mapBackendCase(legalCase, clients)),
+      data: mergeCasesWithLocalCases(
+        response.data.map((legalCase) => mapBackendCase(legalCase, clients))
+      ),
       source: "api"
     };
   } catch (error) {
@@ -134,7 +140,7 @@ export async function listCases(
     }
 
     return {
-      data: mockCases,
+      data: mergeCasesWithLocalCases(mockCases),
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -168,6 +174,14 @@ export async function getCase(
   caseId: string,
   clients: Client[] = []
 ): Promise<ServiceResult<Case>> {
+  const localCase = findStoredLocalCase(caseId);
+  if (localCase) {
+    return {
+      data: localCase,
+      source: "mock"
+    };
+  }
+
   try {
     const response = await apiClient.get<BackendCase>(`/api/v1/cases/${caseId}`);
     return {
@@ -179,7 +193,10 @@ export async function getCase(
       throw error;
     }
 
-    const legalCase = mockCases.find((item) => item.id === caseId) ?? mockCases[0];
+    const legalCase =
+      findStoredLocalCase(caseId) ??
+      mockCases.find((item) => item.id === caseId) ??
+      mockCases[0];
     return {
       data: legalCase,
       fallbackReason: fallbackReason(error),
