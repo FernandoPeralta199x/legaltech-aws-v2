@@ -349,7 +349,7 @@ class ReportSchema(BaseModel):
     recommendation: ReportRecommendation
     confidence: float | None = Field(default=None, ge=0, le=1)
     limitations: list[str] = Field(default_factory=list)
-    source_refs: list[str] = Field(default_factory=list)
+    source_refs: list[dict[str, Any] | str] = Field(default_factory=list)
     generated_by: str | None = None
     generated_at: datetime | None = None
     updated_at: datetime

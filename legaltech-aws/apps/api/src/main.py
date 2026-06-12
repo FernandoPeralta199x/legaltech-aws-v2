@@ -17,6 +17,7 @@ from src.modules.documents.router import case_router as case_documents_router
 from src.modules.health.router import router as health_router
 from src.modules.provider_results.router import router as provider_results_router
 from src.modules.requests.router import router as requests_router
+from src.modules.reports.router import router as reports_router
 from src.modules.timeline.router import router as timeline_router
 from src.modules.triage.router import router as triage_router
 
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(timeline_router)
     app.include_router(triage_router)
     app.include_router(provider_results_router)
+    app.include_router(reports_router)
     app.include_router(documents_router)
     app.include_router(requests_router)
     app.include_router(document_processing_router)
