@@ -20,7 +20,6 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
 
-import { AgentCard } from "@/components/AgentCard";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
@@ -34,22 +33,22 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
 import { formatDate } from "@/lib/formatters";
-import { findStoredLocalCase } from "@/src/lib/localCases";
 import { ApiClientError } from "@/src/services/apiClient";
 import {
   createCaseParty,
-  listCaseParties,
   updateCaseParty
 } from "@/src/services/caseParties";
-import { getCase } from "@/src/services/cases";
-import { listClients } from "@/src/services/clients";
-import { listDocuments } from "@/src/services/documents";
-import type { Case, CaseParty, CasePartyCreate, CasePartyUpdate, Document } from "@/types";
-import {
-  mockAgentExecutions,
-  mockReports,
-  mockTimeline
-} from "@/lib/mockData";
+import { getCaseAggregate } from "@/src/services/cases";
+import type {
+  Case,
+  CaseAggregate,
+  CaseParty,
+  CasePartyCreate,
+  CasePartyUpdate,
+  Document,
+  ProviderResult,
+  Report
+} from "@/types";
 
 const TABS = [
   { id: "overview", label: "Visão geral", icon: ClipboardList },
@@ -112,10 +111,87 @@ function errorMessage(error: unknown): string {
 }
 
 function caseDisplayTitle(legalCase: Case): string {
+  if (legalCase.title?.trim()) {
+    return legalCase.title;
+  }
+
   const title = legalCase.metadata?.title;
   return typeof title === "string" && title.trim()
     ? title
     : caseTypeLabel[legalCase.caseType] ?? legalCase.caseType;
+}
+
+function sourceModeLabel(value: unknown): string {
+  if (typeof value !== "string" || !value) {
+    return "api";
+  }
+
+  const labels: Record<string, string> = {
+    hybrid: "híbrido",
+    local: "local",
+    mock: "mock",
+    real: "real",
+    simulated: "simulado"
+  };
+
+  return labels[value] ?? value;
+}
+
+function recommendationLabel(value: unknown): string {
+  if (typeof value !== "string" || !value) {
+    return "Pendente";
+  }
+
+  const labels: Record<string, string> = {
+    do_not_proceed: "Não prosseguir",
+    human_review_required: "Revisão humana obrigatória",
+    proceed: "Prosseguir",
+    proceed_with_caution: "Prosseguir com ressalvas"
+  };
+
+  return labels[value] ?? value;
+}
+
+function reportStatusLabel(report: Report | null): string {
+  if (!report) return "Não gerado";
+
+  const labels: Record<string, string> = {
+    failed: "Falhou",
+    generating: "Gerando",
+    not_started: "Não iniciado",
+    ready: "Pronto"
+  };
+
+  return labels[report.status] ?? report.status;
+}
+
+function ProviderResultRow({ result }: { result: ProviderResult }) {
+  return (
+    <div className="rounded-lg border border-[var(--bd)] bg-[var(--surf2)] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold text-[var(--text)]">{result.provider}</p>
+          <p className="mt-0.5 text-[11px] text-[var(--text3)]">
+            {sourceModeLabel(result.sourceMode)}
+            {typeof result.confidence === "number"
+              ? ` · confiança ${(result.confidence * 100).toFixed(0)}%`
+              : ""}
+          </p>
+        </div>
+        <StatusBadge status={result.status} />
+      </div>
+      {result.summary && (
+        <p className="mt-2 text-xs leading-5 text-[var(--text2)]">
+          {result.summary}
+        </p>
+      )}
+      {result.riskSignals.length > 0 && (
+        <p className="mt-2 text-[11px] text-[var(--text3)]">
+          Sinais: {result.riskSignals.join(", ")}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function validatePartyForm(form: CasePartyCreate): PartyFormErrors {
@@ -164,9 +240,21 @@ function partyFormFromParty(party: CaseParty): CasePartyCreate {
   };
 }
 
+function aggregatePartyFromCaseParty(
+  party: CaseParty,
+  fallbackOrganizationId: string
+): CaseAggregate["parties"][number] {
+  return {
+    ...party,
+    organizationId: party.organizationId ?? fallbackOrganizationId,
+    role: typeof party.metadata?.role === "string" ? party.metadata.role : party.type
+  };
+}
+
 export default function CaseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState("overview");
+  const [caseAggregate, setCaseAggregate] = useState<CaseAggregate | null>(null);
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [caseDocuments, setCaseDocuments] = useState<Document[]>([]);
   const [caseParties, setCaseParties] = useState<CaseParty[]>([]);
@@ -186,43 +274,21 @@ export default function CaseDetailPage({ params }: PageProps) {
     setError("");
 
     try {
-      const localCase = findStoredLocalCase(id);
-      if (localCase) {
-        setCaseData(localCase);
-        setCaseDocuments([]);
-        setCaseParties(localCase.parties);
-        setFallbackReason("");
-        return;
-      }
-
-      const clientsResult = await listClients();
-      const [caseResult, documentsResult, partiesResult] = await Promise.all([
-        getCase(id, clientsResult.data),
-        listDocuments({ caseId: id }),
-        listCaseParties(id)
-      ]);
-      setCaseData({
-        ...caseResult.data,
-        documentsCount: documentsResult.data.length,
-        parties: partiesResult.data
-      });
-      setCaseDocuments(documentsResult.data);
-      setCaseParties(partiesResult.data);
+      const aggregateResult = await getCaseAggregate(id);
+      setCaseAggregate(aggregateResult.data);
+      setCaseData(aggregateResult.data.case);
+      setCaseDocuments(aggregateResult.data.documents);
+      setCaseParties(aggregateResult.data.parties);
       setFallbackReason(
-        clientsResult.source === "mock" ||
-          caseResult.source === "mock" ||
-          documentsResult.source === "mock" ||
-          partiesResult.source === "mock"
-          ? clientsResult.fallbackReason ??
-              caseResult.fallbackReason ??
-              documentsResult.fallbackReason ??
-              partiesResult.fallbackReason ??
-              ""
-          : ""
+        aggregateResult.source === "mock" ? aggregateResult.fallbackReason ?? "" : ""
       );
     } catch (err) {
       setError(errorMessage(err));
       setFallbackReason("");
+      setCaseAggregate(null);
+      setCaseData(null);
+      setCaseDocuments([]);
+      setCaseParties([]);
     } finally {
       setLoading(false);
     }
@@ -233,6 +299,24 @@ export default function CaseDetailPage({ params }: PageProps) {
       const next = updater(current);
       setCaseData((currentCase) =>
         currentCase ? { ...currentCase, parties: next } : currentCase
+      );
+      setCaseAggregate((currentAggregate) =>
+        currentAggregate
+          ? {
+              ...currentAggregate,
+              case: { ...currentAggregate.case, parties: next },
+              parties: next.map((party) =>
+                aggregatePartyFromCaseParty(
+                  party,
+                  currentAggregate.case.organizationId ?? ""
+                )
+              ),
+              summary: {
+                ...currentAggregate.summary,
+                partiesCount: next.length
+              }
+            }
+          : currentAggregate
       );
       return next;
     });
@@ -363,9 +447,11 @@ export default function CaseDetailPage({ params }: PageProps) {
     );
   }
 
-  const caseTimeline = mockTimeline.filter((t) => t.caseId === caseData.id);
-  const caseAgents = mockAgentExecutions.filter((e) => e.caseId === caseData.id);
-  const caseReport = mockReports.find((r) => r.caseId === caseData.id);
+  const caseTimeline = caseAggregate?.timeline ?? [];
+  const triageModules = caseAggregate?.triageModules ?? [];
+  const providerResults = caseAggregate?.providerResults ?? [];
+  const caseReport = caseAggregate?.report ?? null;
+  const summary = caseAggregate?.summary;
 
   return (
     <AuthGuard>
@@ -447,7 +533,17 @@ export default function CaseDetailPage({ params }: PageProps) {
                 label: "Responsável",
                 value: caseData.assignedTo ?? "Não atribuído"
               },
-              { label: "Documentos", value: `${caseData.documentsCount}` },
+              { label: "Documentos", value: `${summary?.documentsCount ?? caseData.documentsCount}` },
+              { label: "Partes", value: `${summary?.partiesCount ?? caseParties.length}` },
+              { label: "Risco", value: summary?.riskLevel ?? caseData.riskLevel ?? "unknown" },
+              {
+                label: "Recomendação",
+                value: recommendationLabel(caseData.recommendation)
+              },
+              {
+                label: "Origem",
+                value: sourceModeLabel(summary?.sourceMode ?? caseData.sourceMode)
+              },
               {
                 label: "Criado em",
                 value: formatDate(caseData.createdAt)
@@ -512,15 +608,15 @@ export default function CaseDetailPage({ params }: PageProps) {
             <Card title="Estatísticas">
               <dl className="grid grid-cols-2 gap-4">
                 {[
-                  { label: "Documentos", value: caseData.documentsCount },
-                  { label: "Partes", value: caseParties.length },
+                  { label: "Documentos", value: summary?.documentsCount ?? caseData.documentsCount },
+                  { label: "Partes", value: summary?.partiesCount ?? caseParties.length },
                   {
-                    label: "Agentes",
-                    value: caseAgents.filter((e) => e.status === "completed").length
+                    label: "Triagem",
+                    value: summary?.triageStatus ?? "not_started"
                   },
                   {
-                    label: "Progresso",
-                    value: `${caseData.progressPercent}%`
+                    label: "Relatório",
+                    value: reportStatusLabel(caseReport)
                   }
                 ].map((stat) => (
                   <div key={stat.label}>
@@ -741,6 +837,9 @@ export default function CaseDetailPage({ params }: PageProps) {
                     <p className="text-xs text-slate-500">
                       {doc.sizeLabel} · {formatDate(doc.uploadedAt)}
                     </p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      OCR: {doc.ocrStatus ?? "not_started"} · IA: {doc.aiReadStatus ?? "not_started"}
+                    </p>
                   </div>
                   <div className="self-start sm:self-center">
                     <StatusBadge status={doc.status} />
@@ -754,7 +853,7 @@ export default function CaseDetailPage({ params }: PageProps) {
         {/* Tab: Timeline */}
         {activeTab === "timeline" && (
           <div className="animate-in">
-            <Card title="Linha do tempo local">
+            <Card title="Linha do tempo operacional">
               <Timeline events={caseTimeline} />
             </Card>
           </div>
@@ -766,20 +865,70 @@ export default function CaseDetailPage({ params }: PageProps) {
             <div className="mb-4 flex items-center gap-2">
               <Bot className="text-brand-teal" size={18} />
               <h2 className="text-sm font-semibold text-slate-900">
-                Roteiro de IA planejada
+                Módulos de triagem do caso
               </h2>
             </div>
-            {caseAgents.length === 0 ? (
+            {triageModules.length === 0 ? (
               <EmptyState
-                description="As execuções de agentes são demonstrativas nesta tela até haver endpoint e integração real dedicados."
+                description="Nenhum módulo de triagem foi registrado para este caso."
                 icon={<Bot size={20} />}
-                title="Nenhuma execução demonstrativa"
+                title="Triagem ainda não iniciada"
               />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {caseAgents.map((exec) => (
-                  <AgentCard execution={exec} key={exec.id} />
+                {triageModules.map((module) => (
+                  <Card key={module.id}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--text)]">
+                          {module.moduleLabel}
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text2)]">
+                          {module.provider} · {sourceModeLabel(module.sourceMode)}
+                        </p>
+                      </div>
+                      <StatusBadge status={module.status} />
+                    </div>
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <dt className="text-[var(--text3)]">Tentativas</dt>
+                        <dd className="font-medium text-[var(--text2)]">{module.attempts}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[var(--text3)]">Obrigatório</dt>
+                        <dd className="font-medium text-[var(--text2)]">
+                          {module.required ? "Sim" : "Não"}
+                        </dd>
+                      </div>
+                    </dl>
+                    {module.reason && (
+                      <p className="mt-3 text-xs leading-5 text-[var(--text2)]">
+                        {module.reason}
+                      </p>
+                    )}
+                    {module.summary && (
+                      <p className="mt-3 border-t border-[var(--bd)] pt-3 text-xs leading-5 text-[var(--text2)]">
+                        {module.summary}
+                      </p>
+                    )}
+                    {module.errorMessage && (
+                      <p className="mt-2 text-xs text-red-700">
+                        {module.errorMessage}
+                      </p>
+                    )}
+                  </Card>
                 ))}
+                {providerResults.length > 0 && (
+                  <div className="sm:col-span-2">
+                    <Card title="Resultados de providers">
+                      <div className="space-y-3">
+                        {providerResults.map((result) => (
+                          <ProviderResultRow result={result} key={result.id} />
+                        ))}
+                      </div>
+                    </Card>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -824,6 +973,28 @@ export default function CaseDetailPage({ params }: PageProps) {
                   <p className="text-sm leading-6 text-slate-700">
                     {caseReport.summary}
                   </p>
+                  <dl className="mt-5 grid gap-3 border-t border-slate-200 pt-4 text-xs sm:grid-cols-3">
+                    <div>
+                      <dt className="text-slate-500">Recomendação</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">
+                        {recommendationLabel(caseReport.recommendation)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500">Confiança</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">
+                        {typeof caseReport.confidence === "number"
+                          ? `${(caseReport.confidence * 100).toFixed(0)}%`
+                          : "Não informado"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500">Status</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">
+                        {reportStatusLabel(caseReport)}
+                      </dd>
+                    </div>
+                  </dl>
                 </Card>
 
                 {caseReport.risks.length > 0 && (
@@ -864,7 +1035,33 @@ export default function CaseDetailPage({ params }: PageProps) {
                             className="mt-0.5 shrink-0 text-emerald-600"
                             size={14}
                           />
-                          <p className="text-xs leading-5 text-slate-700">{rec}</p>
+                          <p className="text-xs leading-5 text-slate-700">
+                            {recommendationLabel(rec)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                )}
+
+                {caseReport.limitations && caseReport.limitations.length > 0 && (
+                  <Card title="Limitações">
+                    <ul className="space-y-2">
+                      {caseReport.limitations.map((limitation, index) => (
+                        <li className="text-xs leading-5 text-slate-700" key={index}>
+                          {limitation}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                )}
+
+                {caseReport.sourceRefs && caseReport.sourceRefs.length > 0 && (
+                  <Card title="Fontes utilizadas">
+                    <ul className="space-y-2">
+                      {caseReport.sourceRefs.map((sourceRef, index) => (
+                        <li className="text-xs leading-5 text-slate-700" key={index}>
+                          {sourceRef}
                         </li>
                       ))}
                     </ul>

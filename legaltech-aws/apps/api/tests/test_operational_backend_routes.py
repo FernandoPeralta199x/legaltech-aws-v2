@@ -244,6 +244,146 @@ class OperationalRoutesTest(unittest.TestCase):
         self.assertEqual(200, cross_org_response.status_code)
         self.assertEqual(0, cross_org_response.json()["data"]["total"])
 
+    def test_case_aggregate_returns_only_case_scoped_operational_data(self) -> None:
+        from src.modules.contracts.operational import build_operational_repositories
+        from src.modules.contracts.schemas import (
+            ModuleStatus,
+            ProviderResultStatus,
+            ReportRecommendation,
+            ReportStatus,
+            SourceMode,
+            TimelineSeverity,
+            TimelineSource,
+        )
+
+        request_a = self.create_request("Aggregate A")
+        request_b = self.create_request("Aggregate B")
+        case_a = self.client.get(
+            f"/api/v1/requests/{request_a['id']}/case",
+            headers=auth_headers(),
+        ).json()["data"]
+        case_b = self.client.get(
+            f"/api/v1/requests/{request_b['id']}/case",
+            headers=auth_headers(),
+        ).json()["data"]
+        repositories = build_operational_repositories()
+
+        repositories.parties.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={"name": "Parte A", "role": "contratante", "document": "00000000000"},
+        )
+        repositories.parties.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_b["id"]),
+            values={"name": "Parte B", "role": "contratante", "document": "11111111111"},
+        )
+        repositories.documents.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "filename": "aggregate-a.pdf",
+                "size_bytes": 2048,
+                "storage_key": f"local/{case_a['id']}/aggregate-a.pdf",
+            },
+        )
+        module_a = repositories.triage.create_module(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "module_key": "serasa",
+                "module_label": "Serasa mock",
+                "provider": "mock_serasa",
+                "status": ModuleStatus.COMPLETED,
+                "source_mode": SourceMode.MOCK,
+                "reason": "Aggregate test.",
+            },
+        )
+        repositories.triage.create_module(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_b["id"]),
+            values={
+                "module_key": "procon",
+                "module_label": "Procon mock",
+                "provider": "mock_procon",
+                "status": ModuleStatus.COMPLETED,
+                "source_mode": SourceMode.MOCK,
+                "reason": "Other case.",
+            },
+        )
+        repositories.provider_results.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "triage_module_id": module_a.id,
+                "provider": "mock_serasa",
+                "source_mode": SourceMode.MOCK,
+                "status": ProviderResultStatus.COMPLETED,
+                "input_hash": "hash-a",
+                "normalized_result": {"risk_level": "low"},
+                "summary": "Resultado do caso A.",
+                "risk_signals": ["mock_signal_a"],
+                "confidence": 0.61,
+            },
+        )
+        repositories.reports.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "status": ReportStatus.READY,
+                "summary": "Relatorio do caso A.",
+                "findings": ["Achado A"],
+                "legal_risks": ["Risco juridico A"],
+                "recommendation": ReportRecommendation.PROCEED_WITH_CAUTION,
+                "confidence": 0.52,
+                "limitations": ["Mock local."],
+                "source_refs": [{"type": "case", "id": case_a["id"]}],
+            },
+        )
+        repositories.timeline.append(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "type": "aggregate_checked",
+                "title": "Aggregate checado",
+                "description": "Evento exclusivo do caso A.",
+                "severity": TimelineSeverity.INFO,
+                "source": TimelineSource.SYSTEM,
+                "source_mode": SourceMode.LOCAL,
+            },
+        )
+
+        response = self.client.get(
+            f"/api/v1/cases/{case_a['id']}/aggregate",
+            headers=auth_headers(),
+        )
+
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(case_a["id"], body["data"]["case"]["id"])
+        self.assertEqual(1, len(body["data"]["parties"]))
+        self.assertEqual("Parte A", body["data"]["parties"][0]["name"])
+        self.assertNotIn("document", body["data"]["parties"][0])
+        self.assertEqual(1, len(body["data"]["documents"]))
+        self.assertEqual("aggregate-a.pdf", body["data"]["documents"][0]["filename"])
+        self.assertEqual(1, len(body["data"]["triage_modules"]))
+        self.assertEqual("serasa", body["data"]["triage_modules"][0]["module_key"])
+        self.assertEqual(1, len(body["data"]["provider_results"]))
+        self.assertEqual(case_a["id"], body["data"]["provider_results"][0]["case_id"])
+        self.assertEqual("Relatorio do caso A.", body["data"]["report"]["summary"])
+        self.assertGreaterEqual(body["data"]["summary"]["timeline_count"], 3)
+        self.assertEqual(1, body["data"]["summary"]["parties_count"])
+        self.assertEqual(1, body["data"]["summary"]["documents_count"])
+
+        self.jwt_verifier.organization_id = ORG_B
+        cross_org_response = self.client.get(
+            f"/api/v1/cases/{case_a['id']}/aggregate",
+            headers=auth_headers(),
+        )
+        self.assertEqual(404, cross_org_response.status_code)
+        self.assertEqual("NOT_FOUND", cross_org_response.json()["error"]["code"])
+
     def test_requests_and_timeline_are_isolated_by_case_and_organization(self) -> None:
         request_a = self.create_request("Pedido A")
         request_b = self.create_request("Pedido B")

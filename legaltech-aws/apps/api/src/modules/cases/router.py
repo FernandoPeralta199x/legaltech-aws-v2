@@ -9,6 +9,7 @@ from src.core.tenant import TenantContext
 from src.db.session import get_db
 from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
+from src.modules.cases.operational_detail import OperationalCaseDetailService
 from src.modules.cases.operational_list import OperationalCaseListService
 from src.modules.cases.schemas import CaseCreate, CaseRead, CaseUpdate
 from src.modules.cases.service import CaseService
@@ -32,6 +33,10 @@ def get_case_service(db: Annotated[Session, Depends(get_db)]) -> CaseService:
 
 def get_operational_case_list_service() -> OperationalCaseListService:
     return OperationalCaseListService()
+
+
+def get_operational_case_detail_service() -> OperationalCaseDetailService:
+    return OperationalCaseDetailService()
 
 
 def serialize_case(case) -> dict:
@@ -108,6 +113,35 @@ def list_cases(
     )
 
     return success_response([serialize_case(case) for case in cases])
+
+
+@router.get("/{case_id}/aggregate")
+def get_case_aggregate(
+    case_id: UUID,
+    request: Request,
+    service: Annotated[
+        OperationalCaseDetailService,
+        Depends(get_operational_case_detail_service),
+    ],
+    audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
+    tenant: Annotated[TenantContext, Depends(require_permission("cases:read"))],
+) -> dict[str, object]:
+    aggregate = service.get_aggregate(
+        organization_id=tenant.organization_id,
+        case_id=case_id,
+    )
+    audit_log.record_event(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        action=actions.CASES_READ,
+        entity_type="case",
+        entity_id=case_id,
+        metadata={"source": "operational_aggregate"},
+        ip_address=request_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return success_response(aggregate, source_mode=str(aggregate["case"]["source_mode"]))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

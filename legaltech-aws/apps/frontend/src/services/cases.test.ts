@@ -3,7 +3,7 @@ import test from "node:test";
 
 import type { Case } from "../../types";
 import { saveStoredLocalCase } from "../lib/localCases";
-import { createCase, getCase, listCases } from "./cases";
+import { createCase, getCase, getCaseAggregate, listCases } from "./cases";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -268,6 +268,227 @@ test("getCase returns locally stored wizard cases without fetching the backend",
   assert.equal(result.data.id, localCase.id);
   assert.equal(result.data.metadata?.syncStatus, "local_only");
   assert.equal(called, false);
+});
+
+test("getCaseAggregate maps operational aggregate scoped to a case id", async () => {
+  storage.clear();
+  let capturedUrl = "";
+  globalThis.fetch = (async (url) => {
+    capturedUrl = String(url);
+
+    return Response.json({
+      success: true,
+      data: {
+        case: {
+          id: "11111111-1111-4111-8111-111111111111",
+          request_id: "22222222-2222-4222-8222-222222222222",
+          code: "CASO-LOCAL-0001",
+          organization_id: "33333333-3333-4333-8333-333333333333",
+          created_by: "44444444-4444-4444-8444-444444444444",
+          product_type: "analise_contratual",
+          product_label: "Análise contratual",
+          title: "Aggregate A",
+          description: "Caso operacional A",
+          status: "report_ready",
+          progress: 90,
+          risk_level: "medium",
+          recommendation: "proceed_with_caution",
+          source_mode: "mock",
+          is_local_simulation: true,
+          created_at: "2026-06-01T10:00:00.000Z",
+          updated_at: "2026-06-01T11:00:00.000Z"
+        },
+        request: {
+          id: "22222222-2222-4222-8222-222222222222",
+          code: "PED-LOCAL-0001",
+          organization_id: "33333333-3333-4333-8333-333333333333",
+          created_by: "44444444-4444-4444-8444-444444444444",
+          product_type: "analise_contratual",
+          product_label: "Análise contratual",
+          title: "Pedido A",
+          description: "Pedido operacional A",
+          status: "case_created",
+          source_mode: "local",
+          idempotency_key: "idem-a",
+          created_at: "2026-06-01T10:00:00.000Z",
+          updated_at: "2026-06-01T10:00:00.000Z"
+        },
+        parties: [
+          {
+            id: "party-a",
+            case_id: "11111111-1111-4111-8111-111111111111",
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            name: "Parte A",
+            document_masked: "000****00",
+            document_type: "cpf",
+            person_type: "individual",
+            role: "contratante",
+            email: "parte@example.test",
+            phone: "",
+            status: "completed",
+            risk_level: "low",
+            provider_status_summary: "Mock ok",
+            metadata: {},
+            created_at: "2026-06-01T10:05:00.000Z",
+            updated_at: "2026-06-01T10:05:00.000Z"
+          }
+        ],
+        documents: [
+          {
+            id: "doc-a",
+            case_id: "11111111-1111-4111-8111-111111111111",
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            filename: "contrato-a.pdf",
+            original_filename: "contrato-a.pdf",
+            mime_type: "application/pdf",
+            size_bytes: 2048,
+            storage_provider: "local",
+            storage_key: "local/case-a/contrato-a.pdf",
+            status: "uploaded",
+            ocr_status: "not_started",
+            ai_read_status: "not_started",
+            preview_available: false,
+            download_available: false,
+            uploaded_at: "2026-06-01T10:07:00.000Z",
+            updated_at: "2026-06-01T10:07:00.000Z"
+          }
+        ],
+        timeline: [
+          {
+            id: "event-a",
+            case_id: "11111111-1111-4111-8111-111111111111",
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            type: "case_created",
+            title: "Caso criado",
+            description: "Caso A criado.",
+            severity: "success",
+            source: "system",
+            source_mode: "local",
+            metadata: {},
+            created_at: "2026-06-01T10:00:00.000Z"
+          }
+        ],
+        triage_modules: [
+          {
+            id: "module-a",
+            case_id: "11111111-1111-4111-8111-111111111111",
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            module_key: "serasa",
+            module_label: "Serasa mock",
+            provider: "mock_serasa",
+            status: "completed",
+            source_mode: "mock",
+            required: true,
+            reason: "Teste",
+            started_at: "2026-06-01T10:10:00.000Z",
+            finished_at: "2026-06-01T10:11:00.000Z",
+            attempts: 1,
+            error_code: null,
+            error_message: null,
+            summary: "Consulta mock concluída.",
+            result_ref: "provider-result-a",
+            raw_result_ref: "raw-a",
+            created_at: "2026-06-01T10:09:00.000Z",
+            updated_at: "2026-06-01T10:11:00.000Z"
+          }
+        ],
+        provider_results: [
+          {
+            id: "provider-result-a",
+            case_id: "11111111-1111-4111-8111-111111111111",
+            triage_module_id: "module-a",
+            organization_id: "33333333-3333-4333-8333-333333333333",
+            provider: "mock_serasa",
+            provider_request_id: null,
+            source_mode: "mock",
+            status: "completed",
+            input_hash: "hash-a",
+            raw_result_ref: "raw-a",
+            normalized_result: { risk_level: "low" },
+            summary: "Resultado mock A.",
+            risk_signals: ["mock_signal_a"],
+            confidence: 0.61,
+            error_code: null,
+            error_message: null,
+            created_at: "2026-06-01T10:11:00.000Z",
+            updated_at: "2026-06-01T10:11:00.000Z"
+          }
+        ],
+        report: {
+          id: "report-a",
+          case_id: "11111111-1111-4111-8111-111111111111",
+          organization_id: "33333333-3333-4333-8333-333333333333",
+          status: "ready",
+          version: 1,
+          summary: "Relatório do caso A.",
+          findings: ["Achado A"],
+          legal_risks: ["Risco jurídico A"],
+          commercial_risks: [],
+          reputational_risks: [],
+          contractual_risks: [],
+          missing_information: [],
+          recommendation: "proceed_with_caution",
+          confidence: 0.52,
+          limitations: ["Mock local."],
+          source_refs: [{ type: "case", id: "11111111-1111-4111-8111-111111111111" }],
+          generated_by: "mock_ai_report_provider",
+          generated_at: "2026-06-01T11:00:00.000Z",
+          updated_at: "2026-06-01T11:00:00.000Z"
+        },
+        summary: {
+          case_id: "11111111-1111-4111-8111-111111111111",
+          organization_id: "33333333-3333-4333-8333-333333333333",
+          parties_count: 1,
+          documents_count: 1,
+          timeline_count: 1,
+          triage_status: "completed",
+          report_status: "ready",
+          risk_level: "medium",
+          recommendation: "proceed_with_caution",
+          progress: 90,
+          latest_event_at: "2026-06-01T10:00:00.000Z",
+          source_mode: "mock",
+          updated_at: "2026-06-01T11:00:00.000Z"
+        }
+      },
+      source_mode: "mock"
+    });
+  }) as typeof fetch;
+
+  const result = await getCaseAggregate("11111111-1111-4111-8111-111111111111");
+
+  assert.equal(new URL(capturedUrl).pathname, "/api/v1/cases/11111111-1111-4111-8111-111111111111/aggregate");
+  assert.equal(result.source, "api");
+  assert.equal(result.data.case.id, "11111111-1111-4111-8111-111111111111");
+  assert.equal(result.data.case.progressPercent, 90);
+  assert.equal(result.data.parties[0].name, "Parte A");
+  assert.equal(result.data.parties[0].document, "000****00");
+  assert.equal(result.data.documents[0].filename, "contrato-a.pdf");
+  assert.equal(result.data.timeline[0].type, "case_created");
+  assert.equal(result.data.triageModules[0].moduleKey, "serasa");
+  assert.equal(result.data.providerResults[0].caseId, result.data.case.id);
+  assert.equal(result.data.report?.summary, "Relatório do caso A.");
+  assert.equal(result.data.summary.partiesCount, 1);
+});
+
+test("getCaseAggregate local fallback keeps the requested case id", async () => {
+  storage.clear();
+  const localCase = makeLocalCase({ id: "case-local-b", code: "CASO-LOCAL-B" });
+  saveStoredLocalCase(makeLocalCase({ id: "case-local-a", code: "CASO-LOCAL-A" }));
+  saveStoredLocalCase(localCase);
+  let called = false;
+
+  globalThis.fetch = (async () => {
+    called = true;
+    throw new Error("fetch should not be called for non-uuid local cases");
+  }) as typeof fetch;
+
+  const result = await getCaseAggregate("case-local-b");
+
+  assert.equal(called, false);
+  assert.equal(result.source, "mock");
+  assert.equal(result.data.case.id, "case-local-b");
+  assert.equal(result.data.summary.caseId, "case-local-b");
 });
 
 test("createCase sends backend field names and omits organization_id", async () => {
