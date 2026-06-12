@@ -17,6 +17,17 @@ class DocumentCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class CaseDocumentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    filename: str = Field(min_length=1, max_length=255)
+    content_type: str = Field(min_length=1, max_length=120)
+    size_bytes: int = Field(gt=0)
+    file_hash: str | None = Field(default=None, max_length=128)
+    status: str = Field(default="pending_upload", min_length=1, max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class DocumentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

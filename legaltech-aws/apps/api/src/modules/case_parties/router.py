@@ -16,6 +16,14 @@ from src.modules.case_parties.schemas import (
 )
 from src.modules.case_parties.service import CasePartyService
 from src.modules.common.responses import success_response
+from src.modules.contracts.schemas import (
+    SourceMode,
+    TimelineSeverity,
+    TimelineSource,
+)
+from src.modules.timeline.router import get_timeline_service
+from src.modules.timeline.schemas import TimelineEventCreate
+from src.modules.timeline.service import TimelineService
 
 
 router = APIRouter(prefix="/api/v1/cases", tags=["case_parties"])
@@ -80,6 +88,7 @@ def create_case_party(
     payload: CasePartyCreate,
     request: Request,
     service: Annotated[CasePartyService, Depends(get_case_party_service)],
+    timeline: Annotated[TimelineService, Depends(get_timeline_service)],
     audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
     tenant: Annotated[TenantContext, Depends(require_permission("case_parties:write"))],
 ) -> dict[str, object]:
@@ -99,8 +108,49 @@ def create_case_party(
         ip_address=request_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
+    timeline.try_append_event(
+        organization_id=tenant.organization_id,
+        case_id=case_id,
+        payload=TimelineEventCreate(
+            type="party_added",
+            title="Parte adicionada",
+            description="Parte registrada no caso.",
+            severity=TimelineSeverity.SUCCESS,
+            source=TimelineSource.USER,
+            source_mode=SourceMode.LOCAL,
+            metadata={"party_id": str(case_party.id)},
+        ),
+    )
 
     return success_response(serialize_case_party(case_party), "Parte criada com sucesso.")
+
+
+@router.get("/{case_id}/parties/{party_id}")
+def get_case_party(
+    case_id: UUID,
+    party_id: UUID,
+    request: Request,
+    service: Annotated[CasePartyService, Depends(get_case_party_service)],
+    audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
+    tenant: Annotated[TenantContext, Depends(require_permission("case_parties:read"))],
+) -> dict[str, object]:
+    case_party = service.get_case_party(
+        organization_id=tenant.organization_id,
+        case_id=case_id,
+        party_id=party_id,
+    )
+    audit_log.record_event(
+        organization_id=tenant.organization_id,
+        user_id=tenant.user_id,
+        action=actions.CASE_PARTIES_READ,
+        entity_type="case_party",
+        entity_id=case_party.id,
+        metadata={"case_id": str(case_id), "source": "api"},
+        ip_address=request_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return success_response(serialize_case_party(case_party))
 
 
 @router.patch("/{case_id}/parties/{party_id}")

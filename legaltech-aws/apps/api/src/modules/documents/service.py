@@ -145,6 +145,33 @@ class DocumentService:
 
         return document
 
+    def get_document_for_case(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+        document_id: UUID | str,
+    ) -> Document:
+        repository_getter = getattr(self.repository, "get_document_for_case", None)
+        if repository_getter is None:
+            document = self.get_document(
+                organization_id=organization_id,
+                document_id=document_id,
+            )
+            if document.case_id != parse_uuid(case_id):
+                raise ResourceNotFoundError("Document not found.")
+            return document
+
+        document = repository_getter(
+            organization_id=parse_uuid(organization_id),
+            case_id=parse_uuid(case_id),
+            document_id=parse_uuid(document_id),
+        )
+        if document is None:
+            raise ResourceNotFoundError("Document not found.")
+
+        return document
+
     def create_document(
         self,
         *,

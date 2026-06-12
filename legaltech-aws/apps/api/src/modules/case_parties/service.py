@@ -95,6 +95,27 @@ class CasePartyService:
             case_id=parse_uuid(case_id),
         )
 
+    def get_case_party(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+        party_id: UUID | str,
+    ) -> CaseParty:
+        self._get_case_or_raise(
+            organization_id=organization_id,
+            case_id=case_id,
+        )
+        case_party = self.repository.get_case_party(
+            organization_id=parse_uuid(organization_id),
+            case_id=parse_uuid(case_id),
+            party_id=parse_uuid(party_id),
+        )
+        if case_party is None:
+            raise ResourceNotFoundError("Case party not found.")
+
+        return case_party
+
     def create_case_party(
         self,
         *,

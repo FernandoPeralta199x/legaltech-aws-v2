@@ -12,6 +12,14 @@ from src.modules.audit.service import AuditLogService, get_audit_log_service
 from src.modules.cases.schemas import CaseCreate, CaseRead, CaseUpdate
 from src.modules.cases.service import CaseService
 from src.modules.common.responses import success_response
+from src.modules.contracts.schemas import (
+    SourceMode,
+    TimelineSeverity,
+    TimelineSource,
+)
+from src.modules.timeline.router import get_timeline_service
+from src.modules.timeline.schemas import TimelineEventCreate
+from src.modules.timeline.service import TimelineService
 
 
 router = APIRouter(prefix="/api/v1/cases", tags=["cases"])
@@ -127,6 +135,7 @@ def update_case(
     payload: CaseUpdate,
     request: Request,
     service: Annotated[CaseService, Depends(get_case_service)],
+    timeline: Annotated[TimelineService, Depends(get_timeline_service)],
     audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
     tenant: Annotated[TenantContext, Depends(require_permission("cases:write"))],
 ) -> dict[str, object]:
@@ -144,6 +153,19 @@ def update_case(
         metadata={"updated_fields": list(payload.model_dump(exclude_unset=True))},
         ip_address=request_ip(request),
         user_agent=request.headers.get("user-agent"),
+    )
+    timeline.try_append_event(
+        organization_id=tenant.organization_id,
+        case_id=case_id,
+        payload=TimelineEventCreate(
+            type="case_updated",
+            title="Caso atualizado",
+            description="Dados operacionais do caso foram atualizados.",
+            severity=TimelineSeverity.INFO,
+            source=TimelineSource.USER,
+            source_mode=SourceMode.LOCAL,
+            metadata={"updated_fields": list(payload.model_dump(exclude_unset=True))},
+        ),
     )
 
     return success_response(serialize_case(case), "Caso atualizado com sucesso.")

@@ -13,7 +13,10 @@ from src.modules.common.exceptions import ResourceNotFoundError
 from src.modules.common.responses import error_response
 from src.modules.document_processing.router import router as document_processing_router
 from src.modules.documents.router import router as documents_router
+from src.modules.documents.router import case_router as case_documents_router
 from src.modules.health.router import router as health_router
+from src.modules.requests.router import router as requests_router
+from src.modules.timeline.router import router as timeline_router
 
 
 HTTP_ERROR_CODES = {
@@ -86,7 +89,10 @@ def create_app() -> FastAPI:
     app.include_router(clients_router)
     app.include_router(cases_router)
     app.include_router(case_parties_router)
+    app.include_router(case_documents_router)
+    app.include_router(timeline_router)
     app.include_router(documents_router)
+    app.include_router(requests_router)
     app.include_router(document_processing_router)
     app.include_router(audit_router)
     return app

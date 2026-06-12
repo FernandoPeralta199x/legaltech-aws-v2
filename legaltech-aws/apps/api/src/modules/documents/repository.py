@@ -53,6 +53,22 @@ class DocumentRepository:
 
         return self.db.scalars(statement).first()
 
+    def get_document_for_case(
+        self,
+        *,
+        organization_id: UUID | str,
+        case_id: UUID | str,
+        document_id: UUID | str,
+    ) -> Document | None:
+        statement = select(Document).where(
+            Document.id == parse_uuid(document_id),
+            Document.organization_id == parse_uuid(organization_id),
+            Document.case_id == parse_uuid(case_id),
+            Document.deleted_at.is_(None),
+        )
+
+        return self.db.scalars(statement).first()
+
     def create_document(self, document: Document) -> Document:
         self.db.add(document)
         self.db.flush()

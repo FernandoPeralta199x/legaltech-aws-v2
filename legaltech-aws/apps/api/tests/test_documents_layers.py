@@ -118,6 +118,23 @@ class DocumentRepositoryTest(unittest.TestCase):
         self.assertIn("documents.organization_id", sql)
         self.assertIn("documents.deleted_at IS NULL", sql)
 
+    def test_get_document_for_case_filters_by_organization_case_and_document(self) -> None:
+        from src.modules.documents.repository import DocumentRepository
+
+        session = FakeSession()
+
+        DocumentRepository(session).get_document_for_case(
+            organization_id=uuid4(),
+            case_id=uuid4(),
+            document_id=uuid4(),
+        )
+
+        sql = compile_sql(session.statements[0])
+        self.assertIn("documents.id", sql)
+        self.assertIn("documents.organization_id", sql)
+        self.assertIn("documents.case_id", sql)
+        self.assertIn("documents.deleted_at IS NULL", sql)
+
 
 class DocumentServiceTest(unittest.TestCase):
     def test_create_document_requires_case_from_same_organization(self) -> None:
@@ -385,6 +402,31 @@ class DocumentServiceTest(unittest.TestCase):
             )
 
         self.assertFalse(storage.called)
+
+    def test_get_document_for_case_rejects_document_from_another_case(self) -> None:
+        from src.modules.common.exceptions import ResourceNotFoundError
+        from src.modules.documents.service import DocumentService
+
+        document_case_id = uuid4()
+
+        class DocumentRepository:
+            def get_document_for_case(self, *, organization_id, case_id, document_id):
+                return None
+
+        class CaseRepository:
+            pass
+
+        service = DocumentService(
+            repository=DocumentRepository(),
+            case_repository=CaseRepository(),
+        )
+
+        with self.assertRaises(ResourceNotFoundError):
+            service.get_document_for_case(
+                organization_id=uuid4(),
+                case_id=document_case_id,
+                document_id=uuid4(),
+            )
 
     def test_update_document_validates_new_case_when_case_id_changes(self) -> None:
         from src.modules.common.exceptions import ResourceNotFoundError
