@@ -9,6 +9,7 @@ from src.core.tenant import TenantContext
 from src.db.session import get_db
 from src.modules.audit import actions
 from src.modules.audit.service import AuditLogService, get_audit_log_service
+from src.modules.cases.operational_list import OperationalCaseListService
 from src.modules.cases.schemas import CaseCreate, CaseRead, CaseUpdate
 from src.modules.cases.service import CaseService
 from src.modules.common.responses import success_response
@@ -29,6 +30,10 @@ def get_case_service(db: Annotated[Session, Depends(get_db)]) -> CaseService:
     return CaseService(db=db)
 
 
+def get_operational_case_list_service() -> OperationalCaseListService:
+    return OperationalCaseListService()
+
+
 def serialize_case(case) -> dict:
     return CaseRead.model_validate(case).model_dump(mode="json")
 
@@ -41,21 +46,29 @@ def request_ip(request: Request) -> str | None:
 def list_cases(
     request: Request,
     service: Annotated[CaseService, Depends(get_case_service)],
+    operational_service: Annotated[
+        OperationalCaseListService,
+        Depends(get_operational_case_list_service),
+    ],
     audit_log: Annotated[AuditLogService, Depends(get_audit_log_service)],
     tenant: Annotated[TenantContext, Depends(require_permission("cases:read"))],
     status: str | None = None,
     case_type: str | None = None,
     client_id: UUID | None = None,
+    product_type: str | None = None,
+    risk_level: str | None = None,
+    q: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, object]:
-    cases = service.list_cases(
+    operational_cases = operational_service.list_cases(
         organization_id=tenant.organization_id,
-        status=status,
-        case_type=case_type,
-        client_id=client_id,
         page=page,
         page_size=page_size,
+        status=status,
+        product_type=product_type,
+        risk_level=risk_level,
+        q=q,
     )
     audit_log.record_event(
         organization_id=tenant.organization_id,
@@ -66,11 +79,32 @@ def list_cases(
             "status": status,
             "case_type": case_type,
             "client_id": str(client_id) if client_id else None,
+            "product_type": product_type,
+            "risk_level": risk_level,
+            "q": q,
             "page": page,
             "page_size": page_size,
         },
         ip_address=request_ip(request),
         user_agent=request.headers.get("user-agent"),
+    )
+
+    uses_legacy_filters = case_type is not None or client_id is not None
+    if not uses_legacy_filters and (
+        operational_cases.total > 0 or product_type or risk_level or q
+    ):
+        return success_response(
+            operational_cases.model_dump(mode="json"),
+            source_mode="local",
+        )
+
+    cases = service.list_cases(
+        organization_id=tenant.organization_id,
+        status=status,
+        case_type=case_type,
+        client_id=client_id,
+        page=page,
+        page_size=page_size,
     )
 
     return success_response([serialize_case(case) for case in cases])

@@ -87,6 +87,77 @@ test("listCases maps backend cases and reports api source", async () => {
   assert.equal(result.data[0].product, "analise_contratual");
 });
 
+test("listCases maps operational paginated backend cases without local fallback", async () => {
+  storage.clear();
+  globalThis.fetch = (async () =>
+    Response.json({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "case-operational-a",
+            case_id: "case-operational-a",
+            request_id: "request-operational-a",
+            code: "CASO-LOCAL-0001",
+            title: "Análise operacional A",
+            product_type: "analise_contratual",
+            product_label: "Análise contratual",
+            status: "triage_completed",
+            progress: 75,
+            risk_level: "medium",
+            recommendation: "proceed_with_caution",
+            parties_count: 2,
+            documents_count: 1,
+            triage_status: "completed",
+            report_status: "ready",
+            source_mode: "mock",
+            created_at: "2026-06-01T10:00:00.000Z",
+            updated_at: "2026-06-01T11:00:00.000Z"
+          },
+          {
+            id: "case-operational-b",
+            case_id: "case-operational-b",
+            code: "CASO-LOCAL-0002",
+            title: "Análise operacional B",
+            product_type: "dados_partes",
+            product_label: "Dados das partes",
+            status: "created",
+            progress: 0,
+            risk_level: "unknown",
+            parties_count: 0,
+            documents_count: 0,
+            triage_status: "not_started",
+            report_status: "not_started",
+            source_mode: "local",
+            created_at: "2026-06-02T10:00:00.000Z",
+            updated_at: "2026-06-02T10:00:00.000Z"
+          }
+        ],
+        page: 1,
+        page_size: 20,
+        total: 2,
+        total_pages: 1
+      },
+      source_mode: "mock"
+    })) as typeof fetch;
+
+  const result = await listCases();
+
+  assert.equal(result.source, "api");
+  assert.equal(result.fallbackReason, undefined);
+  assert.equal(result.data.length, 2);
+  assert.equal(result.data[0].id, "case-operational-a");
+  assert.equal(result.data[0].status, "triage_completed");
+  assert.equal(result.data[0].progressPercent, 75);
+  assert.equal(result.data[0].documentsCount, 1);
+  assert.equal(result.data[0].sourceMode, "mock");
+  assert.equal(result.data[0].riskLevel, "medium");
+  assert.equal(result.data[0].metadata?.reportStatus, "ready");
+  assert.equal(result.data[0].metadata?.partiesCount, 2);
+  assert.equal(result.data[1].id, "case-operational-b");
+  assert.equal(result.data[1].progressPercent, 0);
+});
+
 test("listCases accepts pagination and multi-case filters", async () => {
   storage.clear();
   let capturedUrl = "";

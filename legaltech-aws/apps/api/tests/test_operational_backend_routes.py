@@ -150,6 +150,100 @@ class OperationalRoutesTest(unittest.TestCase):
         self.assertEqual(created["id"], case["request_id"])
         self.assertEqual("analise_contratual", case["product_type"])
 
+    def test_cases_list_returns_operational_paginated_summary_by_organization(self) -> None:
+        from src.modules.cases.router import get_case_service
+        from src.modules.contracts.operational import build_operational_repositories
+        from src.modules.contracts.schemas import (
+            ModuleStatus,
+            ReportRecommendation,
+            ReportStatus,
+            SourceMode,
+        )
+
+        class EmptyLegacyCaseService:
+            def list_cases(self, **kwargs):
+                return []
+
+        self.app.dependency_overrides[get_case_service] = lambda: EmptyLegacyCaseService()
+        request_a = self.create_request("Lista A")
+        request_b = self.create_request("Lista B")
+        case_a = self.client.get(
+            f"/api/v1/requests/{request_a['id']}/case",
+            headers=auth_headers(),
+        ).json()["data"]
+        case_b = self.client.get(
+            f"/api/v1/requests/{request_b['id']}/case",
+            headers=auth_headers(),
+        ).json()["data"]
+
+        repositories = build_operational_repositories()
+        repositories.parties.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={"name": "Cliente Lista A", "role": "contratante"},
+        )
+        repositories.documents.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "filename": "contrato-lista-a.pdf",
+                "size_bytes": 1234,
+                "storage_key": f"local/{case_a['id']}/contrato-lista-a.pdf",
+            },
+        )
+        repositories.triage.create_module(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "module_key": "serasa",
+                "module_label": "Serasa mock",
+                "provider": "mock_serasa",
+                "status": ModuleStatus.COMPLETED,
+                "source_mode": SourceMode.MOCK,
+                "reason": "Teste de resumo da lista.",
+            },
+        )
+        repositories.reports.create(
+            organization_id=UUID(ORG_A),
+            case_id=UUID(case_a["id"]),
+            values={
+                "status": ReportStatus.READY,
+                "summary": "Relatorio mock pronto para lista.",
+                "recommendation": ReportRecommendation.PROCEED_WITH_CAUTION,
+                "confidence": 0.55,
+                "limitations": ["Mock local."],
+                "source_refs": [],
+            },
+        )
+
+        response = self.client.get(
+            "/api/v1/cases?page=1&page_size=10",
+            headers=auth_headers(),
+        )
+
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual("local", body["source_mode"])
+        self.assertEqual(2, body["data"]["total"])
+        self.assertEqual(2, len(body["data"]["items"]))
+        items = {item["case_id"]: item for item in body["data"]["items"]}
+        self.assertIn(case_a["id"], items)
+        self.assertIn(case_b["id"], items)
+        self.assertEqual(1, items[case_a["id"]]["parties_count"])
+        self.assertEqual(1, items[case_a["id"]]["documents_count"])
+        self.assertEqual("completed", items[case_a["id"]]["triage_status"])
+        self.assertEqual("ready", items[case_a["id"]]["report_status"])
+        self.assertEqual(case_a["id"], items[case_a["id"]]["id"])
+
+        self.jwt_verifier.organization_id = ORG_B
+        cross_org_response = self.client.get(
+            "/api/v1/cases?product_type=analise_contratual",
+            headers=auth_headers(),
+        )
+        self.assertEqual(200, cross_org_response.status_code)
+        self.assertEqual(0, cross_org_response.json()["data"]["total"])
+
     def test_requests_and_timeline_are_isolated_by_case_and_organization(self) -> None:
         request_a = self.create_request("Pedido A")
         request_b = self.create_request("Pedido B")

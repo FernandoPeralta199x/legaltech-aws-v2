@@ -64,6 +64,15 @@ const productOptions: Array<{ id: ProductType; label: string }> = [
 
 const statusFilterOptions: Array<{ id: CaseStatus; label: string }> = [
   { id: "draft", label: "Rascunho" },
+  { id: "created", label: "Criado" },
+  { id: "document_attached", label: "Documento anexado" },
+  { id: "awaiting_triage", label: "Aguardando triagem" },
+  { id: "triage_running", label: "Triagem em andamento" },
+  { id: "triage_partial", label: "Triagem parcial" },
+  { id: "triage_completed", label: "Triagem concluída" },
+  { id: "ai_running", label: "IA mock em andamento" },
+  { id: "report_ready", label: "Relatório pronto" },
+  { id: "needs_human_review", label: "Revisão humana necessária" },
   { id: "submitted", label: "Enviado no MVP" },
   { id: "triagem_pendente", label: "Triagem" },
   { id: "coleta_pendente", label: "Coleta" },
@@ -100,6 +109,10 @@ const emptyCaseForm: CaseForm = {
 };
 
 function caseDisplayTitle(legalCase: Case): string {
+  if (legalCase.title?.trim()) {
+    return legalCase.title;
+  }
+
   const title = legalCase.metadata?.title;
   return typeof title === "string" && title.trim()
     ? title
@@ -108,6 +121,39 @@ function caseDisplayTitle(legalCase: Case): string {
 
 function productDisplayLabel(product: ProductType): string {
   return productOptions.find((option) => option.id === product)?.label ?? product;
+}
+
+function reportStatusLabel(legalCase: Case): string {
+  const reportStatus = legalCase.metadata?.reportStatus;
+  if (typeof reportStatus !== "string" || !reportStatus) {
+    return "Pendente";
+  }
+
+  const labels: Record<string, string> = {
+    failed: "Falhou",
+    generating: "Gerando",
+    not_started: "Pendente",
+    ready: "Pronto"
+  };
+
+  return labels[reportStatus] ?? reportStatus;
+}
+
+function sourceModeLabel(legalCase: Case): string {
+  const sourceMode = legalCase.sourceMode ?? legalCase.metadata?.sourceMode;
+  if (typeof sourceMode !== "string" || !sourceMode) {
+    return "api";
+  }
+
+  const labels: Record<string, string> = {
+    hybrid: "híbrido",
+    local: "local",
+    mock: "mock",
+    real: "real",
+    simulated: "simulado"
+  };
+
+  return labels[sourceMode] ?? sourceMode;
 }
 
 export default function CasesPage() {
@@ -504,12 +550,15 @@ export default function CasesPage() {
                 <p className="mt-4 text-[11px] font-semibold text-brand-teal">
                   {c.code}
                 </p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-normal text-[var(--text3)]">
+                  Origem: {sourceModeLabel(c)}
+                </p>
                 <h2 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[var(--text)]">
                   {caseDisplayTitle(c)}
                 </h2>
                 <p className="mt-1 truncate text-xs text-[var(--text2)]">{c.clientName}</p>
                 <p className="mt-1 text-[11px] text-[var(--text3)]">
-                  {caseTypeLabel[c.caseType] ?? c.caseType} · {productDisplayLabel(c.product)}
+                  {caseTypeLabel[c.caseType] ?? c.caseType} · {c.productLabel ?? productDisplayLabel(c.product)}
                 </p>
 
                 <div className="mt-4">
@@ -546,7 +595,7 @@ export default function CasesPage() {
                   </div>
                   <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
                     <Shield className="shrink-0 text-[var(--text3)]" size={12} />
-                    <span className="truncate">Relatório: acompanhar no detalhe</span>
+                    <span className="truncate">Relatório: {reportStatusLabel(c)}</span>
                   </div>
                 </div>
 

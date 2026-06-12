@@ -27,6 +27,50 @@ type BackendCase = {
   updated_at: string;
 };
 
+type BackendOperationalCase = {
+  id?: string;
+  case_id?: string;
+  request_id?: string | null;
+  code?: string;
+  title?: string;
+  description?: string;
+  case_type?: string;
+  product_type?: string;
+  product_label?: string;
+  client_id?: string | null;
+  client_name?: string | null;
+  status?: string;
+  progress?: number;
+  risk_level?: string;
+  recommendation?: string | null;
+  parties_count?: number;
+  documents_count?: number;
+  triage_status?: string;
+  report_status?: string;
+  source_mode?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type BackendCaseListPage = {
+  items: BackendOperationalCase[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+};
+
+type BackendCaseListPayload = BackendCase[] | BackendCaseListPage;
+
+const productAliases: Record<string, ProductType> = {
+  analise_contratual: "analise_contratual",
+  contract_analysis: "analise_contratual",
+  consulta_objeto: "consulta_objeto",
+  dados_partes: "dados_partes",
+  reuniao_advogado: "reuniao_equipe",
+  reuniao_equipe: "reuniao_equipe"
+};
+
 function caseCodeFromId(id: string): string {
   if (id.toLowerCase().startsWith("case-")) {
     return id.replace(/^case-/i, "CASE-").toUpperCase();
@@ -37,15 +81,9 @@ function caseCodeFromId(id: string): string {
 
 function productFromMetadata(metadata: Record<string, unknown>): ProductType {
   const product = metadata.product;
-  const allowed: ProductType[] = [
-    "dados_partes",
-    "consulta_objeto",
-    "analise_contratual",
-    "reuniao_equipe"
-  ];
 
-  return typeof product === "string" && allowed.includes(product as ProductType)
-    ? (product as ProductType)
+  return typeof product === "string"
+    ? productAliases[product] ?? "analise_contratual"
     : "analise_contratual";
 }
 
@@ -63,6 +101,22 @@ function progressFromStatus(status: string): number {
   };
 
   return progress[status] ?? 35;
+}
+
+function clampProgress(progress: number): number {
+  return Math.max(0, Math.min(100, Math.round(progress)));
+}
+
+function isPaginatedCaseList(payload: BackendCaseListPayload): payload is BackendCaseListPage {
+  return !Array.isArray(payload) && Array.isArray(payload.items);
+}
+
+function caseTypeFromProduct(product: ProductType, rawCaseType?: string): string {
+  if (rawCaseType && rawCaseType !== product) {
+    return rawCaseType;
+  }
+
+  return product === "analise_contratual" ? "contract_analysis" : product;
 }
 
 function buildCaseListQuery(filters: CaseListFilters = {}): string {
@@ -124,6 +178,62 @@ export function mapBackendCase(
   };
 }
 
+export function mapOperationalCase(legalCase: BackendOperationalCase): Case {
+  const id = legalCase.case_id ?? legalCase.id ?? "";
+  const product = productAliases[legalCase.product_type ?? ""] ?? "analise_contratual";
+  const title = legalCase.title?.trim() || legalCase.code || "Caso operacional";
+  const progress =
+    typeof legalCase.progress === "number"
+      ? clampProgress(legalCase.progress)
+      : progressFromStatus(legalCase.status ?? "");
+
+  return {
+    id,
+    code: legalCase.code ?? caseCodeFromId(id),
+    clientId: legalCase.client_id ?? legalCase.request_id ?? id,
+    clientName: legalCase.client_name?.trim() || "Nao informado",
+    caseType: caseTypeFromProduct(product, legalCase.case_type),
+    product,
+    productLabel: legalCase.product_label,
+    status: (legalCase.status ?? "created") as Case["status"],
+    priority: "normal",
+    documentsCount: legalCase.documents_count ?? 0,
+    progressPercent: progress,
+    progress,
+    riskLevel: legalCase.risk_level as Case["riskLevel"],
+    recommendation: legalCase.recommendation as Case["recommendation"],
+    sourceMode: legalCase.source_mode as Case["sourceMode"],
+    assignedTo: null,
+    notes: legalCase.description ?? "",
+    metadata: {
+      description: legalCase.description,
+      partiesCount: legalCase.parties_count ?? 0,
+      recommendation: legalCase.recommendation,
+      reportStatus: legalCase.report_status,
+      requestId: legalCase.request_id,
+      riskLevel: legalCase.risk_level,
+      sourceMode: legalCase.source_mode,
+      title,
+      triageStatus: legalCase.triage_status
+    },
+    parties: [],
+    updatedAt: legalCase.updated_at ?? new Date().toISOString(),
+    createdAt: legalCase.created_at ?? legalCase.updated_at ?? new Date().toISOString(),
+    submittedAt: legalCase.created_at ?? null
+  };
+}
+
+function mapCaseListPayload(
+  payload: BackendCaseListPayload,
+  clients: Client[] = []
+): Case[] {
+  if (isPaginatedCaseList(payload)) {
+    return payload.items.map((legalCase) => mapOperationalCase(legalCase));
+  }
+
+  return payload.map((legalCase) => mapBackendCase(legalCase, clients));
+}
+
 function makeMockCase(payload: CaseCreate, clients: Client[] = []): Case {
   const now = new Date().toISOString();
   const client = clients.find((item) => item.id === payload.client_id);
@@ -165,13 +275,11 @@ export async function listCases(
 ): Promise<ServiceResult<Case[]>> {
   const { clients, filters } = resolveListCasesArgs(filtersOrClients, maybeClients);
   try {
-    const response = await apiClient.get<BackendCase[]>(
+    const response = await apiClient.get<BackendCaseListPayload>(
       `/api/v1/cases${buildCaseListQuery(filters)}`
     );
     return {
-      data: mergeCasesWithLocalCases(
-        response.data.map((legalCase) => mapBackendCase(legalCase, clients))
-      ),
+      data: mergeCasesWithLocalCases(mapCaseListPayload(response.data, clients)),
       source: "api"
     };
   } catch (error) {
