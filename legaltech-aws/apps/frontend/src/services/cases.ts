@@ -1,4 +1,10 @@
 import { mockCases } from "../../lib/mockData";
+import {
+  MODULOS,
+  PRODUTOS,
+  type Modulo,
+  type Produto
+} from "../../lib/produtoConfig";
 import type {
   Case,
   CaseAggregate,
@@ -18,7 +24,9 @@ import type {
 } from "../../types";
 import {
   findStoredLocalCase,
-  mergeCasesWithLocalCases
+  mergeCasesWithLocalCases,
+  saveLocalCaseFromWizard,
+  type LocalCaseWizardInput
 } from "../lib/localCases";
 import { ApiClientError, apiClient } from "./apiClient";
 import { fallbackReason, shouldUseMockFallback, type ServiceResult } from "./fallback";
@@ -253,6 +261,36 @@ type BackendCaseAggregate = {
   summary: BackendAggregateSummary;
 };
 
+type BackendWizardSubmitResponse = BackendLegalRequest & {
+  request_id?: string;
+  request_status?: string;
+  case_id?: string;
+  case_code?: string;
+  case_status?: string;
+  documents_count?: number;
+  parties_count?: number;
+  triage_modules_count?: number;
+  timeline_events_count?: number;
+};
+
+export type WizardOperationalSubmitInput = LocalCaseWizardInput & {
+  idempotencyKey: string;
+};
+
+export type WizardOperationalSubmitResult = {
+  requestId: string;
+  caseId: string;
+  caseCode: string;
+  status: string;
+  productType: ProductType;
+  productLabel: string;
+  documentsCount: number;
+  partiesCount: number;
+  triageModulesCount: number;
+  timelineEventsCount: number;
+  sourceMode: Case["sourceMode"];
+};
+
 const productAliases: Record<string, ProductType> = {
   analise_contratual: "analise_contratual",
   contract_analysis: "analise_contratual",
@@ -308,6 +346,118 @@ function caseTypeFromProduct(product: ProductType, rawCaseType?: string): string
   }
 
   return product === "analise_contratual" ? "contract_analysis" : product;
+}
+
+function selectedWizardModules(modulos: Record<Modulo, boolean>): Modulo[] {
+  return (Object.keys(MODULOS) as Modulo[]).filter((modulo) => modulos[modulo]);
+}
+
+function caseTypeForWizardProduct(product: Produto): string {
+  const map: Record<Produto, string> = {
+    analise_contratual: "contract_analysis",
+    consulta_objeto: "object_query",
+    dados_partes: "party_data",
+    reuniao_equipe: "lawyer_meeting"
+  };
+
+  return map[product];
+}
+
+function primaryWizardPartyName(input: LocalCaseWizardInput): string {
+  return (
+    input.parties.find((party) => party.nome.trim())?.nome.trim() ??
+    "Cliente nao informado"
+  );
+}
+
+function wizardTitle(input: LocalCaseWizardInput): string {
+  return `${PRODUTOS[input.produto].titulo} - ${primaryWizardPartyName(input)}`;
+}
+
+function wizardDescription(input: LocalCaseWizardInput): string {
+  const activeModules = selectedWizardModules(input.modulos);
+  const documentText = input.arquivo?.name
+    ? `Documento informado: ${input.arquivo.name}.`
+    : "Sem documento informado.";
+
+  return [
+    "Pedido criado pelo fluxo Novo Pedido / Wizard.",
+    `Produto juridico: ${PRODUTOS[input.produto].titulo}.`,
+    `Modulos selecionados: ${activeModules.length}.`,
+    documentText
+  ].join(" ");
+}
+
+function mapWizardSubmitPayload(input: WizardOperationalSubmitInput) {
+  const activeModules = selectedWizardModules(input.modulos);
+  const productLabel = PRODUTOS[input.produto].titulo;
+
+  return {
+    product_type: input.produto,
+    product_label: productLabel,
+    title: wizardTitle(input),
+    description: wizardDescription(input),
+    source_mode: "local",
+    idempotency_key: input.idempotencyKey,
+    notes: "Criado pelo Wizard operacional local.",
+    selected_modules: activeModules,
+    parties: input.parties
+      .filter((party) => party.nome.trim())
+      .map((party) => ({
+        name: party.nome.trim(),
+        document: (party.documento ?? "").trim() || null,
+        document_type: party.tipoPessoa === "pj" ? "cnpj" : "cpf",
+        person_type: party.tipoPessoa === "pj" ? "company" : "individual",
+        role: party.papel,
+        email: (party.email ?? "").trim() || null,
+        phone: (party.telefone ?? "").trim() || null,
+        metadata: {
+          source: "new_case_wizard",
+          wizard_party_id: party.id
+        }
+      })),
+    document:
+      input.arquivo?.status === "done"
+        ? {
+            filename: input.arquivo.name,
+            original_filename: input.arquivo.name,
+            mime_type: input.arquivo.type || "application/octet-stream",
+            size_bytes: input.arquivo.size,
+            storage_provider: "local",
+            status: "uploaded",
+            preview_available: false,
+            download_available: false
+          }
+        : null,
+    metadata: {
+      case_type: caseTypeForWizardProduct(input.produto),
+      module_names: activeModules.map((modulo) => MODULOS[modulo].titulo),
+      modules: activeModules,
+      product: input.produto,
+      source: "new_case_wizard",
+      source_mode: "local"
+    }
+  };
+}
+
+function mapWizardSubmitResponse(
+  payload: BackendWizardSubmitResponse
+): WizardOperationalSubmitResult {
+  const requestId = payload.request_id ?? payload.id;
+  const caseId = payload.case_id ?? "";
+  return {
+    requestId,
+    caseId,
+    caseCode: payload.case_code ?? caseCodeFromId(caseId || requestId),
+    status: payload.case_status ?? payload.status,
+    productType: productAliases[payload.product_type] ?? "analise_contratual",
+    productLabel: payload.product_label,
+    documentsCount: payload.documents_count ?? 0,
+    partiesCount: payload.parties_count ?? 0,
+    triageModulesCount: payload.triage_modules_count ?? 0,
+    timelineEventsCount: payload.timeline_events_count ?? 0,
+    sourceMode: payload.source_mode as Case["sourceMode"]
+  };
 }
 
 function buildCaseListQuery(filters: CaseListFilters = {}): string {
@@ -678,6 +828,57 @@ function mapAggregateSummary(summary: BackendAggregateSummary): CaseOperationSum
   };
 }
 
+function fallbackDocumentsFromCase(legalCase: Case): Document[] {
+  const wizardDocument = legalCase.metadata?.wizardDocument;
+  if (!wizardDocument || typeof wizardDocument !== "object") return [];
+
+  const documentMetadata = wizardDocument as Record<string, unknown>;
+  const filename =
+    typeof documentMetadata.filename === "string"
+      ? documentMetadata.filename
+      : "documento-local";
+  const mimeType =
+    typeof documentMetadata.mimeType === "string"
+      ? documentMetadata.mimeType
+      : "application/octet-stream";
+  const sizeBytes =
+    typeof documentMetadata.sizeBytes === "number"
+      ? documentMetadata.sizeBytes
+      : 0;
+  const uploadedAt = legalCase.submittedAt ?? legalCase.createdAt;
+
+  return [
+    {
+      id: `${legalCase.id}-document-local-1`,
+      filename,
+      originalFilename: filename,
+      caseId: legalCase.id,
+      organizationId: legalCase.organizationId ?? "local",
+      caseCode: legalCase.code,
+      contentType: mimeType,
+      mimeType,
+      status: "uploaded",
+      sizeBytes,
+      sizeLabel: formatBytes(sizeBytes),
+      fileHash: null,
+      storageProvider: "local",
+      storageKey: `local/wizard/${legalCase.id}/${filename}`,
+      ocrStatus: "not_started",
+      aiReadStatus: "not_started",
+      previewAvailable: false,
+      downloadAvailable: false,
+      uploadedAt,
+      updatedAt: legalCase.updatedAt,
+      processedAt: null,
+      metadata: {
+        source: "new_case_wizard",
+        sourceMode: "local"
+      },
+      notes: "Metadata local do documento selecionado no Wizard."
+    }
+  ];
+}
+
 export function mapBackendCaseAggregate(payload: BackendCaseAggregate): CaseAggregate {
   const legalCase = mapAggregateCase(payload);
   const parties = payload.parties.map(mapAggregateParty);
@@ -701,11 +902,12 @@ export function mapBackendCaseAggregate(payload: BackendCaseAggregate): CaseAggr
 
 function makeFallbackAggregate(legalCase: Case): CaseAggregate {
   const sourceMode = (legalCase.sourceMode ?? "mock") as CaseOperationSummary["sourceMode"];
+  const fallbackDocuments = fallbackDocumentsFromCase(legalCase);
   return {
     case: legalCase,
     request: null,
     parties: legalCase.parties as Party[],
-    documents: [],
+    documents: fallbackDocuments,
     timeline: [],
     triageModules: [],
     providerResults: [],
@@ -714,7 +916,7 @@ function makeFallbackAggregate(legalCase: Case): CaseAggregate {
       caseId: legalCase.id,
       organizationId: legalCase.organizationId,
       partiesCount: legalCase.parties.length,
-      documentsCount: legalCase.documentsCount,
+      documentsCount: fallbackDocuments.length || legalCase.documentsCount,
       triageStatus: "not_started",
       reportStatus: "not_started",
       riskLevel: legalCase.riskLevel ?? "unknown",
@@ -792,6 +994,44 @@ export async function listCases(
 
     return {
       data: mergeCasesWithLocalCases(mockCases),
+      fallbackReason: fallbackReason(error),
+      source: "mock"
+    };
+  }
+}
+
+export async function submitWizardRequest(
+  input: WizardOperationalSubmitInput
+): Promise<ServiceResult<WizardOperationalSubmitResult>> {
+  try {
+    const response = await apiClient.post<BackendWizardSubmitResponse>(
+      "/api/v1/requests",
+      mapWizardSubmitPayload(input)
+    );
+    return {
+      data: mapWizardSubmitResponse(response.data),
+      source: "api"
+    };
+  } catch (error) {
+    if (!shouldUseMockFallback(error)) {
+      throw error;
+    }
+
+    const localCase = saveLocalCaseFromWizard(input);
+    return {
+      data: {
+        requestId: localCase.requestId ?? localCase.id,
+        caseId: localCase.id,
+        caseCode: localCase.code,
+        status: localCase.status,
+        productType: localCase.product,
+        productLabel: localCase.productLabel ?? PRODUTOS[localCase.product].titulo,
+        documentsCount: localCase.documentsCount,
+        partiesCount: localCase.parties.length,
+        triageModulesCount: selectedWizardModules(input.modulos).length,
+        timelineEventsCount: 0,
+        sourceMode: "local"
+      },
       fallbackReason: fallbackReason(error),
       source: "mock"
     };

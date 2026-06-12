@@ -150,6 +150,139 @@ class OperationalRoutesTest(unittest.TestCase):
         self.assertEqual(created["id"], case["request_id"])
         self.assertEqual("analise_contratual", case["product_type"])
 
+    def test_wizard_submit_creates_operational_case_resources_and_triage_plan(self) -> None:
+        payload = {
+            "product_type": "analise_contratual",
+            "product_label": "Analise contratual",
+            "title": "Analise contratual - Cliente Wizard",
+            "description": "Pedido criado pelo Wizard em teste.",
+            "source_mode": "local",
+            "idempotency_key": "wizard-idempotency-a",
+            "selected_modules": ["ia_deepseek", "analise_contratual_ia"],
+            "parties": [
+                {
+                    "name": "Cliente Wizard",
+                    "document": "123.456.789-00",
+                    "document_type": "cpf",
+                    "person_type": "individual",
+                    "role": "contratante",
+                    "email": "cliente@example.test",
+                    "phone": "+55 11 99999-0000",
+                    "metadata": {"wizard_party_id": "party-a"},
+                },
+                {
+                    "name": "Fornecedor Wizard",
+                    "document": "12.345.678/0001-90",
+                    "document_type": "cnpj",
+                    "person_type": "company",
+                    "role": "contratada",
+                    "metadata": {"wizard_party_id": "party-b"},
+                },
+            ],
+            "document": {
+                "filename": "contrato-wizard.pdf",
+                "original_filename": "contrato-wizard.pdf",
+                "mime_type": "application/pdf",
+                "size_bytes": 4096,
+                "storage_provider": "local",
+                "status": "uploaded",
+                "preview_available": False,
+                "download_available": False,
+            },
+            "metadata": {
+                "case_type": "contract_analysis",
+                "source": "new_case_wizard",
+            },
+        }
+
+        response = self.client.post(
+            "/api/v1/requests",
+            headers=auth_headers(),
+            json=payload,
+        )
+
+        self.assertEqual(201, response.status_code)
+        body = response.json()
+        self.assertTrue(body["success"])
+        data = body["data"]
+        self.assertEqual("case_created", data["status"])
+        self.assertEqual("awaiting_triage", data["case_status"])
+        self.assertIsNotNone(data["case_id"])
+        self.assertEqual(2, data["parties_count"])
+        self.assertEqual(1, data["documents_count"])
+        self.assertGreaterEqual(data["triage_modules_count"], 1)
+        self.assertGreaterEqual(data["timeline_events_count"], 6)
+
+        aggregate_response = self.client.get(
+            f"/api/v1/cases/{data['case_id']}/aggregate",
+            headers=auth_headers(),
+        )
+        self.assertEqual(200, aggregate_response.status_code)
+        aggregate = aggregate_response.json()["data"]
+        self.assertEqual(data["case_id"], aggregate["case"]["id"])
+        self.assertEqual(data["request_id"], aggregate["request"]["id"])
+        self.assertEqual(2, len(aggregate["parties"]))
+        self.assertEqual("Cliente Wizard", aggregate["parties"][0]["name"])
+        self.assertNotIn("document", aggregate["parties"][0])
+        self.assertIn("***", aggregate["parties"][0]["document_masked"])
+        self.assertEqual(1, len(aggregate["documents"]))
+        self.assertEqual("contrato-wizard.pdf", aggregate["documents"][0]["filename"])
+        self.assertEqual(data["case_id"], aggregate["documents"][0]["case_id"])
+        self.assertGreaterEqual(len(aggregate["triage_modules"]), 1)
+        self.assertTrue(
+            all(module["case_id"] == data["case_id"] for module in aggregate["triage_modules"])
+        )
+
+        event_types = [event["type"] for event in aggregate["timeline"]]
+        self.assertIn("request_created", event_types)
+        self.assertIn("case_created", event_types)
+        self.assertEqual(2, event_types.count("party_added"))
+        self.assertIn("document_attached", event_types)
+        self.assertIn("triage_plan_created", event_types)
+        self.assertIn("wizard_completed", event_types)
+
+        duplicate_response = self.client.post(
+            "/api/v1/requests",
+            headers=auth_headers(),
+            json=payload,
+        )
+        self.assertEqual(201, duplicate_response.status_code)
+        duplicate = duplicate_response.json()["data"]
+        self.assertEqual(data["request_id"], duplicate["request_id"])
+        self.assertEqual(data["case_id"], duplicate["case_id"])
+
+        duplicate_aggregate = self.client.get(
+            f"/api/v1/cases/{data['case_id']}/aggregate",
+            headers=auth_headers(),
+        ).json()["data"]
+        duplicate_event_types = [event["type"] for event in duplicate_aggregate["timeline"]]
+        self.assertEqual(2, len(duplicate_aggregate["parties"]))
+        self.assertEqual(1, len(duplicate_aggregate["documents"]))
+        self.assertEqual(1, duplicate_event_types.count("document_attached"))
+        self.assertEqual(1, duplicate_event_types.count("wizard_completed"))
+
+        self.jwt_verifier.organization_id = ORG_B
+        cross_org_response = self.client.get(
+            f"/api/v1/cases/{data['case_id']}/aggregate",
+            headers=auth_headers(),
+        )
+        self.assertEqual(404, cross_org_response.status_code)
+
+    def test_wizard_submit_rejects_payload_with_frontend_organization_id(self) -> None:
+        response = self.client.post(
+            "/api/v1/requests",
+            headers=auth_headers(),
+            json={
+                "product_type": "analise_contratual",
+                "product_label": "Analise contratual",
+                "title": "Payload com tenant arbitrario",
+                "source_mode": "local",
+                "organization_id": ORG_B,
+            },
+        )
+
+        self.assertEqual(422, response.status_code)
+
     def test_cases_list_returns_operational_paginated_summary_by_organization(self) -> None:
         from src.modules.cases.router import get_case_service
         from src.modules.contracts.operational import build_operational_repositories

@@ -1,16 +1,24 @@
 import { MODULOS, PRODUTOS, type Modulo } from "../../lib/produtoConfig";
-import type { Case, Priority, ProductType } from "../../types";
+import type { Case, CaseParty, CaseStatus, Priority, ProductType } from "../../types";
 
 export const LOCAL_CASES_STORAGE_KEY = "legaltech.local.cases.v1";
 
 type WizardPartySummary = {
+  documento?: string;
+  email?: string;
   id: string;
   nome: string;
   papel: string;
+  telefone?: string;
+  tipoPessoa?: "pf" | "pj";
 };
 
 type WizardFileSummary = {
+  name?: string;
+  progress?: number;
+  size?: number;
   status: string;
+  type?: string;
 } | null;
 
 export type LocalCaseWizardInput = {
@@ -91,6 +99,16 @@ function makeLocalCaseId(now: Date, partyId: string): string {
   return `case-local-${timestamp}-${suffix}`;
 }
 
+function maskDocument(value: string | undefined): string {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length <= 4) return "****";
+
+  const prefix = digits.slice(0, 3);
+  const suffix = digits.slice(-2);
+  return `${prefix}****${suffix}`;
+}
+
 function dedupeCases(cases: Case[]): Case[] {
   const seen = new Set<string>();
   const result: Case[] = [];
@@ -168,18 +186,62 @@ export function createLocalCaseFromWizard(
   const productName = PRODUTOS[product].titulo;
   const nowIso = now.toISOString();
   const title = `${productName} - ${clientName}`;
+  const caseId = makeLocalCaseId(now, primaryParty?.id ?? "wizard");
+  const documentReady = input.arquivo?.status === "done";
+  const status: CaseStatus =
+    activeModules.length > 0
+      ? "awaiting_triage"
+      : documentReady
+        ? "document_attached"
+        : "created";
+  const progress = Math.min(
+    30,
+    (documentReady ? 10 : 0) + Math.max(0, activeModules.length * 3)
+  );
+  const parties: CaseParty[] = input.parties
+    .filter((party) => party.nome.trim())
+    .map((party) => ({
+      id: `${caseId}-${normalizeIdPart(party.id) || "party"}`,
+      caseId,
+      organizationId: "local",
+      name: party.nome.trim(),
+      document: "",
+      documentMasked: maskDocument(party.documento),
+      documentType: party.tipoPessoa === "pj" ? "cnpj" : "cpf",
+      personType: party.tipoPessoa === "pj" ? "company" : "individual",
+      type: party.papel,
+      email: "",
+      phone: "",
+      notes: "",
+      status: "not_started",
+      riskLevel: "unknown",
+      providerStatusSummary: null,
+      metadata: {
+        role: party.papel,
+        source: "new_case_wizard",
+        wizardPartyId: party.id
+      },
+      createdAt: nowIso,
+      updatedAt: nowIso
+    }));
 
   return {
-    id: makeLocalCaseId(now, primaryParty?.id ?? "wizard"),
+    id: caseId,
     code: makeLocalCaseCode(now),
+    organizationId: "local",
     clientId: primaryParty?.id ?? "local-client",
     clientName,
     caseType: caseTypeForProduct(product),
     product,
-    status: "submitted",
+    productLabel: productName,
+    status,
     priority: "normal" satisfies Priority,
-    documentsCount: input.arquivo?.status === "done" ? 1 : 0,
-    progressPercent: 15,
+    documentsCount: documentReady ? 1 : 0,
+    progressPercent: progress,
+    progress,
+    riskLevel: "unknown",
+    sourceMode: "local",
+    isLocalSimulation: true,
     assignedTo: null,
     notes: "Registro local criado pelo fluxo Novo Pedido do MVP.",
     metadata: {
@@ -189,10 +251,20 @@ export function createLocalCaseFromWizard(
       product,
       productName,
       source: "new_case_wizard",
+      sourceMode: "local",
       syncStatus: "local_only",
-      title
+      title,
+      wizardDocument: input.arquivo
+        ? {
+            filename: input.arquivo.name ?? "documento-local",
+            mimeType: input.arquivo.type ?? "application/octet-stream",
+            sizeBytes: input.arquivo.size ?? 0,
+            sourceMode: "local",
+            storageProvider: "local"
+          }
+        : null
     },
-    parties: [],
+    parties,
     updatedAt: nowIso,
     createdAt: nowIso,
     submittedAt: nowIso

@@ -3,7 +3,13 @@ import test from "node:test";
 
 import type { Case } from "../../types";
 import { saveStoredLocalCase } from "../lib/localCases";
-import { createCase, getCase, getCaseAggregate, listCases } from "./cases";
+import {
+  createCase,
+  getCase,
+  getCaseAggregate,
+  listCases,
+  submitWizardRequest
+} from "./cases";
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -527,4 +533,149 @@ test("createCase sends backend field names and omits organization_id", async () 
   const payload = JSON.parse(requestBody);
   assert.equal(payload.client_id, "client-api-1");
   assert.equal(payload.organization_id, undefined);
+});
+
+test("submitWizardRequest sends operational wizard payload without organization_id", async () => {
+  storage.clear();
+  let requestBody = "";
+  let capturedUrl = "";
+
+  globalThis.fetch = (async (url, init) => {
+    capturedUrl = String(url);
+    requestBody = String(init?.body ?? "");
+
+    return Response.json(
+      {
+        success: true,
+        data: {
+          id: "request-api-1",
+          request_id: "request-api-1",
+          code: "PED-LOCAL-0001",
+          organization_id: "org-api-1",
+          created_by: "user-api-1",
+          product_type: "analise_contratual",
+          product_label: "Análise contratual",
+          title: "Análise contratual - Cliente Wizard",
+          description: "Pedido criado pelo Wizard.",
+          status: "case_created",
+          request_status: "case_created",
+          source_mode: "local",
+          idempotency_key: "idem-wizard-1",
+          case_id: "case-api-1",
+          case_code: "CASO-LOCAL-0001",
+          case_status: "awaiting_triage",
+          parties_count: 1,
+          documents_count: 1,
+          triage_modules_count: 5,
+          timeline_events_count: 6,
+          created_at: "2026-06-01T10:00:00.000Z",
+          updated_at: "2026-06-01T10:00:00.000Z"
+        },
+        source_mode: "local"
+      },
+      { status: 201 }
+    );
+  }) as typeof fetch;
+
+  const result = await submitWizardRequest({
+    arquivo: {
+      name: "contrato.pdf",
+      progress: 100,
+      size: 4096,
+      status: "done",
+      type: "application/pdf"
+    },
+    idempotencyKey: "idem-wizard-1",
+    modulos: {
+      analise_contratual_ia: true,
+      escavador: false,
+      ia_deepseek: true,
+      revisao_humana: false,
+      serasa_procon: false,
+      targetdata: false
+    },
+    parties: [
+      {
+        documento: "123.456.789-00",
+        email: "cliente@example.test",
+        id: "party-wizard-1",
+        nome: "Cliente Wizard",
+        papel: "contratante",
+        telefone: "+55 11 99999-0000",
+        tipoPessoa: "pf"
+      }
+    ],
+    produto: "analise_contratual"
+  });
+
+  const payload = JSON.parse(requestBody);
+  assert.equal(new URL(capturedUrl).pathname, "/api/v1/requests");
+  assert.equal(payload.organization_id, undefined);
+  assert.equal(payload.product_type, "analise_contratual");
+  assert.equal(payload.idempotency_key, "idem-wizard-1");
+  assert.equal(payload.parties[0].name, "Cliente Wizard");
+  assert.equal(payload.parties[0].document_type, "cpf");
+  assert.equal(payload.document.filename, "contrato.pdf");
+  assert.equal(result.source, "api");
+  assert.equal(result.data.caseId, "case-api-1");
+  assert.equal(result.data.status, "awaiting_triage");
+  assert.equal(result.data.partiesCount, 1);
+  assert.equal(result.data.documentsCount, 1);
+});
+
+test("submitWizardRequest uses explicit local fallback only when API is unavailable", async () => {
+  storage.clear();
+  const previousFallback = process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+  process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = "true";
+
+  globalThis.fetch = (async () => {
+    throw new TypeError("network down");
+  }) as typeof fetch;
+
+  try {
+    const result = await submitWizardRequest({
+      arquivo: {
+        name: "contrato-local.pdf",
+        progress: 100,
+        size: 2048,
+        status: "done",
+        type: "application/pdf"
+      },
+      idempotencyKey: "idem-local-1",
+      modulos: {
+        analise_contratual_ia: true,
+        escavador: false,
+        ia_deepseek: true,
+        revisao_humana: false,
+        serasa_procon: false,
+        targetdata: false
+      },
+      parties: [
+        {
+          documento: "123.456.789-00",
+          email: "cliente@example.test",
+          id: "party-local-1",
+          nome: "Cliente Local",
+          papel: "contratante",
+          telefone: "",
+          tipoPessoa: "pf"
+        }
+      ],
+      produto: "analise_contratual"
+    });
+
+    assert.equal(result.source, "mock");
+    assert.match(result.data.caseId, /^case-local-/);
+    assert.equal(result.data.sourceMode, "local");
+    assert.equal(result.data.partiesCount, 1);
+    assert.equal(result.data.documentsCount, 1);
+    assert.equal(storage.getItem("legaltech.local.cases.v1")?.includes("Cliente Local"), true);
+    assert.equal(storage.getItem("legaltech.local.cases.v1")?.includes("123.456.789-00"), false);
+  } finally {
+    if (previousFallback === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+    } else {
+      process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = previousFallback;
+    }
+  }
 });

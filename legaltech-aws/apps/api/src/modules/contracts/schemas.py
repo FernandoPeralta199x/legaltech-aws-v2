@@ -161,6 +161,37 @@ class CreateRequestPayloadSchema(BaseModel):
     source_mode: SourceMode = SourceMode.LOCAL
     idempotency_key: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    notes: str | None = None
+    selected_modules: list[str] = Field(default_factory=list)
+    parties: list["WizardPartyPayloadSchema"] = Field(default_factory=list)
+    document: "WizardDocumentPayloadSchema | None" = None
+
+
+class WizardPartyPayloadSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    document: str | None = None
+    document_type: str = "unknown"
+    person_type: str = "unknown"
+    role: str
+    email: str | None = None
+    phone: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class WizardDocumentPayloadSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    filename: str
+    original_filename: str | None = None
+    mime_type: str = "application/octet-stream"
+    size_bytes: int = Field(default=0, ge=0)
+    storage_provider: str = "local"
+    storage_key: str | None = None
+    status: DocumentStatus = DocumentStatus.UPLOADED
+    preview_available: bool = False
+    download_available: bool = False
 
 
 class CaseSchema(BaseModel):

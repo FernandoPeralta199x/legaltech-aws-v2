@@ -97,9 +97,13 @@ test("createLocalCaseFromWizard builds a minimal local case without sensitive pa
   );
 
   assert.equal(legalCase.clientName, "Cliente Local");
-  assert.equal(legalCase.status, "submitted");
+  assert.equal(legalCase.status, "awaiting_triage");
   assert.equal(legalCase.documentsCount, 1);
-  assert.deepEqual(legalCase.parties, []);
+  assert.equal(legalCase.parties.length, 1);
+  assert.equal(legalCase.parties[0].name, "Cliente Local");
+  assert.equal(legalCase.parties[0].document, "");
+  assert.equal(legalCase.parties[0].documentMasked, "123****00");
+  assert.equal(legalCase.metadata?.wizardDocument !== null, true);
 
   const serialized = JSON.stringify(legalCase);
   assert.equal(serialized.includes("123.456.789-00"), false);

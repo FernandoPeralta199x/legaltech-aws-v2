@@ -57,10 +57,14 @@ def create_request(
         user_id=tenant.user_id,
         payload=payload,
     )
+    response_data = service.build_creation_response(
+        organization_id=tenant.organization_id,
+        request_id=request.id,
+    )
     return success_response(
-        dump_model(request),
+        response_data,
         "Pedido criado com sucesso.",
-        source_mode="local",
+        source_mode=str(response_data["source_mode"]),
     )
 
 

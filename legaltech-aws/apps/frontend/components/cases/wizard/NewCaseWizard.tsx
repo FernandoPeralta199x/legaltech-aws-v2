@@ -10,7 +10,7 @@ import {
   type Modulo,
   type Produto
 } from "@/lib/produtoConfig";
-import { saveLocalCaseFromWizard } from "@/src/lib/localCases";
+import { submitWizardRequest } from "@/src/services/cases";
 
 import { ContractStep } from "./ContractStep";
 import { ModulesStep } from "./ModulesStep";
@@ -34,6 +34,14 @@ const STEP_TITLES: Record<number, string> = {
   5: "Revise a simulação"
 };
 
+function makeIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `wizard-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function defaultModulesFor(produto: Produto): Record<Modulo, boolean> {
   const matriz = MATRIZ[produto];
   const next = {} as Record<Modulo, boolean>;
@@ -48,9 +56,11 @@ export function NewCaseWizard() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitNotice, setSubmitNotice] = useState<{
+    tone: "error" | "success" | "warning";
     title: string;
     description: string;
   } | null>(null);
+  const [idempotencyKey] = useState(makeIdempotencyKey);
 
   const [parties, setParties] = useState<Party[]>(() => [newParty()]);
   const [arquivo, setArquivo] = useState<WizardFile | null>(null);
@@ -88,32 +98,57 @@ export function NewCaseWizard() {
   async function handleSubmit() {
     if (!canAdvance || !produto || submitting) return;
     setSubmitting(true);
-    const localCase = saveLocalCaseFromWizard({
-      arquivo,
-      modulos,
-      parties,
-      produto
-    });
-    setSubmitNotice({
-      title: "Simulação local registrada",
-      description:
-        `Registro ${localCase.code} salvo somente neste navegador. Não há criação real no backend nesta versão; você será redirecionado para Casos para seguir o fluxo operacional do MVP local.`
-    });
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    setSubmitting(false);
-    router.push("/cases");
+    setSubmitNotice(null);
+
+    try {
+      const result = await submitWizardRequest({
+        arquivo,
+        idempotencyKey,
+        modulos,
+        parties,
+        produto
+      });
+
+      if (!result.data.caseId) {
+        throw new Error("A API não retornou case_id para o pedido.");
+      }
+
+      setSubmitNotice({
+        tone: result.source === "api" ? "success" : "warning",
+        title:
+          result.source === "api"
+            ? "Pedido operacional criado"
+            : "Fallback local registrado",
+        description:
+          result.source === "api"
+            ? `Caso ${result.data.caseCode} criado no backend operacional local. Abrindo a operação do caso.`
+            : `Backend indisponível; caso ${result.data.caseCode} salvo neste navegador como fallback local. Abrindo a operação do caso local.`
+      });
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      router.push(`/cases/${result.data.caseId}`);
+    } catch (error) {
+      setSubmitting(false);
+      setSubmitNotice({
+        tone: "error",
+        title: "Não foi possível registrar o pedido",
+        description:
+          error instanceof Error
+            ? error.message
+            : "O backend não concluiu a criação operacional do caso."
+      });
+    }
   }
 
   return (
     <WizardShell
       backHref="/cases"
-      description="Preencha as informações da simulação local do pedido. Nesta versão, não há submit real nem criação real de caso no backend."
+      description="Preencha as informações do pedido. Ao concluir, o backend operacional cria o request, o caso e os recursos locais vinculados ao mesmo case_id."
       step={step}
       title={STEP_TITLES[step]}
       totalSteps={TOTAL_STEPS}
     >
       {submitNotice && (
-        <Notification compact tone="success" title={submitNotice.title}>
+        <Notification compact tone={submitNotice.tone} title={submitNotice.title}>
           {submitNotice.description}
         </Notification>
       )}
@@ -138,7 +173,7 @@ export function NewCaseWizard() {
         onBack={() => setStep((s) => Math.max(1, s - 1))}
         onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
         onSubmit={handleSubmit}
-        submitLabel="Registrar simulação local"
+        submitLabel="Registrar pedido"
         step={step}
         submitting={submitting}
         totalSteps={TOTAL_STEPS}

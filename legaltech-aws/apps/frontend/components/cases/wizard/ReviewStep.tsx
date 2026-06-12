@@ -51,12 +51,12 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-[var(--text)]">
-          Revisão da simulação do Novo Pedido
+          Revisão do Novo Pedido
         </h2>
         <p className="mt-1 text-sm text-[var(--text2)]">
-          Confira os dados antes de registrar a simulação local. Esta revisão
-          organiza o resumo do pedido local, sem submit real e sem criação real
-          de caso no backend.
+          Confira os dados antes de registrar o pedido operacional. O backend
+          local vai criar o request, o caso e os recursos vinculados ao mesmo
+          case_id.
         </p>
       </div>
 
@@ -143,9 +143,9 @@ export function ReviewStep({ parties, arquivo, produto, modulos }: ReviewStepPro
       <div className="flex items-start gap-2 rounded-lg border border-[var(--bd)] bg-[var(--surf2)] px-3 py-2.5">
         <Info className="mt-0.5 shrink-0 text-[var(--text2)]" size={14} />
         <p className="text-xs leading-5 text-[var(--text2)]">
-          O registro local da simulação não cria caso real, não faz submit real
-          e não aciona IA, OCR ou integrações externas. O retorno para /cases
-          mantém o usuário no fluxo operacional do MVP local.
+          O registro cria dados operacionais no backend local/mock e não aciona
+          IA, OCR ou integrações externas reais. Após concluir, a operação abre
+          o caso criado pelo mesmo case_id.
         </p>
       </div>
     </div>
