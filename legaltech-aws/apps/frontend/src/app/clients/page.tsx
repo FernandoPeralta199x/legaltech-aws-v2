@@ -18,7 +18,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
-import { FormField, TextInput } from "@/components/FormField";
+import { FormField, SelectInput, TextInput } from "@/components/FormField";
 import { LoadingState } from "@/components/LoadingState";
 import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
@@ -27,7 +27,20 @@ import { formatDate } from "@/lib/formatters";
 import { errorMessage } from "@/src/lib/errorMessage";
 import { createClient, listClients, updateClient } from "@/src/services/clients";
 import { validateClientForm, type ValidationErrors } from "@/src/lib/validation";
-import type { Client, ClientCreate, ClientUpdate } from "@/types";
+import {
+  buildClientCreatePayload,
+  buildClientUpdatePayload,
+  clientContractRoleLabels,
+  clientFormFromClient,
+  clientPersonTypeLabels,
+  emptyClientForm,
+  maskBirthDate,
+  maskCnpj,
+  maskCpf,
+  maskPhone,
+  type ClientFormState
+} from "@/src/lib/clientForm";
+import type { Client } from "@/types";
 
 const riskConfig: Record<string, { label: string; className: string }> = {
   high: { label: "Indicador local alto", className: "text-red-700 bg-red-50 border-red-200" },
@@ -35,19 +48,14 @@ const riskConfig: Record<string, { label: string; className: string }> = {
   medium: { label: "Indicador local médio", className: "text-amber-700 bg-amber-50 border-amber-200" }
 };
 
-const emptyForm: ClientCreate = {
-  document: "",
-  email: "",
-  name: "",
-  phone: ""
-};
+const contractRoleOptions = Object.entries(clientContractRoleLabels);
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [error, setError] = useState("");
   const [fallbackReason, setFallbackReason] = useState("");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [form, setForm] = useState<ClientCreate>(emptyForm);
+  const [form, setForm] = useState<ClientFormState>(emptyClientForm);
   const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -87,15 +95,37 @@ export default function ClientsPage() {
     }
 
     return clients.filter((client) =>
-      [client.name, client.email, client.phone, client.documentLabel]
+      [
+        client.displayName,
+        client.name,
+        client.email,
+        client.phone,
+        client.documentLabel,
+        clientContractRoleLabels[client.contractRole ?? "other"],
+        client.personType ? clientPersonTypeLabels[client.personType] : ""
+      ]
         .join(" ")
         .toLowerCase()
         .includes(normalized)
     );
   }, [clients, query]);
 
-  function updateForm<K extends keyof ClientCreate>(field: K, value: ClientCreate[K]) {
-    setForm((current) => ({ ...current, [field]: value }));
+  function updateForm<K extends keyof ClientFormState>(
+    field: K,
+    value: ClientFormState[K]
+  ) {
+    const maskedValue =
+      field === "cpf"
+        ? maskCpf(String(value))
+        : field === "cnpj"
+          ? maskCnpj(String(value))
+          : field === "phone"
+            ? maskPhone(String(value))
+            : field === "birthDate"
+              ? maskBirthDate(String(value))
+              : value;
+
+    setForm((current) => ({ ...current, [field]: maskedValue }));
     setFormErrors((current) => ({ ...current, [field]: "" }));
     setError("");
     setSuccessMessage("");
@@ -103,14 +133,14 @@ export default function ClientsPage() {
 
   function resetFormState() {
     setEditingClient(null);
-    setForm(emptyForm);
+    setForm(emptyClientForm);
     setFormErrors({});
     setShowForm(false);
   }
 
   function startCreateClient() {
     setEditingClient(null);
-    setForm(emptyForm);
+    setForm(emptyClientForm);
     setFormErrors({});
     setShowForm(true);
     setError("");
@@ -119,12 +149,7 @@ export default function ClientsPage() {
 
   function startEditClient(client: Client) {
     setEditingClient(client);
-    setForm({
-      document: client.document ?? "",
-      email: client.email ?? "",
-      name: client.name,
-      phone: client.phone ?? ""
-    });
+    setForm(clientFormFromClient(client));
     setFormErrors({});
     setShowForm(true);
     setError("");
@@ -140,7 +165,7 @@ export default function ClientsPage() {
     const validation = validateClientForm(form);
     setFormErrors(validation.errors);
     if (!validation.valid) {
-      setError("Revise os campos destacados antes de registrar o cliente local.");
+      setError("Revise os campos destacados antes de salvar o cliente.");
       return;
     }
 
@@ -149,19 +174,12 @@ export default function ClientsPage() {
     setSuccessMessage("");
 
     try {
-      const payload: ClientUpdate = {
-        document: form.document?.trim() || null,
-        email: form.email?.trim() || null,
-        name: form.name.trim(),
-        phone: form.phone?.trim() || null
-      };
       const result = editingClient
-        ? await updateClient(editingClient.id, payload)
-        : await createClient({
-            ...payload,
-            metadata: { source: "frontend" },
-            name: payload.name ?? ""
-          });
+        ? await updateClient(
+            editingClient.id,
+            buildClientUpdatePayload(form, editingClient)
+          )
+        : await createClient(buildClientCreatePayload(form));
       setClients((current) =>
         editingClient
           ? current.map((client) =>
@@ -181,7 +199,7 @@ export default function ClientsPage() {
       );
       resetFormState();
     } catch (err) {
-      setError(errorMessage(err, "Não foi possível carregar clientes."));
+      setError(errorMessage(err, "Não foi possível salvar cliente."));
     } finally {
       setSubmitting(false);
     }
@@ -223,7 +241,7 @@ export default function ClientsPage() {
 
         {fallbackReason && (
           <Notification title="Fallback local ativo" tone="warning">
-            A API não respondeu. Os dados exibidos são de demonstração e servem apenas para desenvolvimento local.
+            A API não respondeu. A lista não usa clientes demonstrativos; novos cadastros em fallback ficam explícitos neste navegador de desenvolvimento.
           </Notification>
         )}
         {successMessage && (
@@ -253,49 +271,141 @@ export default function ClientsPage() {
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField error={formErrors.name} label="Nome do cliente" required>
-                <TextInput
-                  invalid={Boolean(formErrors.name)}
-                  onChange={(event) => updateForm("name", event.target.value)}
-                  placeholder="Cliente local de desenvolvimento"
-                  value={form.name}
-                />
+              <FormField error={formErrors.personType} label="Tipo de pessoa" required>
+                <SelectInput
+                  className="text-sm"
+                  onChange={(event) =>
+                    updateForm(
+                      "personType",
+                      event.target.value as ClientFormState["personType"]
+                    )
+                  }
+                  value={form.personType}
+                >
+                  <option value="individual">Pessoa física</option>
+                  <option value="company">Pessoa jurídica</option>
+                </SelectInput>
               </FormField>
-              <FormField
-                error={formErrors.document}
-                hint="Opcional. Use identificadores de demonstração em ambiente local."
-                label="Documento"
-              >
-                <TextInput
-                  invalid={Boolean(formErrors.document)}
-                  onChange={(event) => updateForm("document", event.target.value)}
-                  placeholder="00000000000"
-                  value={form.document ?? ""}
-                />
+              <FormField error={formErrors.contractRole} label="Papel no contrato" required>
+                <SelectInput
+                  className="text-sm"
+                  onChange={(event) =>
+                    updateForm(
+                      "contractRole",
+                      event.target.value as ClientFormState["contractRole"]
+                    )
+                  }
+                  value={form.contractRole}
+                >
+                  <option value="">Selecione</option>
+                  {contractRoleOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </SelectInput>
               </FormField>
+
+              {form.personType === "individual" ? (
+                <>
+                  <FormField error={formErrors.fullName} label="Nome completo" required>
+                    <TextInput
+                      invalid={Boolean(formErrors.fullName)}
+                      onChange={(event) => updateForm("fullName", event.target.value)}
+                      placeholder="João da Silva"
+                      value={form.fullName}
+                    />
+                  </FormField>
+                  <FormField error={formErrors.cpf} label="CPF">
+                    <TextInput
+                      inputMode="numeric"
+                      invalid={Boolean(formErrors.cpf)}
+                      onChange={(event) => updateForm("cpf", event.target.value)}
+                      placeholder="000.000.000-00"
+                      value={form.cpf}
+                    />
+                  </FormField>
+                  <FormField label="RG">
+                    <TextInput
+                      onChange={(event) => updateForm("rg", event.target.value)}
+                      placeholder="00.000.000-0"
+                      value={form.rg}
+                    />
+                  </FormField>
+                  <FormField error={formErrors.birthDate} label="Data de nascimento">
+                    <TextInput
+                      inputMode="numeric"
+                      invalid={Boolean(formErrors.birthDate)}
+                      onChange={(event) => updateForm("birthDate", event.target.value)}
+                      placeholder="dd/mm/aaaa"
+                      value={form.birthDate}
+                    />
+                  </FormField>
+                </>
+              ) : (
+                <>
+                  <FormField error={formErrors.legalName} label="Razão social" required>
+                    <TextInput
+                      invalid={Boolean(formErrors.legalName)}
+                      onChange={(event) => updateForm("legalName", event.target.value)}
+                      placeholder="Acme Comércio Ltda"
+                      value={form.legalName}
+                    />
+                  </FormField>
+                  <FormField label="Nome fantasia">
+                    <TextInput
+                      onChange={(event) => updateForm("tradeName", event.target.value)}
+                      placeholder="Acme"
+                      value={form.tradeName}
+                    />
+                  </FormField>
+                  <FormField error={formErrors.cnpj} label="CNPJ">
+                    <TextInput
+                      inputMode="numeric"
+                      invalid={Boolean(formErrors.cnpj)}
+                      onChange={(event) => updateForm("cnpj", event.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      value={form.cnpj}
+                    />
+                  </FormField>
+                </>
+              )}
+
               <FormField error={formErrors.email} label="E-mail">
                 <TextInput
                   invalid={Boolean(formErrors.email)}
                   onChange={(event) => updateForm("email", event.target.value)}
-                  placeholder="cliente.dev@example.test"
+                  placeholder="contato@example.test"
                   type="email"
-                  value={form.email ?? ""}
+                  value={form.email}
                 />
               </FormField>
-              <FormField label="Telefone">
+              <FormField error={formErrors.phone} label="Telefone">
                 <TextInput
+                  inputMode="tel"
+                  invalid={Boolean(formErrors.phone)}
                   onChange={(event) => updateForm("phone", event.target.value)}
-                  placeholder="+5500000000000"
-                  value={form.phone ?? ""}
+                  placeholder="(11) 98888-7777"
+                  value={form.phone}
                 />
               </FormField>
+              <div className="md:col-span-2">
+                <FormField label="Endereço">
+                  <textarea
+                    className="cv-input min-h-24 w-full resize-y text-sm"
+                    onChange={(event) => updateForm("address", event.target.value)}
+                    placeholder="Rua, número, bairro, cidade - UF"
+                    value={form.address}
+                  />
+                </FormField>
+              </div>
             </div>
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button disabled={submitting} onClick={resetFormState} variant="secondary">
                 Cancelar
               </Button>
               <Button loading={submitting} type="submit">
-                {editingClient ? "Atualizar registro local" : "Registrar cliente local"}
+                {editingClient ? "Atualizar cliente" : "Salvar cliente"}
               </Button>
             </div>
           </form>
@@ -348,7 +458,7 @@ export default function ClientsPage() {
               )
             }
             secondaryAction={
-              <Button icon={<Plus size={15} />} onClick={() => setShowForm(true)} variant="secondary">
+              <Button icon={<Plus size={15} />} onClick={startCreateClient} variant="secondary">
                 Novo cliente
               </Button>
             }
@@ -364,6 +474,13 @@ export default function ClientsPage() {
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {filteredClients.map((client) => {
               const risk = riskConfig[client.riskLevel] ?? riskConfig.low;
+              const displayName = client.displayName ?? client.name;
+              const personTypeLabel = client.personType
+                ? clientPersonTypeLabels[client.personType]
+                : "Tipo não informado";
+              const contractRoleLabel = client.contractRole
+                ? clientContractRoleLabels[client.contractRole]
+                : "Papel não informado";
               return (
                 <div
                   className="cv-card cv-card-hover p-5"
@@ -372,16 +489,16 @@ export default function ClientsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-brand text-sm font-bold text-white">
-                        {client.name.slice(0, 2).toUpperCase()}
+                        {displayName.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--text)]">{client.name}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--text)]">{displayName}</p>
                         <p className="truncate text-[11px] text-[var(--text3)]">{client.documentLabel}</p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Button
-                        aria-label={`Editar cliente ${client.name}`}
+                        aria-label={`Editar cliente ${displayName}`}
                         icon={<Pencil aria-hidden="true" size={14} />}
                         onClick={() => startEditClient(client)}
                         size="sm"
@@ -394,6 +511,12 @@ export default function ClientsPage() {
                   </div>
 
                   <dl className="mt-4 space-y-2 text-xs">
+                    <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
+                      <UsersRound size={12} className="shrink-0 text-[var(--text3)]" />
+                      <span className="truncate">
+                        {personTypeLabel} · {contractRoleLabel}
+                      </span>
+                    </div>
                     <div className="flex min-w-0 items-center gap-2 text-[var(--text2)]">
                       <Mail size={12} className="shrink-0 text-[var(--text3)]" />
                       <span className="truncate">{client.email || "E-mail não informado"}</span>
@@ -420,6 +543,7 @@ export default function ClientsPage() {
                       {risk.label}
                     </span>
                     <span className="text-[11px] text-[var(--text3)]">
+                      {client.sourceMode ? `Origem: ${client.sourceMode} · ` : ""}
                       Registro desde {formatDate(client.createdAt)}
                     </span>
                   </div>

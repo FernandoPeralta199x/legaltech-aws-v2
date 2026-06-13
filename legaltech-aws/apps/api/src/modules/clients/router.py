@@ -21,8 +21,59 @@ def get_client_service(db: Annotated[Session, Depends(get_db)]) -> ClientService
     return ClientService(db=db)
 
 
+def mask_document(document: str | None) -> str | None:
+    if not document:
+        return None
+    digits = "".join(char for char in document if char.isdigit())
+    if len(digits) == 11:
+        return f"***.***.***-{digits[-2:]}"
+    if len(digits) == 14:
+        return f"**.***.***/****-{digits[-2:]}"
+    return "Documento protegido"
+
+
 def serialize_client(client) -> dict:
-    return ClientRead.model_validate(client).model_dump(mode="json")
+    data = ClientRead.model_validate(client).model_dump(mode="json")
+    metadata = data.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    for field in (
+        "person_type",
+        "contract_role",
+        "full_name",
+        "legal_name",
+        "company_name",
+        "trade_name",
+        "display_name",
+        "document_type",
+        "document_number",
+        "cpf",
+        "cnpj",
+        "rg",
+        "birth_date",
+        "address",
+        "source_mode",
+    ):
+        if data.get(field) is None and metadata.get(field) is not None:
+            data[field] = metadata[field]
+
+    raw_document = (
+        data.get("document")
+        or metadata.get("document_number")
+        or metadata.get("cpf")
+        or metadata.get("cnpj")
+        or metadata.get("rg")
+    )
+    data["display_name"] = data.get("display_name") or data["name"]
+    data["document_masked"] = mask_document(raw_document)
+    data["document"] = None
+    data["document_number"] = None
+    data["cpf"] = None
+    data["cnpj"] = None
+    data["rg"] = None
+    data["source_mode"] = data.get("source_mode") or "mock"
+    return data
 
 
 def request_ip(request: Request) -> str | None:

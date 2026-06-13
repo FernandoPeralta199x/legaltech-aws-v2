@@ -16,6 +16,20 @@ export type PasswordValidationResult = ValidationResult & {
   requirements: PasswordRequirementState;
 };
 
+type ClientFormValidationInput = {
+  birthDate?: string | null;
+  cnpj?: string | null;
+  contractRole?: string | null;
+  cpf?: string | null;
+  document?: string | null;
+  email?: string | null;
+  fullName?: string | null;
+  legalName?: string | null;
+  name?: string | null;
+  personType?: string | null;
+  phone?: string | null;
+};
+
 const allowedPriorities = new Set(["low", "normal", "high", "urgent"]);
 const allowedDocumentStatuses = new Set([
   "pending_upload",
@@ -51,8 +65,8 @@ function result(errors: ValidationErrors): ValidationResult {
   };
 }
 
-function hasOnlySafeIdentifierCharacters(value: string): boolean {
-  return /^[A-Za-z0-9./-]+$/.test(value);
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 function fileExtension(filename: string): string {
@@ -85,27 +99,75 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-export function validateClientForm(input: {
-  document?: string | null;
-  email?: string | null;
-  name?: string | null;
-  phone?: string | null;
-}): ValidationResult {
+export function validateClientForm(input: ClientFormValidationInput): ValidationResult {
   const errors: ValidationErrors = {};
-  const name = input.name?.trim() ?? "";
-  const document = input.document?.trim() ?? "";
+  const personType = input.personType ?? "individual";
+  const contractRole = input.contractRole?.trim() ?? "";
+  const fullName = input.fullName?.trim() ?? input.name?.trim() ?? "";
+  const legalName = input.legalName?.trim() ?? input.name?.trim() ?? "";
+  const cpf = input.cpf?.trim() ?? "";
+  const cnpj = input.cnpj?.trim() ?? "";
+  const legacyDocument = input.document?.trim() ?? "";
   const email = input.email?.trim() ?? "";
+  const birthDate = input.birthDate?.trim() ?? "";
+  const phone = input.phone?.trim() ?? "";
 
-  if (!name) {
-    errors.name = "Informe o nome do cliente.";
+  if (!["individual", "company"].includes(personType)) {
+    errors.personType = "Selecione um tipo de pessoa válido.";
   }
 
-  if (document && !hasOnlySafeIdentifierCharacters(document)) {
+  if (!contractRole && input.personType) {
+    errors.contractRole = "Selecione o papel no contrato.";
+  }
+
+  if (personType === "company") {
+    if (!legalName) {
+      errors.legalName = "Informe a razão social.";
+    }
+    if (cnpj && digitsOnly(cnpj).length !== 14) {
+      errors.cnpj = "Informe um CNPJ com 14 dígitos.";
+    }
+  } else {
+    if (!fullName) {
+      errors.fullName = input.personType
+        ? "Informe o nome completo."
+        : "Informe o nome do cliente.";
+      if (!input.personType) {
+        errors.name = "Informe o nome do cliente.";
+      }
+    }
+    if (cpf && digitsOnly(cpf).length !== 11) {
+      errors.cpf = "Informe um CPF com 11 dígitos.";
+    }
+    if (birthDate) {
+      const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(birthDate);
+      const iso = match ? `${match[3]}-${match[2]}-${match[1]}` : "";
+      const date = iso ? new Date(`${iso}T00:00:00.000Z`) : null;
+      if (
+        !match ||
+        !date ||
+        date.getUTCFullYear() !== Number(match[3]) ||
+        date.getUTCMonth() + 1 !== Number(match[2]) ||
+        date.getUTCDate() !== Number(match[1])
+      ) {
+        errors.birthDate = "Informe uma data válida no formato dd/mm/aaaa.";
+      }
+    }
+  }
+
+  if (legacyDocument && !/^[A-Za-z0-9./-]+$/.test(legacyDocument)) {
     errors.document = "Use apenas números, letras, pontos, barras ou hífens.";
   }
 
-  if (email && !email.includes("@")) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = "Informe um e-mail válido ou deixe o campo vazio.";
+  }
+
+  if (phone) {
+    const phoneLength = digitsOnly(phone).length;
+    if (phoneLength < 10 || phoneLength > 11) {
+      errors.phone = "Informe um telefone brasileiro com DDD.";
+    }
   }
 
   return result(errors);

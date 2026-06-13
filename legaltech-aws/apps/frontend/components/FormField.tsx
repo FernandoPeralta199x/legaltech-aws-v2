@@ -89,7 +89,13 @@ export function SelectInput({ className, invalid, ...props }: SelectInputProps) 
   return (
     <select
       aria-invalid={invalid || undefined}
-      className={controlClass(invalid, cn("px-3 [&_option]:bg-[var(--surf)]", className))}
+      className={controlClass(
+        invalid,
+        cn(
+          "px-3 [color-scheme:inherit] [&_option]:bg-[var(--surf)] [&_option]:text-[var(--text)] [&_option:checked]:bg-[var(--surf2)]",
+          className
+        )
+      )}
       {...props}
     />
   );

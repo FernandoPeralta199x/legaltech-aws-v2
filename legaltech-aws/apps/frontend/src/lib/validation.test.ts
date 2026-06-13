@@ -24,6 +24,53 @@ test("validateClientForm requires a client name", () => {
   assert.equal(result.errors.name, "Informe o nome do cliente.");
 });
 
+test("validateClientForm requires individual full name and contract role", () => {
+  const result = validateClientForm({
+    contractRole: "",
+    fullName: "",
+    personType: "individual"
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.fullName, "Informe o nome completo.");
+  assert.equal(result.errors.contractRole, "Selecione o papel no contrato.");
+});
+
+test("validateClientForm requires company legal name", () => {
+  const result = validateClientForm({
+    contractRole: "contractor",
+    legalName: "",
+    personType: "company"
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.legalName, "Informe a razão social.");
+});
+
+test("validateClientForm validates CPF, CNPJ, phone and birth date lightly", () => {
+  const individual = validateClientForm({
+    birthDate: "31/02/1990",
+    contractRole: "contractor",
+    cpf: "123",
+    fullName: "Cliente Teste",
+    personType: "individual",
+    phone: "119"
+  });
+  const company = validateClientForm({
+    cnpj: "12",
+    contractRole: "contractor",
+    legalName: "Empresa Teste",
+    personType: "company"
+  });
+
+  assert.equal(individual.valid, false);
+  assert.equal(individual.errors.cpf, "Informe um CPF com 11 dígitos.");
+  assert.equal(individual.errors.birthDate, "Informe uma data válida no formato dd/mm/aaaa.");
+  assert.equal(individual.errors.phone, "Informe um telefone brasileiro com DDD.");
+  assert.equal(company.valid, false);
+  assert.equal(company.errors.cnpj, "Informe um CNPJ com 14 dígitos.");
+});
+
 test("validateClientForm validates optional document format lightly", () => {
   const result = validateClientForm({ document: "abc@", name: "Cliente Dev" });
 

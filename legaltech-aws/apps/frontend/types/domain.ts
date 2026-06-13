@@ -121,6 +121,14 @@ export type RiskLevel = (typeof RISK_LEVEL_VALUES)[number];
 export type Priority = "low" | "normal" | "high" | "urgent";
 
 export type ClientStatus = "active" | "review" | "inactive";
+export type ClientPersonType = "individual" | "company";
+export type ClientContractRole =
+  | "contractor"
+  | "contracted"
+  | "intervening"
+  | "guarantor"
+  | "witness"
+  | "other";
 
 export type ReviewStatus = "pending" | "approved" | "rejected" | "adjustment_requested";
 
@@ -152,7 +160,7 @@ export type ProductType =
   | "analise_contratual"
   | "reuniao_equipe";
 
-export type DocumentType = "cpf" | "cnpj" | "unknown";
+export type DocumentType = "cpf" | "cnpj" | "rg" | "unknown";
 export type PersonType = "individual" | "company" | "unknown";
 export type TimelineSeverity = "info" | "success" | "warning" | "error";
 export type TimelineSource = "user" | "system" | "provider" | "ai" | "mock";
@@ -222,15 +230,31 @@ export type User = {
 
 export type Client = {
   id: string;
+  organizationId?: string;
+  personType?: ClientPersonType;
+  contractRole?: ClientContractRole;
   name: string;
+  fullName?: string | null;
+  legalName?: string | null;
+  companyName?: string | null;
+  tradeName?: string | null;
+  displayName?: string | null;
   document?: string | null;
+  documentType?: DocumentType;
+  documentNumber?: string | null;
+  documentMasked?: string | null;
   documentLabel: string;
+  cpf?: string | null;
+  cnpj?: string | null;
+  rg?: string | null;
+  birthDate?: string | null;
   email: string;
   phone: string;
+  address?: string | null;
   status: ClientStatus;
   riskLevel: RiskLevel;
+  sourceMode?: SourceMode;
   casesCount: number;
-  organizationId?: string;
   metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt?: string;
@@ -324,9 +348,24 @@ export type Document = {
 
 export type ClientCreate = {
   name: string;
+  person_type?: ClientPersonType;
+  contract_role?: ClientContractRole;
+  full_name?: string | null;
+  legal_name?: string | null;
+  company_name?: string | null;
+  trade_name?: string | null;
+  display_name?: string | null;
+  document_type?: DocumentType;
+  document_number?: string | null;
   document?: string | null;
+  cpf?: string | null;
+  cnpj?: string | null;
+  rg?: string | null;
+  birth_date?: string | null;
   email?: string | null;
   phone?: string | null;
+  address?: string | null;
+  source_mode?: SourceMode;
   metadata?: Record<string, unknown>;
 };
 

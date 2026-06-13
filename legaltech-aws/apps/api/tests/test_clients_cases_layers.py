@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -56,6 +57,33 @@ class SchemasTest(unittest.TestCase):
                 {
                     "name": "Cliente Teste",
                     "organization_id": str(uuid4()),
+                }
+            )
+
+    def test_client_create_validates_person_type_required_fields(self) -> None:
+        from src.modules.clients.schemas import ClientCreate
+
+        with self.assertRaises(ValidationError):
+            ClientCreate.model_validate(
+                {
+                    "person_type": "individual",
+                    "contract_role": "contractor",
+                }
+            )
+
+        with self.assertRaises(ValidationError):
+            ClientCreate.model_validate(
+                {
+                    "person_type": "company",
+                    "contract_role": "contractor",
+                }
+            )
+
+        with self.assertRaises(ValidationError):
+            ClientCreate.model_validate(
+                {
+                    "person_type": "individual",
+                    "full_name": "Cliente Teste",
                 }
             )
 
@@ -155,15 +183,117 @@ class ClientServiceTest(unittest.TestCase):
             organization_id=organization_id,
             user_id=user_id,
             payload=ClientCreate(
-                name="Cliente Teste",
-                document="00000000000",
+                contract_role="contractor",
+                cpf="000.000.000-00",
+                full_name="Cliente Teste",
                 metadata={"origin": "unit-test"},
+                name="Cliente Teste",
+                person_type="individual",
             ),
         )
 
         self.assertEqual(organization_id, repository.created.organization_id)
         self.assertEqual(user_id, repository.created.created_by)
-        self.assertEqual({"origin": "unit-test"}, repository.created.metadata_json)
+        self.assertEqual("Cliente Teste", repository.created.name)
+        self.assertEqual("000.000.000-00", repository.created.document)
+        self.assertEqual("unit-test", repository.created.metadata_json["origin"])
+        self.assertEqual("individual", repository.created.metadata_json["person_type"])
+        self.assertEqual("contractor", repository.created.metadata_json["contract_role"])
+
+    def test_update_client_clears_incompatible_person_type_metadata(self) -> None:
+        from src.modules.clients.schemas import ClientUpdate
+        from src.modules.clients.service import ClientService
+
+        class Repository:
+            def __init__(self) -> None:
+                self.client = SimpleNamespace(
+                    id=uuid4(),
+                    metadata_json={
+                        "contract_role": "contractor",
+                        "cpf": "123.456.789-01",
+                        "document_type": "cpf",
+                        "display_name": "Cliente PF",
+                        "full_name": "Cliente PF",
+                        "person_type": "individual",
+                        "rg": "12.345.678-9",
+                    },
+                )
+                self.updated_values = None
+
+            def get_client(self, *, organization_id, client_id):
+                return self.client
+
+            def update_client(self, client, values):
+                self.updated_values = values
+                for field, value in values.items():
+                    setattr(client, field, value)
+                return client
+
+        repository = Repository()
+        service = ClientService(repository=repository)
+
+        service.update_client(
+            organization_id=uuid4(),
+            client_id=repository.client.id,
+            payload=ClientUpdate(
+                cnpj="12.345.678/0001-99",
+                contract_role="contracted",
+                document="12.345.678/0001-99",
+                document_type="cnpj",
+                legal_name="Empresa Atualizada Ltda",
+                name="Empresa Atualizada Ltda",
+                person_type="company",
+            ),
+        )
+
+        metadata = repository.updated_values["metadata_json"]
+        self.assertEqual("company", metadata["person_type"])
+        self.assertEqual("cnpj", metadata["document_type"])
+        self.assertEqual("12.345.678/0001-99", metadata["cnpj"])
+        self.assertEqual("Empresa Atualizada Ltda", metadata["display_name"])
+        self.assertNotIn("cpf", metadata)
+        self.assertNotIn("rg", metadata)
+        self.assertNotIn("full_name", metadata)
+
+    def test_update_client_name_refreshes_metadata_display_name(self) -> None:
+        from src.modules.clients.schemas import ClientUpdate
+        from src.modules.clients.service import ClientService
+
+        class Repository:
+            def __init__(self) -> None:
+                self.client = SimpleNamespace(
+                    id=uuid4(),
+                    metadata_json={
+                        "contract_role": "contractor",
+                        "display_name": "Cliente Original",
+                        "person_type": "individual",
+                    },
+                )
+                self.updated_values = None
+
+            def get_client(self, *, organization_id, client_id):
+                return self.client
+
+            def update_client(self, client, values):
+                self.updated_values = values
+                for field, value in values.items():
+                    setattr(client, field, value)
+                return client
+
+        repository = Repository()
+        service = ClientService(repository=repository)
+
+        service.update_client(
+            organization_id=uuid4(),
+            client_id=repository.client.id,
+            payload=ClientUpdate(name="Cliente Atualizado"),
+        )
+
+        self.assertEqual("Cliente Atualizado", repository.updated_values["name"])
+        self.assertEqual(
+            "Cliente Atualizado",
+            repository.updated_values["metadata_json"]["display_name"],
+        )
 
 
 class CaseServiceTest(unittest.TestCase):

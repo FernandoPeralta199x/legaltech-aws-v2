@@ -21,11 +21,19 @@ def make_client(**overrides):
     now = datetime(2026, 5, 23, 12, 0, tzinfo=UTC)
     values = {
         "id": uuid4(),
+        "organization_id": UUID(ORG_ID),
         "name": "Cliente Teste",
         "document": "00000000000",
         "email": "cliente@example.com",
         "phone": "+5548999999999",
-        "metadata_json": {"origin": "test"},
+        "metadata_json": {
+            "contract_role": "contractor",
+            "document_type": "cpf",
+            "display_name": "Cliente Teste",
+            "origin": "test",
+            "person_type": "individual",
+            "source_mode": "mock",
+        },
         "created_at": now,
         "updated_at": now,
     }
@@ -62,10 +70,29 @@ class FakeClientService:
 
     def create_client(self, **kwargs):
         self.calls.append(("create_client", kwargs))
+        payload = kwargs["payload"]
         return make_client(
-            name=kwargs["payload"].name,
-            document=kwargs["payload"].document,
-            metadata_json=kwargs["payload"].metadata,
+            name=payload.name or payload.full_name or payload.legal_name,
+            document=(
+                payload.document
+                or payload.cpf
+                or payload.cnpj
+            ),
+            metadata_json={
+                **payload.metadata,
+                "address": payload.address,
+                "birth_date": payload.birth_date.isoformat() if payload.birth_date else None,
+                "cnpj": payload.cnpj,
+                "contract_role": payload.contract_role,
+                "cpf": payload.cpf,
+                "document_type": payload.document_type,
+                "full_name": payload.full_name,
+                "legal_name": payload.legal_name,
+                "person_type": payload.person_type,
+                "rg": payload.rg,
+                "source_mode": payload.source_mode or "mock",
+                "trade_name": payload.trade_name,
+            },
         )
 
     def get_client(self, **kwargs):
@@ -74,7 +101,36 @@ class FakeClientService:
 
     def update_client(self, **kwargs):
         self.calls.append(("update_client", kwargs))
-        return make_client(id=UUID(str(kwargs["client_id"])), name=kwargs["payload"].name)
+        payload = kwargs["payload"]
+        return make_client(
+            id=UUID(str(kwargs["client_id"])),
+            name=(
+                payload.name
+                or payload.full_name
+                or payload.legal_name
+                or payload.company_name
+                or "Cliente Atualizado"
+            ),
+            document=(
+                payload.document
+                or payload.cpf
+                or payload.cnpj
+                or payload.rg
+            ),
+            metadata_json={
+                "address": payload.address,
+                "cnpj": payload.cnpj,
+                "contract_role": payload.contract_role,
+                "cpf": payload.cpf,
+                "document_type": payload.document_type,
+                "full_name": payload.full_name,
+                "legal_name": payload.legal_name,
+                "person_type": payload.person_type,
+                "rg": payload.rg,
+                "source_mode": payload.source_mode or "mock",
+                "trade_name": payload.trade_name,
+            },
+        )
 
 
 class NotFoundClientService(FakeClientService):
@@ -205,6 +261,54 @@ class ClientsRoutesTest(unittest.TestCase):
         self.assertEqual(ORG_ID, kwargs["organization_id"])
         self.assertEqual(USER_ID, kwargs["user_id"])
 
+    def test_create_client_accepts_individual_payload_and_masks_document(self) -> None:
+        response = self.client.post(
+            "/api/v1/clients",
+            headers=auth_headers(),
+            json={
+                "person_type": "individual",
+                "contract_role": "contractor",
+                "full_name": "Cliente Pessoa Fisica",
+                "cpf": "000.000.000-00",
+                "rg": "12.345.678-9",
+                "birth_date": "1990-01-01",
+                "email": "pf@example.test",
+                "phone": "(11) 98888-7777",
+                "address": "Rua Teste, 100",
+            },
+        )
+
+        self.assertEqual(201, response.status_code)
+        data = response.json()["data"]
+        self.assertEqual("Cliente Pessoa Fisica", data["name"])
+        self.assertEqual("individual", data["person_type"])
+        self.assertEqual("contractor", data["contract_role"])
+        self.assertEqual("***.***.***-00", data["document_masked"])
+        self.assertEqual("mock", data["source_mode"])
+
+    def test_create_client_accepts_company_payload_and_masks_document(self) -> None:
+        response = self.client.post(
+            "/api/v1/clients",
+            headers=auth_headers(),
+            json={
+                "person_type": "company",
+                "contract_role": "contractor",
+                "legal_name": "Empresa Teste Ltda",
+                "trade_name": "Empresa Teste",
+                "cnpj": "00.000.000/0000-00",
+                "email": "pj@example.test",
+                "phone": "(11) 98888-7777",
+                "address": "Rua Teste, 200",
+            },
+        )
+
+        self.assertEqual(201, response.status_code)
+        data = response.json()["data"]
+        self.assertEqual("Empresa Teste Ltda", data["name"])
+        self.assertEqual("company", data["person_type"])
+        self.assertEqual("contractor", data["contract_role"])
+        self.assertEqual("**.***.***/****-00", data["document_masked"])
+
     def test_get_client_not_found_returns_contract_error(self) -> None:
         from src.modules.clients.router import get_client_service
 
@@ -232,6 +336,32 @@ class ClientsRoutesTest(unittest.TestCase):
         _, kwargs = self.service.calls[0]
         self.assertEqual(ORG_ID, kwargs["organization_id"])
         self.assertEqual(client_id, kwargs["client_id"])
+
+    def test_update_client_accepts_company_payload_and_masks_document(self) -> None:
+        client_id = uuid4()
+        response = self.client.patch(
+            f"/api/v1/clients/{client_id}",
+            headers=auth_headers(),
+            json={
+                "person_type": "company",
+                "contract_role": "contracted",
+                "legal_name": "Empresa Atualizada Ltda",
+                "trade_name": "Empresa Atualizada",
+                "cnpj": "12.345.678/0001-99",
+                "document": "12.345.678/0001-99",
+                "document_type": "cnpj",
+                "email": "empresa@example.test",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        data = response.json()["data"]
+        self.assertEqual("Empresa Atualizada Ltda", data["name"])
+        self.assertEqual("company", data["person_type"])
+        self.assertEqual("contracted", data["contract_role"])
+        self.assertEqual("**.***.***/****-99", data["document_masked"])
+        self.assertIsNone(data["document"])
+        self.assertIsNone(data["cnpj"])
 
 
 class CasesRoutesTest(unittest.TestCase):
