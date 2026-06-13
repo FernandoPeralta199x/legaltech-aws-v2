@@ -183,7 +183,7 @@ class RequestService:
     ) -> None:
         base = {
             "source": TimelineSource.SYSTEM,
-            "source_mode": SourceMode.LOCAL,
+            "source_mode": case.source_mode,
             "severity": TimelineSeverity.INFO,
             "metadata": {
                 "request_id": str(request.id),
@@ -295,7 +295,7 @@ class RequestService:
                     "description": "Parte informada no Wizard vinculada ao caso.",
                     "severity": TimelineSeverity.INFO,
                     "source": TimelineSource.USER,
-                    "source_mode": SourceMode.LOCAL,
+                    "source_mode": case.source_mode,
                     "metadata": {
                         "party_id": str(party.id),
                         "role": party.role,
@@ -364,7 +364,7 @@ class RequestService:
                 "description": "Metadata do documento selecionado no Wizard vinculada ao caso.",
                 "severity": TimelineSeverity.INFO,
                 "source": TimelineSource.USER,
-                "source_mode": SourceMode.LOCAL,
+                "source_mode": case.source_mode,
                 "metadata": {
                     "document_id": str(document.id),
                     "filename": document.filename,
@@ -403,7 +403,7 @@ class RequestService:
                 "description": "Novo Pedido concluído e conectado ao backend operacional local.",
                 "severity": TimelineSeverity.SUCCESS,
                 "source": TimelineSource.USER,
-                "source_mode": SourceMode.LOCAL,
+                "source_mode": case.source_mode,
                 "metadata": {
                     "idempotency_key": idempotency_key,
                     "product_type": payload.product_type,

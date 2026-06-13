@@ -156,7 +156,7 @@ class OperationalRoutesTest(unittest.TestCase):
             "product_label": "Analise contratual",
             "title": "Analise contratual - Cliente Wizard",
             "description": "Pedido criado pelo Wizard em teste.",
-            "source_mode": "local",
+            "source_mode": "mock",
             "idempotency_key": "wizard-idempotency-a",
             "selected_modules": ["ia_deepseek", "analise_contratual_ia"],
             "parties": [
@@ -212,6 +212,7 @@ class OperationalRoutesTest(unittest.TestCase):
         self.assertEqual(1, data["documents_count"])
         self.assertGreaterEqual(data["triage_modules_count"], 1)
         self.assertGreaterEqual(data["timeline_events_count"], 6)
+        self.assertEqual("mock", data["source_mode"])
 
         aggregate_response = self.client.get(
             f"/api/v1/cases/{data['case_id']}/aggregate",
@@ -240,6 +241,9 @@ class OperationalRoutesTest(unittest.TestCase):
         self.assertIn("document_attached", event_types)
         self.assertIn("triage_plan_created", event_types)
         self.assertIn("wizard_completed", event_types)
+        self.assertEqual("mock", aggregate["case"]["source_mode"])
+        self.assertEqual("mock", aggregate["summary"]["source_mode"])
+        self.assertGreaterEqual(aggregate["summary"]["progress"], 40)
 
         duplicate_response = self.client.post(
             "/api/v1/requests",

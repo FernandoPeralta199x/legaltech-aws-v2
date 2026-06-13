@@ -30,7 +30,7 @@ test("listClients maps backend clients and reports api source", async () => {
   assert.equal(result.data[0].createdAt, "2026-05-25T10:00:00.000Z");
 });
 
-test("listClients falls back to mock only when the API is unavailable", async () => {
+test("listClients shows empty explicit fallback when the API is unavailable", async () => {
   const originalMockFallback = process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
   process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = "true";
 
@@ -43,7 +43,7 @@ test("listClients falls back to mock only when the API is unavailable", async ()
 
     assert.equal(result.source, "mock");
     assert.ok(result.fallbackReason);
-    assert.ok(result.data.length > 0);
+    assert.equal(result.data.length, 0);
   } finally {
     if (originalMockFallback === undefined) {
       delete process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;

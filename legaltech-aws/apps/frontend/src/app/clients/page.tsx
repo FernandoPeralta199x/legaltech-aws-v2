@@ -174,7 +174,7 @@ export default function ClientsPage() {
         result.source === "mock"
           ? editingClient
             ? "Registro local atualizado no fallback de desenvolvimento."
-            : "Registro local criado no fallback de desenvolvimento."
+            : "Fallback local explícito criado no navegador de desenvolvimento."
           : editingClient
             ? "Registro de cliente atualizado pela API local."
             : "Registro de cliente criado pela API local."

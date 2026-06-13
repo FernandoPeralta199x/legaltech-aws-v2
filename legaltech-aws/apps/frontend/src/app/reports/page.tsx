@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -6,103 +8,159 @@ import {
   Download,
   FileText,
   Lock,
+  RefreshCw,
   Scale
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppLayout } from "@/components/AppLayout";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { LoadingState } from "@/components/LoadingState";
+import { Notification } from "@/components/Notification";
 import { PageTitle } from "@/components/PageTitle";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/formatters";
-import { mockCases, mockReports } from "@/lib/mockData";
+import { errorMessage } from "@/src/lib/errorMessage";
+import {
+  listOperationalReports,
+  type OperationalReportListItem
+} from "@/src/services/reports";
 
 const statusIcon: Record<string, ReactNode> = {
-  draft: <Clock className="text-[var(--text2)]" size={16} />,
-  in_review: <AlertTriangle className="text-amber-700" size={16} />,
-  approved: <CheckCircle2 className="text-[var(--teal)]" size={16} />,
-  delivered: <CheckCircle2 className="text-emerald-500" size={16} />,
-  rejected: <AlertTriangle className="text-red-700" size={16} />
+  failed: <AlertTriangle className="text-red-700" size={16} />,
+  generating: <Clock className="text-[var(--text2)]" size={16} />,
+  not_started: <Clock className="text-[var(--text2)]" size={16} />,
+  ready: <CheckCircle2 className="text-[var(--teal)]" size={16} />
 };
 
 const statusMeta: Record<
   string,
   { delivery: string; exportLabel: string; exportTitle: string }
 > = {
-  approved: {
-    delivery: "Aprovação demonstrativa",
-    exportLabel: "Exportação roadmap",
-    exportTitle: "Exportação/PDF real ainda não implementados no MVP local."
+  failed: {
+    delivery: "Falha mock/local",
+    exportLabel: "PDF indisponível",
+    exportTitle: "PDF/exportação real ainda não implementados nesta versão."
   },
-  delivered: {
-    delivery: "Entrega simulada no MVP local",
-    exportLabel: "PDF roadmap",
-    exportTitle: "PDF real ainda não existe nesta versão."
+  generating: {
+    delivery: "Geração mock/local",
+    exportLabel: "PDF não implementado",
+    exportTitle: "PDF real indisponível enquanto o relatório está em geração mock/local."
   },
-  draft: {
-    delivery: "Rascunho demonstrativo",
+  not_started: {
+    delivery: "Não iniciado",
     exportLabel: "PDF não implementado",
     exportTitle: "PDF/exportação real ainda não implementados nesta versão."
   },
-  in_review: {
-    delivery: "Revisão simulada no MVP",
-    exportLabel: "PDF não implementado",
-    exportTitle: "PDF real indisponível nesta revisão demonstrativa."
-  },
-  rejected: {
-    delivery: "Ajuste demonstrativo",
-    exportLabel: "PDF não implementado",
-    exportTitle: "PDF/exportação real indisponíveis para relatório mockado."
+  ready: {
+    delivery: "Relatório mock pronto",
+    exportLabel: "PDF roadmap",
+    exportTitle: "PDF real ainda não existe nesta versão."
   }
 };
 
+function sourceLabel(value: unknown): string {
+  return typeof value === "string" && value ? value : "api";
+}
+
+function metadataText(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
 export default function ReportsPage() {
-  const approved = mockReports.filter(
-    (r) => r.status === "approved" || r.status === "delivered"
-  ).length;
-  const pending = mockReports.filter((r) => r.status === "in_review").length;
-  const blocked = mockReports.filter(
-    (r) => r.status !== "approved" && r.status !== "delivered"
-  ).length;
+  const [error, setError] = useState("");
+  const [fallbackReason, setFallbackReason] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<OperationalReportListItem[]>([]);
+
+  const refreshReports = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await listOperationalReports();
+      setReports(result.data);
+      setFallbackReason(result.source === "mock" ? result.fallbackReason ?? "" : "");
+    } catch (err) {
+      setReports([]);
+      setFallbackReason("");
+      setError(errorMessage(err, "Não foi possível carregar relatórios operacionais."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshReports();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [refreshReports]);
+
+  const metrics = useMemo(() => {
+    const ready = reports.filter((item) => item.report.status === "ready").length;
+    const generating = reports.filter((item) => item.report.status === "generating").length;
+    const failed = reports.filter((item) => item.report.status === "failed").length;
+    return { failed, generating, ready };
+  }, [reports]);
 
   return (
     <AuthGuard>
       <AppLayout>
         <PageTitle
-          description="Área de entrega e revisão do MVP local. Os relatórios abaixo usam dados mockados e representam uma entrega demonstrativa do fluxo Novo Pedido, Caso, Documentos, Triagem local e Relatório."
+          actions={
+            <Button
+              icon={<RefreshCw aria-hidden="true" size={15} />}
+              loading={loading}
+              onClick={() => void refreshReports()}
+              variant="secondary"
+            >
+              Atualizar
+            </Button>
+          }
+          description="Área de entrega e revisão do MVP local. São listados apenas relatórios mock-operacionais gerados por case_id; relatórios demonstrativos fixos não aparecem aqui."
           eyebrow="Relatórios"
           title="Entrega e revisão"
         />
 
+        {fallbackReason && (
+          <Notification title="Fallback local ativo" tone="warning">
+            API local indisponível: a lista abaixo usa apenas dados locais explícitos deste navegador.
+          </Notification>
+        )}
+
         <div className="mb-6 grid gap-3 sm:grid-cols-4">
           {[
             {
-              label: "Relatórios mockados",
-              value: mockReports.length,
+              label: "Relatórios operacionais",
+              value: reports.length,
               tone: "border-[rgba(32,201,151,0.22)] bg-[var(--teal-dim)] text-[var(--teal)]"
             },
             {
-              label: "Revisão mockada",
-              value: pending,
-              tone: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-            },
-            {
-              label: "Aprovação/entrega mockada",
-              value: approved,
+              label: "Prontos",
+              value: metrics.ready,
               tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             },
             {
-              label: "PDF não implementado",
-              value: blocked,
-              tone: "border-[var(--bd)] bg-[var(--surf2)] text-[var(--text2)]"
+              label: "Gerando",
+              value: metrics.generating,
+              tone: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+            },
+            {
+              label: "Falhas",
+              value: metrics.failed,
+              tone: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300"
             }
-          ].map((m) => (
-            <div className={`rounded-lg border p-4 ${m.tone}`} key={m.label}>
-              <p className="text-xs font-medium">{m.label}</p>
-              <p className="mt-2 text-2xl font-bold">{m.value}</p>
+          ].map((metric) => (
+            <div className={`rounded-lg border p-4 ${metric.tone}`} key={metric.label}>
+              <p className="text-xs font-medium">{metric.label}</p>
+              <p className="mt-2 text-2xl font-bold">{metric.value}</p>
             </div>
           ))}
         </div>
@@ -111,35 +169,49 @@ export default function ReportsPage() {
           <Lock className="shrink-0 text-amber-700" size={18} />
           <p className="text-xs leading-5 text-[var(--text2)]">
             <span className="font-semibold text-amber-700 dark:text-amber-300">
-              MVP local:
+              MVP local/mock:
             </span>{" "}
-            relatórios, revisão operacional, IA/RAG e exportação PDF real ainda não
-            estão integrados. Esta tela organiza a entrega esperada sem acionar
-            backend de relatórios ou download real.
+            IA real, revisão persistida e exportação PDF real ainda não estão
+            implementadas. Gere o relatório dentro do detalhe do caso para que
+            ele apareça nesta lista operacional.
           </p>
         </div>
 
-        {mockReports.length === 0 ? (
+        {loading ? (
+          <LoadingState
+            description="Consultando casos e aggregates para localizar relatórios por case_id."
+            label="Carregando relatórios"
+          />
+        ) : error ? (
+          <ErrorState
+            action={
+              <Button
+                icon={<RefreshCw size={15} />}
+                onClick={() => void refreshReports()}
+                variant="secondary"
+              >
+                Tentar novamente
+              </Button>
+            }
+            description="A listagem de relatórios não pôde ser carregada. Erros da API não são substituídos por relatórios demonstrativos."
+            details={error}
+          />
+        ) : reports.length === 0 ? (
           <EmptyState
             action={
               <Button href="/cases" variant="secondary">
                 Ver casos
               </Button>
             }
-            description="Quando houver relatórios mockados no MVP local, eles aparecerão aqui como etapa de entrega/revisão demonstrativa."
+            description="Nenhum relatório operacional foi gerado por case_id. Casos criados pelo Wizard aparecem em Casos; relatórios aparecem aqui somente depois da geração mock/local."
             icon={<FileText size={20} />}
             secondaryAction={<Button href="/cases/new">Novo Pedido</Button>}
-            title="Nenhum relatório disponível"
+            title="Nenhum relatório operacional"
           />
         ) : (
           <div className="space-y-4">
-            {mockReports.map((report) => {
-              const relatedCase = mockCases.find((item) => item.id === report.caseId);
-              const meta = statusMeta[report.status] ?? {
-                delivery: "Status em acompanhamento",
-                exportLabel: "PDF roadmap",
-                exportTitle: "Exportação/PDF real ainda não implementados no MVP local."
-              };
+            {reports.map(({ caseData, report, sourceMode }) => {
+              const meta = statusMeta[report.status] ?? statusMeta.not_started;
 
               return (
                 <div className="cv-card p-5" key={report.id}>
@@ -151,7 +223,7 @@ export default function ReportsPage() {
                       <div className="min-w-0">
                         <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="text-[11px] font-semibold text-[var(--teal)]">
-                            {report.caseCode}
+                            {caseData.code}
                           </span>
                           <span className="text-[11px] text-[var(--text3)]">
                             v{report.version}
@@ -159,6 +231,9 @@ export default function ReportsPage() {
                           <StatusBadge status={report.status} />
                           <span className="cv-badge cv-badge-muted">
                             {meta.delivery}
+                          </span>
+                          <span className="cv-badge cv-badge-muted">
+                            origem {sourceLabel(sourceMode)}
                           </span>
                         </div>
                         <h2 className="text-sm font-semibold text-[var(--text)]">
@@ -178,13 +253,6 @@ export default function ReportsPage() {
                         Ver caso
                         <ArrowRight size={13} />
                       </Link>
-                      <Link
-                        className="cv-btn cv-btn-ghost min-h-11 px-3 text-xs font-semibold"
-                        href="/documents"
-                        title="Abre a área geral de documentos; não há filtro por caso nesta rota."
-                      >
-                        Documentos
-                      </Link>
                       <button
                         className="cv-btn cv-btn-secondary min-h-11 cursor-not-allowed px-3 text-xs font-semibold opacity-60"
                         disabled
@@ -199,22 +267,21 @@ export default function ReportsPage() {
 
                   <div className="mt-4 grid gap-3 border-t border-[var(--bd)] pt-4 text-xs sm:grid-cols-3">
                     <div>
-                      <p className="text-[var(--text3)]">Cliente</p>
+                      <p className="text-[var(--text3)]">Caso</p>
                       <p className="mt-0.5 truncate font-medium text-[var(--text2)]">
-                        {relatedCase?.clientName ?? "Cliente no detalhe do caso"}
+                        {caseData.title ?? metadataText(caseData.metadata?.title, caseData.code)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text3)]">Documentos do caso</p>
+                      <p className="text-[var(--text3)]">Recomendação</p>
                       <p className="mt-0.5 font-medium text-[var(--text2)]">
-                        {relatedCase ? `${relatedCase.documentsCount} na listagem` : "Ver em Documentos"}
+                        {report.recommendation ?? "Revisão humana"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[var(--text3)]">Data demonstrativa</p>
+                      <p className="text-[var(--text3)]">Geração</p>
                       <p className="mt-0.5 font-medium text-[var(--text2)]">
                         {formatDate(report.generatedAt)}
-                        {report.approvedBy ? ` · ${report.approvedBy}` : ""}
                       </p>
                     </div>
                   </div>

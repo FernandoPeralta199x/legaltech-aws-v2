@@ -50,7 +50,7 @@ function makeLocalCase(overrides: Partial<Case> = {}): Case {
     documentsCount: 1,
     progressPercent: 15,
     assignedTo: null,
-    notes: "Registro local criado pelo fluxo Novo Pedido do MVP.",
+    notes: "Fallback local explícito do fluxo Novo Pedido. Backend indisponível no momento da criação.",
     metadata: {
       origin: "local",
       source: "new_case_wizard",
@@ -195,7 +195,7 @@ test("listCases accepts pagination and multi-case filters", async () => {
   assert.equal(url.searchParams.get("status"), "created");
 });
 
-test("listCases includes locally stored wizard cases before backend cases", async () => {
+test("listCases does not mix local fallback cases when backend succeeds", async () => {
   storage.clear();
   const localCase = makeLocalCase();
   saveStoredLocalCase(localCase);
@@ -222,10 +222,36 @@ test("listCases includes locally stored wizard cases before backend cases", asyn
   const result = await listCases();
 
   assert.equal(result.source, "api");
-  assert.equal(result.data.length, 2);
-  assert.equal(result.data[0].id, localCase.id);
-  assert.equal(result.data[0].metadata?.syncStatus, "local_only");
-  assert.equal(result.data[1].id, "case-api-1");
+  assert.equal(result.data.length, 1);
+  assert.equal(result.data[0].id, "case-api-1");
+  assert.notEqual(result.data[0].id, localCase.id);
+});
+
+test("listCases falls back only to stored local cases when API is unavailable", async () => {
+  storage.clear();
+  const previousFallback = process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+  process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = "true";
+  const localCase = makeLocalCase();
+  saveStoredLocalCase(localCase);
+
+  globalThis.fetch = (async () => {
+    throw new TypeError("network down");
+  }) as typeof fetch;
+
+  try {
+    const result = await listCases();
+
+    assert.equal(result.source, "mock");
+    assert.equal(result.data.length, 1);
+    assert.equal(result.data[0].id, localCase.id);
+    assert.equal(result.data[0].metadata?.syncStatus, "local_only");
+  } finally {
+    if (previousFallback === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK;
+    } else {
+      process.env.NEXT_PUBLIC_ENABLE_API_MOCK_FALLBACK = previousFallback;
+    }
+  }
 });
 
 test("listCases deduplicates locally stored wizard cases on refresh", async () => {
@@ -479,7 +505,35 @@ test("getCaseAggregate maps operational aggregate scoped to a case id", async ()
 
 test("getCaseAggregate local fallback keeps the requested case id", async () => {
   storage.clear();
-  const localCase = makeLocalCase({ id: "case-local-b", code: "CASO-LOCAL-B" });
+  const localCase = makeLocalCase({
+    id: "case-local-b",
+    code: "CASO-LOCAL-B",
+    parties: [
+      {
+        id: "case-local-b-party",
+        caseId: "case-local-b",
+        name: "Cliente Local B",
+        document: "",
+        documentMasked: "123****00",
+        type: "contratante",
+        email: "",
+        phone: "",
+        notes: ""
+      }
+    ],
+    metadata: {
+      moduleNames: ["Análise contratual IA"],
+      modules: ["analise_contratual_ia"],
+      origin: "local",
+      source: "new_case_wizard",
+      syncStatus: "local_only",
+      wizardDocument: {
+        filename: "contrato-local.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2048
+      }
+    }
+  });
   saveStoredLocalCase(makeLocalCase({ id: "case-local-a", code: "CASO-LOCAL-A" }));
   saveStoredLocalCase(localCase);
   let called = false;
@@ -495,6 +549,11 @@ test("getCaseAggregate local fallback keeps the requested case id", async () => 
   assert.equal(result.source, "mock");
   assert.equal(result.data.case.id, "case-local-b");
   assert.equal(result.data.summary.caseId, "case-local-b");
+  assert.equal(result.data.timeline.some((event) => event.type === "wizard_completed"), true);
+  assert.equal(result.data.timeline.some((event) => event.type === "triage_plan_created"), true);
+  assert.equal(result.data.triageModules[0].moduleKey, "analise_contratual_ia");
+  assert.equal(result.data.documents[0].filename, "contrato-local.pdf");
+  assert.equal(result.data.summary.progress >= 40, true);
 });
 
 test("createCase sends backend field names and omits organization_id", async () => {
@@ -537,11 +596,25 @@ test("createCase sends backend field names and omits organization_id", async () 
 
 test("submitWizardRequest sends operational wizard payload without organization_id", async () => {
   storage.clear();
+  storage.setItem(
+    "legaltech.dev.session.v1",
+    JSON.stringify({
+      email: "dev.admin@example.test",
+      issuedAt: "2026-06-01T10:00:00.000Z",
+      organizationId: "33333333-3333-4333-8333-333333333333",
+      role: "admin",
+      source: "pasted",
+      token: "wizard.jwt.token",
+      userId: "44444444-4444-4444-8444-444444444444"
+    })
+  );
+  let authorizationHeader = "";
   let requestBody = "";
   let capturedUrl = "";
 
   globalThis.fetch = (async (url, init) => {
     capturedUrl = String(url);
+    authorizationHeader = new Headers(init?.headers).get("Authorization") ?? "";
     requestBody = String(init?.body ?? "");
 
     return Response.json(
@@ -559,7 +632,7 @@ test("submitWizardRequest sends operational wizard payload without organization_
           description: "Pedido criado pelo Wizard.",
           status: "case_created",
           request_status: "case_created",
-          source_mode: "local",
+          source_mode: "mock",
           idempotency_key: "idem-wizard-1",
           case_id: "case-api-1",
           case_code: "CASO-LOCAL-0001",
@@ -571,7 +644,7 @@ test("submitWizardRequest sends operational wizard payload without organization_
           created_at: "2026-06-01T10:00:00.000Z",
           updated_at: "2026-06-01T10:00:00.000Z"
         },
-        source_mode: "local"
+        source_mode: "mock"
       },
       { status: 201 }
     );
@@ -610,8 +683,11 @@ test("submitWizardRequest sends operational wizard payload without organization_
 
   const payload = JSON.parse(requestBody);
   assert.equal(new URL(capturedUrl).pathname, "/api/v1/requests");
+  assert.equal(authorizationHeader, "Bearer wizard.jwt.token");
   assert.equal(payload.organization_id, undefined);
   assert.equal(payload.product_type, "analise_contratual");
+  assert.equal(payload.source_mode, "mock");
+  assert.equal(payload.metadata.source_mode, "mock");
   assert.equal(payload.idempotency_key, "idem-wizard-1");
   assert.equal(payload.parties[0].name, "Cliente Wizard");
   assert.equal(payload.parties[0].document_type, "cpf");
@@ -619,6 +695,7 @@ test("submitWizardRequest sends operational wizard payload without organization_
   assert.equal(result.source, "api");
   assert.equal(result.data.caseId, "case-api-1");
   assert.equal(result.data.status, "awaiting_triage");
+  assert.equal(result.data.sourceMode, "mock");
   assert.equal(result.data.partiesCount, 1);
   assert.equal(result.data.documentsCount, 1);
 });

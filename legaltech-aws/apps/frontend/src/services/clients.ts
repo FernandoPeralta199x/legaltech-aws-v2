@@ -1,4 +1,3 @@
-import { mockClients } from "../../lib/mockData";
 import type { Client, ClientCreate, ClientUpdate } from "../../types";
 import { apiClient } from "./apiClient";
 import { fallbackReason, shouldUseMockFallback, type ServiceResult } from "./fallback";
@@ -95,7 +94,7 @@ export async function listClients(): Promise<ServiceResult<Client[]>> {
     }
 
     return {
-      data: mockClients,
+      data: [],
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -140,12 +139,7 @@ export async function getClient(clientId: string): Promise<ServiceResult<Client>
       throw error;
     }
 
-    const client = mockClients.find((item) => item.id === clientId) ?? mockClients[0];
-    return {
-      data: client,
-      fallbackReason: fallbackReason(error),
-      source: "mock"
-    };
+    throw error;
   }
 }
 
@@ -168,20 +162,6 @@ export async function updateClient(
       throw error;
     }
 
-    const current = mockClients.find((client) => client.id === clientId) ?? mockClients[0];
-    return {
-      data: {
-        ...current,
-        name: safePayload.name ?? current.name,
-        document: safePayload.document ?? current.document,
-        email: safePayload.email ?? current.email,
-        phone: safePayload.phone ?? current.phone,
-        metadata: safePayload.metadata ?? current.metadata,
-        documentLabel: protectedDocumentLabel(safePayload.document ?? current.document),
-        updatedAt: new Date().toISOString()
-      },
-      fallbackReason: fallbackReason(error),
-      source: "mock"
-    };
+    throw error;
   }
 }

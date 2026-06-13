@@ -293,6 +293,16 @@ class MockCaseRepository:
             else None
         )
         latest_event_at = max((event.created_at for event in timeline), default=None)
+        progress = self._derived_progress(
+            case=case,
+            request=request,
+            parties=parties,
+            documents=documents,
+            timeline=timeline,
+            triage_modules=triage_modules,
+            provider_results=provider_results,
+            report=report,
+        )
         summary = CaseOperationSummarySchema(
             case_id=case.id,
             organization_id=organization_uuid,
@@ -301,7 +311,7 @@ class MockCaseRepository:
             triage_status=self._triage_status(triage_modules),
             report_status=report.status if report is not None else ReportStatus.NOT_STARTED,
             risk_level=case.risk_level,
-            progress=case.progress,
+            progress=progress,
             latest_event_at=latest_event_at,
             source_mode=case.source_mode,
             updated_at=case.updated_at,
@@ -453,6 +463,45 @@ class MockCaseRepository:
         reports = self._case_items(self.store.reports, organization_id, case_id)
         reports.sort(key=lambda item: item.updated_at, reverse=True)
         return reports[0] if reports else None
+
+    @staticmethod
+    def _derived_progress(
+        *,
+        case: CaseSchema,
+        request: LegalRequestSchema | None,
+        parties: list[PartySchema],
+        documents: list[DocumentSchema],
+        timeline: list[TimelineEventSchema],
+        triage_modules: list[TriageModuleSchema],
+        provider_results: list[ProviderResultSchema],
+        report: ReportSchema | None,
+    ) -> int:
+        # Formula do MVP local/mock: request+case (10), partes (10), documentos (10),
+        # timeline (5), plano de triagem (5), execução de módulos (até 45),
+        # provider results (5) e relatório (até 20). O progresso salvo pelo service
+        # continua prevalecendo quando a triagem/relatório já avançou mais.
+        progress = 10 if request is not None else 5
+        progress += 10 if parties else 0
+        progress += 10 if documents else 0
+        progress += 5 if timeline else 0
+        if triage_modules:
+            progress += 5
+            final_statuses = {
+                ModuleStatus.COMPLETED,
+                ModuleStatus.SKIPPED,
+                ModuleStatus.FAILED,
+                ModuleStatus.PROVIDER_NOT_CONFIGURED,
+            }
+            finalized = [
+                module
+                for module in triage_modules
+                if module.status in final_statuses
+            ]
+            progress += round(len(finalized) / len(triage_modules) * 45)
+        progress += 5 if provider_results else 0
+        if report is not None:
+            progress += 20 if report.status == ReportStatus.READY else 10
+        return max(0, min(100, max(case.progress, progress)))
 
     @staticmethod
     def _triage_status(modules: list[TriageModuleSchema]) -> ModuleStatus:

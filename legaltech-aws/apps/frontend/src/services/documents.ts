@@ -1,4 +1,3 @@
-import { mockDocuments } from "../../lib/mockData";
 import type { Document, DocumentCreate, DocumentUpdate } from "../../types";
 import { apiClient, resolveApiBaseUrl } from "./apiClient";
 import { fallbackReason, shouldUseMockFallback, type ServiceResult } from "./fallback";
@@ -150,12 +149,8 @@ export async function listDocuments(
       throw error;
     }
 
-    const documents = params.caseId
-      ? mockDocuments.filter((document) => document.caseId === params.caseId)
-      : mockDocuments;
-
     return {
-      data: documents,
+      data: [],
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -223,12 +218,7 @@ export async function getDocument(
       throw error;
     }
 
-    const document = mockDocuments.find((item) => item.id === documentId) ?? mockDocuments[0];
-    return {
-      data: document,
-      fallbackReason: fallbackReason(error),
-      source: "mock"
-    };
+    throw error;
   }
 }
 
@@ -250,16 +240,7 @@ export async function updateDocument(
       throw error;
     }
 
-    const current = mockDocuments.find((document) => document.id === documentId) ?? mockDocuments[0];
-    return {
-      data: {
-        ...current,
-        filename: payload.filename ?? current.filename,
-        status: payload.status ?? current.status
-      },
-      fallbackReason: fallbackReason(error),
-      source: "mock"
-    };
+    throw error;
   }
 }
 

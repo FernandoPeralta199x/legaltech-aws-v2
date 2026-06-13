@@ -51,7 +51,7 @@ function makeCase(overrides: Partial<Case> = {}): Case {
     documentsCount: 1,
     progressPercent: 15,
     assignedTo: null,
-    notes: "Registro local criado pelo fluxo Novo Pedido do MVP.",
+    notes: "Fallback local explícito do fluxo Novo Pedido. Backend indisponível no momento da criação.",
     metadata: {
       origin: "local",
       source: "new_case_wizard",
@@ -99,6 +99,7 @@ test("createLocalCaseFromWizard builds a minimal local case without sensitive pa
   assert.equal(legalCase.clientName, "Cliente Local");
   assert.equal(legalCase.status, "awaiting_triage");
   assert.equal(legalCase.documentsCount, 1);
+  assert.equal(legalCase.progressPercent, 40);
   assert.equal(legalCase.parties.length, 1);
   assert.equal(legalCase.parties[0].name, "Cliente Local");
   assert.equal(legalCase.parties[0].document, "");

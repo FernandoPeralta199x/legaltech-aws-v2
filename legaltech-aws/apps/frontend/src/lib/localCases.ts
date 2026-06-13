@@ -99,6 +99,26 @@ function makeLocalCaseId(now: Date, partyId: string): string {
   return `case-local-${timestamp}-${suffix}`;
 }
 
+function calculateOperationalFallbackProgress({
+  documentReady,
+  modulesCount,
+  partiesCount
+}: {
+  documentReady: boolean;
+  modulesCount: number;
+  partiesCount: number;
+}): number {
+  // Formula local: request/case (10) + partes (10) + documento (10) + timeline (5) + plano de triagem (5).
+  return Math.min(
+    40,
+    10 +
+      (partiesCount > 0 ? 10 : 0) +
+      (documentReady ? 10 : 0) +
+      (documentReady || partiesCount > 0 || modulesCount > 0 ? 5 : 0) +
+      (modulesCount > 0 ? 5 : 0)
+  );
+}
+
 function maskDocument(value: string | undefined): string {
   const digits = (value ?? "").replace(/\D/g, "");
   if (!digits) return "";
@@ -194,10 +214,6 @@ export function createLocalCaseFromWizard(
       : documentReady
         ? "document_attached"
         : "created";
-  const progress = Math.min(
-    30,
-    (documentReady ? 10 : 0) + Math.max(0, activeModules.length * 3)
-  );
   const parties: CaseParty[] = input.parties
     .filter((party) => party.nome.trim())
     .map((party) => ({
@@ -224,6 +240,11 @@ export function createLocalCaseFromWizard(
       createdAt: nowIso,
       updatedAt: nowIso
     }));
+  const progress = calculateOperationalFallbackProgress({
+    documentReady,
+    modulesCount: activeModules.length,
+    partiesCount: parties.length
+  });
 
   return {
     id: caseId,
@@ -243,7 +264,7 @@ export function createLocalCaseFromWizard(
     sourceMode: "local",
     isLocalSimulation: true,
     assignedTo: null,
-    notes: "Registro local criado pelo fluxo Novo Pedido do MVP.",
+    notes: "Fallback local explícito do fluxo Novo Pedido. Backend indisponível no momento da criação.",
     metadata: {
       modules: activeModules,
       moduleNames: activeModules.map((modulo) => MODULOS[modulo].titulo),

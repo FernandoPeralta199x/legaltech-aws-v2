@@ -1,4 +1,3 @@
-import { mockCases } from "../../lib/mockData";
 import {
   MODULOS,
   PRODUTOS,
@@ -24,8 +23,9 @@ import type {
 } from "../../types";
 import {
   findStoredLocalCase,
-  mergeCasesWithLocalCases,
+  getStoredLocalCases,
   saveLocalCaseFromWizard,
+  saveStoredLocalCase,
   type LocalCaseWizardInput
 } from "../lib/localCases";
 import { ApiClientError, apiClient } from "./apiClient";
@@ -397,9 +397,9 @@ function mapWizardSubmitPayload(input: WizardOperationalSubmitInput) {
     product_label: productLabel,
     title: wizardTitle(input),
     description: wizardDescription(input),
-    source_mode: "local",
+    source_mode: "mock",
     idempotency_key: input.idempotencyKey,
-    notes: "Criado pelo Wizard operacional local.",
+    notes: "Criado pelo Wizard operacional backend mock/local.",
     selected_modules: activeModules,
     parties: input.parties
       .filter((party) => party.nome.trim())
@@ -435,7 +435,7 @@ function mapWizardSubmitPayload(input: WizardOperationalSubmitInput) {
       modules: activeModules,
       product: input.produto,
       source: "new_case_wizard",
-      source_mode: "local"
+      source_mode: "mock"
     }
   };
 }
@@ -879,6 +879,153 @@ function fallbackDocumentsFromCase(legalCase: Case): Document[] {
   ];
 }
 
+function metadataArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function fallbackTriageModulesFromCase(legalCase: Case): TriageModule[] {
+  const moduleKeys = metadataArray(legalCase.metadata?.modules);
+  const moduleNames = metadataArray(legalCase.metadata?.moduleNames);
+  const now = legalCase.updatedAt;
+
+  return moduleKeys.map((moduleKey, index) => ({
+    id: `${legalCase.id}-triage-${moduleKey}`,
+    caseId: legalCase.id,
+    organizationId: legalCase.organizationId ?? "local",
+    moduleKey,
+    moduleLabel: moduleNames[index] ?? MODULOS[moduleKey as Modulo]?.titulo ?? moduleKey,
+    provider: "mock_local",
+    status: "not_started",
+    sourceMode: "local",
+    required: true,
+    reason: "Módulo selecionado no Wizard local de fallback.",
+    startedAt: null,
+    finishedAt: null,
+    attempts: 0,
+    errorCode: null,
+    errorMessage: null,
+    summary: null,
+    resultRef: null,
+    rawResultRef: null,
+    createdAt: legalCase.createdAt,
+    updatedAt: now
+  }));
+}
+
+function fallbackTimelineFromCase(
+  legalCase: Case,
+  documents: Document[],
+  triageModules: TriageModule[]
+): TimelineEvent[] {
+  const organizationId = legalCase.organizationId ?? "local";
+  const base = {
+    caseId: legalCase.id,
+    organizationId,
+    source: "mock" as const,
+    sourceMode: "local" as const,
+    status: "completed" as const,
+    createdAt: legalCase.createdAt
+  };
+  const events: TimelineEvent[] = [
+    {
+      ...base,
+      id: `${legalCase.id}-timeline-request-created`,
+      type: "request_created",
+      title: "Pedido local criado",
+      label: "Pedido local criado",
+      description: "Fallback local registrou o pedido porque a API estava indisponível.",
+      severity: "info",
+      actor: "fallback-local",
+      metadata: { source: "new_case_wizard", sourceMode: "local" }
+    },
+    {
+      ...base,
+      id: `${legalCase.id}-timeline-case-created`,
+      type: "case_created",
+      title: "Caso local criado",
+      label: "Caso local criado",
+      description: "Caso local de fallback criado com o mesmo case_id usado na navegação.",
+      severity: "info",
+      actor: "fallback-local",
+      metadata: { source: "new_case_wizard", sourceMode: "local" }
+    }
+  ];
+
+  legalCase.parties.forEach((party) => {
+    events.push({
+      ...base,
+      id: `${legalCase.id}-timeline-party-${party.id}`,
+      type: "party_added",
+      title: "Parte adicionada",
+      label: "Parte adicionada",
+      description: "Parte informada no Wizard local vinculada ao caso de fallback.",
+      severity: "info",
+      actor: "fallback-local",
+      metadata: { partyId: party.id, role: party.type, source: "new_case_wizard" }
+    });
+  });
+
+  documents.forEach((document) => {
+    events.push({
+      ...base,
+      id: `${legalCase.id}-timeline-document-${document.id}`,
+      type: "document_attached",
+      title: "Documento anexado",
+      label: "Documento anexado",
+      description: "Metadata do documento selecionado no Wizard local vinculada ao caso de fallback.",
+      severity: "info",
+      actor: "fallback-local",
+      metadata: { documentId: document.id, filename: document.filename }
+    });
+  });
+
+  if (triageModules.length > 0) {
+    events.push({
+      ...base,
+      id: `${legalCase.id}-timeline-triage-plan-created`,
+      type: "triage_plan_created",
+      title: "Plano de triagem local criado",
+      label: "Plano de triagem local criado",
+      description: "Módulos selecionados no Wizard foram preservados no fallback local.",
+      severity: "info",
+      actor: "fallback-local",
+      metadata: { moduleKeys: triageModules.map((module) => module.moduleKey) }
+    });
+  }
+
+  events.push({
+    ...base,
+    id: `${legalCase.id}-timeline-wizard-completed`,
+    type: "wizard_completed",
+    title: "Wizard concluído",
+    label: "Wizard concluído",
+    description: "Novo Pedido concluído no fallback local explícito.",
+    severity: "success",
+    actor: "fallback-local",
+    metadata: { source: "new_case_wizard", sourceMode: "local" }
+  });
+
+  return events;
+}
+
+function fallbackProgressFromAggregate(
+  legalCase: Case,
+  documents: Document[],
+  triageModules: TriageModule[],
+  timeline: TimelineEvent[]
+): number {
+  // Formula de fallback local: case/request (10) + partes (10) + documentos (10) + timeline (5) + plano de triagem (5).
+  const progress =
+    10 +
+    (legalCase.parties.length > 0 ? 10 : 0) +
+    (documents.length > 0 ? 10 : 0) +
+    (timeline.length > 0 ? 5 : 0) +
+    (triageModules.length > 0 ? 5 : 0);
+  return clampProgress(Math.max(legalCase.progressPercent, Math.min(40, progress)));
+}
+
 export function mapBackendCaseAggregate(payload: BackendCaseAggregate): CaseAggregate {
   const legalCase = mapAggregateCase(payload);
   const parties = payload.parties.map(mapAggregateParty);
@@ -903,13 +1050,29 @@ export function mapBackendCaseAggregate(payload: BackendCaseAggregate): CaseAggr
 function makeFallbackAggregate(legalCase: Case): CaseAggregate {
   const sourceMode = (legalCase.sourceMode ?? "mock") as CaseOperationSummary["sourceMode"];
   const fallbackDocuments = fallbackDocumentsFromCase(legalCase);
+  const fallbackTriageModules = fallbackTriageModulesFromCase(legalCase);
+  const fallbackTimeline = fallbackTimelineFromCase(
+    legalCase,
+    fallbackDocuments,
+    fallbackTriageModules
+  );
+  const progress = fallbackProgressFromAggregate(
+    legalCase,
+    fallbackDocuments,
+    fallbackTriageModules,
+    fallbackTimeline
+  );
   return {
-    case: legalCase,
+    case: {
+      ...legalCase,
+      progress,
+      progressPercent: progress
+    },
     request: null,
     parties: legalCase.parties as Party[],
     documents: fallbackDocuments,
-    timeline: [],
-    triageModules: [],
+    timeline: fallbackTimeline,
+    triageModules: fallbackTriageModules,
     providerResults: [],
     report: null,
     summary: {
@@ -917,11 +1080,14 @@ function makeFallbackAggregate(legalCase: Case): CaseAggregate {
       organizationId: legalCase.organizationId,
       partiesCount: legalCase.parties.length,
       documentsCount: fallbackDocuments.length || legalCase.documentsCount,
-      triageStatus: "not_started",
+      triageStatus: fallbackTriageModules.length > 0 ? "not_started" : "not_started",
       reportStatus: "not_started",
       riskLevel: legalCase.riskLevel ?? "unknown",
-      progress: legalCase.progressPercent,
-      latestEventAt: null,
+      progress,
+      latestEventAt:
+        fallbackTimeline.length > 0
+          ? fallbackTimeline[fallbackTimeline.length - 1].createdAt
+          : null,
       sourceMode,
       updatedAt: legalCase.updatedAt
     }
@@ -984,7 +1150,7 @@ export async function listCases(
       `/api/v1/cases${buildCaseListQuery(filters)}`
     );
     return {
-      data: mergeCasesWithLocalCases(mapCaseListPayload(response.data, clients)),
+      data: mapCaseListPayload(response.data, clients),
       source: "api"
     };
   } catch (error) {
@@ -993,7 +1159,7 @@ export async function listCases(
     }
 
     return {
-      data: mergeCasesWithLocalCases(mockCases),
+      data: getStoredLocalCases(),
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -1029,7 +1195,11 @@ export async function submitWizardRequest(
         documentsCount: localCase.documentsCount,
         partiesCount: localCase.parties.length,
         triageModulesCount: selectedWizardModules(input.modulos).length,
-        timelineEventsCount: 0,
+        timelineEventsCount:
+          3 +
+          localCase.parties.length +
+          localCase.documentsCount +
+          (selectedWizardModules(input.modulos).length > 0 ? 1 : 0),
         sourceMode: "local"
       },
       fallbackReason: fallbackReason(error),
@@ -1071,14 +1241,12 @@ export async function getCaseAggregate(
       throw error;
     }
 
-    const fallbackCase =
-      localCase ?? mockCases.find((item) => item.id === caseId);
-    if (!fallbackCase) {
+    if (!localCase) {
       throw error;
     }
 
     return {
-      data: makeFallbackAggregate(fallbackCase),
+      data: makeFallbackAggregate(localCase),
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
@@ -1131,7 +1299,7 @@ export async function getCase(
       throw error;
     }
 
-    const legalCase = findStoredLocalCase(caseId) ?? mockCases.find((item) => item.id === caseId);
+    const legalCase = findStoredLocalCase(caseId);
     if (!legalCase) {
       throw error;
     }
@@ -1163,16 +1331,20 @@ export async function updateCase(
       throw error;
     }
 
-    const current = mockCases.find((legalCase) => legalCase.id === caseId) ?? mockCases[0];
+    const current = findStoredLocalCase(caseId);
+    if (!current) {
+      throw error;
+    }
+    const updated = saveStoredLocalCase({
+      ...current,
+      caseType: payload.case_type ?? current.caseType,
+      clientId: payload.client_id ?? current.clientId,
+      priority: payload.priority ?? current.priority,
+      status: payload.status ?? current.status,
+      updatedAt: new Date().toISOString()
+    });
     return {
-      data: {
-        ...current,
-        caseType: payload.case_type ?? current.caseType,
-        clientId: payload.client_id ?? current.clientId,
-        priority: payload.priority ?? current.priority,
-        status: payload.status ?? current.status,
-        updatedAt: new Date().toISOString()
-      },
+      data: updated,
       fallbackReason: fallbackReason(error),
       source: "mock"
     };
